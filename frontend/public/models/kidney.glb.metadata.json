@@ -1,0 +1,470 @@
+{
+  "generatedAt": "2025-08-27T05:08:11.007Z",
+  "asset": {
+    "version": "2.0",
+    "generator": "babylon.js glTF exporter for Autodesk MAYA 2023.2 v20220923.2"
+  },
+  "nodes": [
+    {
+      "index": 0,
+      "name": "VH_M_right_kidney",
+      "extras": null
+    },
+    {
+      "index": 1,
+      "name": "VH_M_kidney_capsule_R",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "kidney capsule",
+        "ontologyid": "UBERON:0002015",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0002015",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "mesh"
+      }
+    },
+    {
+      "index": 2,
+      "name": "VH_M_hilum_of_kidney_R",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "hilum of kidney",
+        "ontologyid": "UBERON:0008716",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0008716",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "surface"
+      }
+    },
+    {
+      "index": 3,
+      "name": "VH_M_renal_medulla_R",
+      "extras": null
+    },
+    {
+      "index": 4,
+      "name": "VH_M_renal_papilla_R",
+      "extras": null
+    },
+    {
+      "index": 5,
+      "name": "VH_M_renal_papilla_R_j",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal papilla",
+        "ontologyid": "UBERON:0001228",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0001228",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "surface"
+      }
+    },
+    {
+      "index": 6,
+      "name": "VH_M_renal_papilla_R_i",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal papilla",
+        "ontologyid": "UBERON:0001228",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0001228",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "surface"
+      }
+    },
+    {
+      "index": 7,
+      "name": "VH_M_renal_papilla_R_h",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal papilla",
+        "ontologyid": "UBERON:0001228",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0001228",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "surface"
+      }
+    },
+    {
+      "index": 8,
+      "name": "VH_M_renal_papilla_R_g",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal papilla",
+        "ontologyid": "UBERON:0001228",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0001228",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "surface"
+      }
+    },
+    {
+      "index": 9,
+      "name": "VH_M_renal_papilla_R_f",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal papilla",
+        "ontologyid": "UBERON:0001228",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0001228",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "surface"
+      }
+    },
+    {
+      "index": 10,
+      "name": "VH_M_renal_papilla_R_e",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal papilla",
+        "ontologyid": "UBERON:0001228",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0001228",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "surface"
+      }
+    },
+    {
+      "index": 11,
+      "name": "VH_M_renal_papilla_R_d",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal papilla",
+        "ontologyid": "UBERON:0001228",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0001228",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "surface"
+      }
+    },
+    {
+      "index": 12,
+      "name": "VH_M_renal_papilla_R_c",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal papilla",
+        "ontologyid": "UBERON:0001228",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0001228",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "surface"
+      }
+    },
+    {
+      "index": 13,
+      "name": "VH_M_renal_papilla_R_b",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal papilla",
+        "ontologyid": "UBERON:0001228",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0001228",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "surface"
+      }
+    },
+    {
+      "index": 14,
+      "name": "VH_M_renal_papilla_R_a",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal papilla",
+        "ontologyid": "UBERON:0001228",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0001228",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "surface"
+      }
+    },
+    {
+      "index": 15,
+      "name": "VH_M_renal_pyramid_R",
+      "extras": null
+    },
+    {
+      "index": 16,
+      "name": "VH_M_renal_pyramid_a",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal pyramid",
+        "ontologyid": "UBERON:0004200",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0004200",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "mesh"
+      }
+    },
+    {
+      "index": 17,
+      "name": "VH_M_renal_pyramid_b",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal pyramid",
+        "ontologyid": "UBERON:0004200",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0004200",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "mesh"
+      }
+    },
+    {
+      "index": 18,
+      "name": "VH_M_renal_pyramid_c",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal pyramid",
+        "ontologyid": "UBERON:0004200",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0004200",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "mesh"
+      }
+    },
+    {
+      "index": 19,
+      "name": "VH_M_renal_pyramid_d",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal pyramid",
+        "ontologyid": "UBERON:0004200",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0004200",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "mesh"
+      }
+    },
+    {
+      "index": 20,
+      "name": "VH_M_renal_pyramid_e",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal pyramid",
+        "ontologyid": "UBERON:0004200",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0004200",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "mesh"
+      }
+    },
+    {
+      "index": 21,
+      "name": "VH_M_renal_pyramid_f",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal pyramid",
+        "ontologyid": "UBERON:0004200",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0004200",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "mesh"
+      }
+    },
+    {
+      "index": 22,
+      "name": "VH_M_renal_pyramid_g",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal pyramid",
+        "ontologyid": "UBERON:0004200",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0004200",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "mesh"
+      }
+    },
+    {
+      "index": 23,
+      "name": "VH_M_renal_pyramid_h",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal pyramid",
+        "ontologyid": "UBERON:0004200",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0004200",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "mesh"
+      }
+    },
+    {
+      "index": 24,
+      "name": "VH_M_renal_pyramid_i",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal pyramid",
+        "ontologyid": "UBERON:0004200",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0004200",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "mesh"
+      }
+    },
+    {
+      "index": 25,
+      "name": "VH_M_renal_pyramid_j",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal pyramid",
+        "ontologyid": "UBERON:0004200",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0004200",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "mesh"
+      }
+    },
+    {
+      "index": 26,
+      "name": "VH_M_cortex_of_kidney_R",
+      "extras": null
+    },
+    {
+      "index": 27,
+      "name": "VH_M_renal_column_R",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "renal column",
+        "ontologyid": "UBERON:0001284",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0001284",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "surface"
+      }
+    },
+    {
+      "index": 28,
+      "name": "VH_M_outer_cortex_of_kidney_R",
+      "extras": {
+        "currentUVSet": "map1",
+        "anatomical_structure_of": "#VHMRightKidney",
+        "source_spatial_entity": "#VHMaleOrgans",
+        "label": "outer cortex of kidney",
+        "ontologyid": "UBERON:0002189",
+        "representation_of": "http://purl.obolibrary.org/obo/UBERON_0002189",
+        "glb_file_of_single_organs": "VH_M_Kidney_R&lf;",
+        "node_type": "mesh"
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "index": 0,
+      "name": "VH_M_kidney_capsule_R"
+    },
+    {
+      "index": 1,
+      "name": "VH_M_hilum_of_kidney_R"
+    },
+    {
+      "index": 2,
+      "name": "VH_M_renal_papilla_R_j"
+    },
+    {
+      "index": 3,
+      "name": "VH_M_renal_papilla_R_i"
+    },
+    {
+      "index": 4,
+      "name": "VH_M_renal_papilla_R_h"
+    },
+    {
+      "index": 5,
+      "name": "VH_M_renal_papilla_R_g"
+    },
+    {
+      "index": 6,
+      "name": "VH_M_renal_papilla_R_f"
+    },
+    {
+      "index": 7,
+      "name": "VH_M_renal_papilla_R_e"
+    },
+    {
+      "index": 8,
+      "name": "VH_M_renal_papilla_R_d"
+    },
+    {
+      "index": 9,
+      "name": "VH_M_renal_papilla_R_c"
+    },
+    {
+      "index": 10,
+      "name": "VH_M_renal_papilla_R_b"
+    },
+    {
+      "index": 11,
+      "name": "VH_M_renal_papilla_R_a"
+    },
+    {
+      "index": 12,
+      "name": "VH_M_renal_pyramid_a"
+    },
+    {
+      "index": 13,
+      "name": "VH_M_renal_pyramid_b"
+    },
+    {
+      "index": 14,
+      "name": "VH_M_renal_pyramid_c"
+    },
+    {
+      "index": 15,
+      "name": "VH_M_renal_pyramid_d"
+    },
+    {
+      "index": 16,
+      "name": "VH_M_renal_pyramid_e"
+    },
+    {
+      "index": 17,
+      "name": "VH_M_renal_pyramid_f"
+    },
+    {
+      "index": 18,
+      "name": "VH_M_renal_pyramid_g"
+    },
+    {
+      "index": 19,
+      "name": "VH_M_renal_pyramid_h"
+    },
+    {
+      "index": 20,
+      "name": "VH_M_renal_pyramid_i"
+    },
+    {
+      "index": 21,
+      "name": "VH_M_renal_pyramid_j"
+    },
+    {
+      "index": 22,
+      "name": "VH_M_renal_column_R"
+    },
+    {
+      "index": 23,
+      "name": "VH_M_outer_cortex_of_kidney_R"
+    }
+  ],
+  "extrasPresent": true,
+  "overrides": {}
+}

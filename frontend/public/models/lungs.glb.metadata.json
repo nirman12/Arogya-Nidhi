@@ -1,0 +1,42 @@
+{
+  "generatedAt": "2025-08-27T05:08:11.015Z",
+  "asset": {
+    "generator": "fab-model-conversion",
+    "version": "2.0"
+  },
+  "nodes": [
+    {
+      "index": 0,
+      "name": "Sketchfab_model",
+      "extras": null
+    },
+    {
+      "index": 1,
+      "name": "stylizedhumanlungs.fbx",
+      "extras": null
+    },
+    {
+      "index": 2,
+      "name": "RootNode",
+      "extras": null
+    },
+    {
+      "index": 3,
+      "name": "StylizedHumanLungs_Mesh",
+      "extras": null
+    },
+    {
+      "index": 4,
+      "name": "StylizedHumanLungs_Mesh_StylizedHumanLungs_Texture_0",
+      "extras": null
+    }
+  ],
+  "meshes": [
+    {
+      "index": 0,
+      "name": "StylizedHumanLungs_Mesh_StylizedHumanLungs_Texture_0"
+    }
+  ],
+  "extrasPresent": false,
+  "overrides": {}
+}
