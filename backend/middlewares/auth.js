@@ -1,28 +1,18 @@
-import jwt from 'jsonwebtoken';
-import getPool from '../config/postgres.js';
+import { verifyAccessToken } from '../util/token.util.js';
+import { sendError } from '../util/response.util.js';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+export function authenticate(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return sendError(res, 'Authorization token missing or invalid', 401);
+  }
 
-export const requireAuth = () => async (req, res, next) => {
-  const auth = req.headers.authorization || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-  if (!token) return res.status(401).json({ success: false, message: 'Missing token' });
+  const token = authHeader.split(' ')[1];
   try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    req.user = { id: payload.sub, role: payload.role };
-    // optionally load full user
-    try {
-      const pool = await getPool();
-      if (pool) {
-        const q = await pool.query('SELECT id,email,name,role,is_active FROM users WHERE id = $1', [payload.sub]);
-        if (q.rows[0]) req.user = { ...req.user, ...q.rows[0] };
-      }
-    } catch (e) {
-      // ignore load error
-    }
+    const payload = verifyAccessToken(token);
+    req.user = payload;
     next();
   } catch (err) {
-    console.error('auth verify error', err);
-    res.status(401).json({ success: false, message: 'Invalid token' });
+    return sendError(res, 'Invalid or expired token', 401);
   }
-};
+}

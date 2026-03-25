@@ -1,0 +1,335 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar
+  passwordHash String   @map("password_hash") @db.VarChar
+  role         String   @db.VarChar
+  name         String   @db.VarChar
+  phone        String?  @db.VarChar
+  avatarUrl    String?  @map("avatar_url") @db.VarChar
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  refreshTokens      RefreshToken[]
+  patient            Patient?
+  doctorProfile      DoctorProfile?
+  studentProfile     StudentProfile?  
+  notifications      Notification[]
+  aiInteractionLogs  AiInteractionLog[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tokenHash String   @map("token_hash") @db.VarChar
+  expiresAt DateTime @map("expires_at")
+  isRevoked Boolean  @default(false) @map("is_revoked")
+  ipAddress String?  @map("ip_address") @db.VarChar
+  userAgent String?  @map("user_agent") @db.VarChar
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("refresh_tokens")
+}
+
+model Patient {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @unique @map("user_id") @db.Uuid
+  dateOfBirth   DateTime? @map("date_of_birth")
+  bloodGroup    String?  @map("blood_group") @db.VarChar
+  gender        String?  @db.VarChar
+  address       String?  @db.VarChar
+  medicalHistory String? @map("medical_history") @db.Text
+  allergies     String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user         User           @relation(fields: [userId], references: [id])
+  appointments Appointment[]
+  queries      PatientQuery[]
+  iotReadings  IotReading[]
+  payments     Payment[]
+
+  @@map("patients")
+}
+
+model DoctorProfile {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @unique @map("user_id") @db.Uuid
+  nmcLicenseNo    String   @unique @map("nmc_license_no") @db.VarChar
+  specialty       String?  @db.VarChar
+  subSpecialty    String?  @map("sub_specialty") @db.VarChar
+  qualifications  String?  @db.Text
+  experienceYears Int?     @map("experience_years")
+  consultationFee Decimal? @map("consultation_fee") @db.Decimal
+  bio             String?  @db.Text
+  isVerified      Boolean  @default(false) @map("is_verified")
+  isAvailable     Boolean  @default(true) @map("is_available")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user          User                 @relation(fields: [userId], references: [id])
+  verifications DoctorVerification[]
+  appointments  Appointment[]
+  queryResponses QueryResponse[]
+
+  @@map("doctor_profiles")
+}
+
+model DoctorVerification {
+  id             String    @id @default(uuid()) @db.Uuid
+  doctorId       String    @map("doctor_id") @db.Uuid
+  licenseDocUrl  String?   @map("license_doc_url") @db.VarChar
+  additionalDocs String?   @map("additional_docs") @db.Text
+  status         String    @default("pending") @db.VarChar
+  reviewedBy     String?   @map("reviewed_by") @db.VarChar
+  reviewNotes    String?   @map("review_notes") @db.Text
+  verifiedAt     DateTime? @map("verified_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  doctor DoctorProfile @relation(fields: [doctorId], references: [id])
+
+  @@map("doctor_verifications")
+}
+
+model StudentProfile {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @unique @map("user_id") @db.Uuid
+  institution  String?  @db.VarChar
+  yearOfStudy  Int?     @map("year_of_study")
+  faculty      String?  @db.VarChar
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user     User              @relation(fields: [userId], references: [id])
+  progress StudentProgress[]
+
+  @@map("student_profiles")
+}
+
+model Appointment {
+  id              String   @id @default(uuid()) @db.Uuid
+  patientId       String   @map("patient_id") @db.Uuid
+  doctorId        String   @map("doctor_id") @db.Uuid
+  scheduledAt     DateTime @map("scheduled_at")
+  durationMinutes Int?     @map("duration_minutes")
+  status          String   @default("pending") @db.VarChar
+  meetingLink     String?  @map("meeting_link") @db.VarChar
+  aiTriageSummary String?  @map("ai_triage_summary") @db.Text
+  patientNotes    String?  @map("patient_notes") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  patient              Patient               @relation(fields: [patientId], references: [id])
+  doctor               DoctorProfile         @relation(fields: [doctorId], references: [id])
+  consultationSummary  ConsultationSummary?
+  payment              Payment?
+  anonymizedCase       AnonymizedCase?
+
+  @@map("appointments")
+}
+
+model ConsultationSummary {
+  id            String    @id @default(uuid()) @db.Uuid
+  appointmentId String    @unique @map("appointment_id") @db.Uuid
+  aiSummary     String?   @map("ai_summary") @db.Text
+  doctorNotes   String?   @map("doctor_notes") @db.Text
+  diagnosis     String?   @db.Text
+  prescription  String?   @db.Text
+  followUpDate  DateTime? @map("follow_up_date")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@map("consultation_summaries")
+}
+
+model PatientQuery {
+  id          String   @id @default(uuid()) @db.Uuid
+  patientId   String   @map("patient_id") @db.Uuid
+  title       String   @db.VarChar
+  symptomText String?  @map("symptom_text") @db.Text
+  isAnonymous Boolean  @default(false) @map("is_anonymous")
+  isResolved  Boolean  @default(false) @map("is_resolved")
+  viewCount   Int      @default(0) @map("view_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  patient        Patient         @relation(fields: [patientId], references: [id])
+  responses      QueryResponse[]
+  triageDecision TriageDecision?
+
+  @@map("patient_queries")
+}
+
+model QueryResponse {
+  id           String   @id @default(uuid()) @db.Uuid
+  queryId      String   @map("query_id") @db.Uuid
+  doctorId     String   @map("doctor_id") @db.Uuid
+  responseText String?  @map("response_text") @db.Text
+  isAccepted   Boolean  @default(false) @map("is_accepted")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  query  PatientQuery  @relation(fields: [queryId], references: [id])
+  doctor DoctorProfile @relation(fields: [doctorId], references: [id])
+
+  @@map("query_responses")
+}
+
+model TriageDecision {
+  id                    String   @id @default(uuid()) @db.Uuid
+  queryId               String   @unique @map("query_id") @db.Uuid
+  recommendedSpecialty  String?  @map("recommended_specialty") @db.VarChar
+  urgencyLevel          String?  @map("urgency_level") @db.VarChar
+  aiReasoning           String?  @map("ai_reasoning") @db.Text
+  confidenceScore       Float?   @map("confidence_score")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  query PatientQuery @relation(fields: [queryId], references: [id])
+
+  @@map("triage_decisions")
+}
+
+model IotReading {
+  id          String   @id @default(uuid()) @db.Uuid
+  patientId   String   @map("patient_id") @db.Uuid
+  testType    String   @map("test_type") @db.VarChar
+  sensorData  Json     @map("sensor_data")
+  resultScore Float?   @map("result_score")
+  notes       String?  @db.Text
+  recordedAt  DateTime @default(now()) @map("recorded_at")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@map("iot_readings")
+}
+
+model Payment {
+  id            String    @id @default(uuid()) @db.Uuid
+  patientId     String    @map("patient_id") @db.Uuid
+  appointmentId String    @unique @map("appointment_id") @db.Uuid
+  amount        Decimal   @db.Decimal
+  currency      String    @default("NPR") @db.VarChar
+  status        String    @default("pending") @db.VarChar
+  gateway       String?   @db.VarChar
+  gatewayRef    String?   @map("gateway_ref") @db.VarChar
+  paidAt        DateTime? @map("paid_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  patient     Patient     @relation(fields: [patientId], references: [id])
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@map("payments")
+}
+
+model LearningResource {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String   @db.VarChar
+  content     String?  @db.Text
+  category    String?  @db.VarChar
+  subcategory String?  @db.VarChar
+  language    String   @default("en") @db.VarChar
+  sourceUrl   String?  @map("source_url") @db.VarChar
+  isPublished Boolean  @default(false) @map("is_published")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  mcqQuestions McqQuestion[]
+
+  @@map("learning_resources")
+}
+
+model McqQuestion {
+  id            String   @id @default(uuid()) @db.Uuid
+  resourceId    String   @map("resource_id") @db.Uuid
+  question      String   @db.Text
+  options       Json
+  correctOption String   @map("correct_option") @db.VarChar
+  aiExplanation String?  @map("ai_explanation") @db.Text
+  difficulty    String?  @db.VarChar
+  subject       String?  @db.VarChar
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  resource  LearningResource  @relation(fields: [resourceId], references: [id])
+  progress  StudentProgress[]
+
+  @@map("mcq_questions")
+}
+
+model StudentProgress {
+  id               String   @id @default(uuid()) @db.Uuid
+  studentId        String   @map("student_id") @db.Uuid
+  mcqId            String   @map("mcq_id") @db.Uuid
+  selectedOption   String?  @map("selected_option") @db.VarChar
+  isCorrect        Boolean  @map("is_correct")
+  timeTakenSeconds Int?     @map("time_taken_seconds")
+  attemptedAt      DateTime @default(now()) @map("attempted_at")
+
+  student StudentProfile @relation(fields: [studentId], references: [id])
+  mcq     McqQuestion    @relation(fields: [mcqId], references: [id])
+
+  @@map("student_progress")
+}
+
+model AnonymizedCase {
+  id                   String   @id @default(uuid()) @db.Uuid
+  appointmentId        String   @unique @map("appointment_id") @db.Uuid
+  anonymizedTranscript String?  @map("anonymized_transcript") @db.Text
+  specialtyTag         String?  @map("specialty_tag") @db.VarChar
+  learningPoints       String?  @map("learning_points") @db.Text
+  isApproved           Boolean  @default(false) @map("is_approved")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@map("anonymized_cases")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String   @db.VarChar
+  message   String?  @db.Text
+  type      String   @db.VarChar
+  isRead    Boolean  @default(false) @map("is_read")
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model AiInteractionLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  interactionType String   @map("interaction_type") @db.VarChar
+  inputText       String?  @map("input_text") @db.Text
+  outputText      String?  @map("output_text") @db.Text
+  modelUsed       String?  @map("model_used") @db.VarChar
+  tokensUsed      Int?     @map("tokens_used")
+  latencyMs       Int?     @map("latency_ms")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("ai_interaction_logs")
+}
