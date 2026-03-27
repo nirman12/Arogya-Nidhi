@@ -1,0 +1,1858 @@
+[
+  {
+    "english": "Diabetes Mellitus",
+    "nepali": "मधुमेह"
+  },
+  {
+    "english": "Hypertension",
+    "nepali": "उच्च रक्तचाप"
+  },
+  {
+    "english": "Hypotension",
+    "nepali": "निम्न रक्तचाप"
+  },
+  {
+    "english": "Heart Attack",
+    "nepali": "हृदयघात"
+  },
+  {
+    "english": "Angina Pectoris",
+    "nepali": "एनजाइना"
+  },
+  {
+    "english": "Arrhythmia",
+    "nepali": "अनियमित मुटुको धड्कन"
+  },
+  {
+    "english": "Atrial Fibrillation",
+    "nepali": "एट्रियल फिब्रिलेसन"
+  },
+  {
+    "english": "Congestive Heart Failure",
+    "nepali": "हृदय असफलता"
+  },
+  {
+    "english": "Myocarditis",
+    "nepali": "मायोकार्डाइटिस"
+  },
+  {
+    "english": "Endocarditis",
+    "nepali": "एन्डोकार्डाइटिस"
+  },
+  {
+    "english": "Pericarditis",
+    "nepali": "पेरिकार्डाइटिस"
+  },
+  {
+    "english": "Stroke",
+    "nepali": "घात"
+  },
+  {
+    "english": "Atherosclerosis",
+    "nepali": "धमनीमा बोसो जम्ने रोग"
+  },
+  {
+    "english": "Peripheral Artery Disease",
+    "nepali": "परिधीय धमनी रोग"
+  },
+  {
+    "english": "Deep Vein Thrombosis",
+    "nepali": "डीभीटी (गहिरो नसामा थक्का)"
+  },
+  {
+    "english": "Varicose Veins",
+    "nepali": "भरिकोज नसाहरू"
+  },
+  {
+    "english": "Asthma",
+    "nepali": "दमा"
+  },
+  {
+    "english": "Bronchitis",
+    "nepali": "ब्रङ्काइटिस"
+  },
+  {
+    "english": "Pneumonia",
+    "nepali": "निमोनिया"
+  },
+  {
+    "english": "Tuberculosis",
+    "nepali": "क्षयरोग"
+  },
+  {
+    "english": "Emphysema",
+    "nepali": "एम्फिजिमा"
+  },
+  {
+    "english": "Chronic Obstructive Pulmonary Disease",
+    "nepali": "सिओपीडी"
+  },
+  {
+    "english": "Lung Cancer",
+    "nepali": "फोक्सोको क्यान्सर"
+  },
+  {
+    "english": "Pulmonary Embolism",
+    "nepali": "फोक्सोमा थक्का"
+  },
+  {
+    "english": "Pleural Effusion",
+    "nepali": "फोक्सो वरिपरिको तरल"
+  },
+  {
+    "english": "Interstitial Lung Disease",
+    "nepali": "अन्तरवस्तु फोक्सो रोग"
+  },
+  {
+    "english": "Migraine",
+    "nepali": "माइग्रेन"
+  },
+  {
+    "english": "Epilepsy",
+    "nepali": "अपस्मार"
+  },
+  {
+    "english": "Parkinson's Disease",
+    "nepali": "पार्किन्सन रोग"
+  },
+  {
+    "english": "Alzheimer's Disease",
+    "nepali": "अल्जाइमर रोग"
+  },
+  {
+    "english": "Multiple Sclerosis",
+    "nepali": "मल्टिपल स्क्लेरोसिस"
+  },
+  {
+    "english": "Cerebral Palsy",
+    "nepali": "मस्तिष्क पक्षघात"
+  },
+  {
+    "english": "Brain Tumor",
+    "nepali": "मस्तिष्क क्यान्सर"
+  },
+  {
+    "english": "Meningitis",
+    "nepali": "मेनिन्जाइटिस"
+  },
+  {
+    "english": "Encephalitis",
+    "nepali": "मस्तिष्क सुन्निने रोग"
+  },
+  {
+    "english": "Stroke",
+    "nepali": "घात"
+  },
+  {
+    "english": "Bell's Palsy",
+    "nepali": "बेल्स पाल्सी"
+  },
+  {
+    "english": "Depression",
+    "nepali": "अवसाद"
+  },
+  {
+    "english": "Anxiety Disorder",
+    "nepali": "चिन्ता विकार"
+  },
+  {
+    "english": "Schizophrenia",
+    "nepali": "सिजोफ्रेनिया"
+  },
+  {
+    "english": "Obsessive Compulsive Disorder",
+    "nepali": "ओसीडी"
+  },
+  {
+    "english": "Bipolar Disorder",
+    "nepali": "द्विध्रुवी विकार"
+  },
+  {
+    "english": "Post Traumatic Stress Disorder",
+    "nepali": "पीटीएसडी"
+  },
+  {
+    "english": "Autism Spectrum Disorder",
+    "nepali": "अटिजम स्पेक्ट्रम विकार"
+  },
+  {
+    "english": "Attention Deficit Hyperactivity Disorder",
+    "nepali": "एडीएचडी"
+  },
+  {
+    "english": "Gastritis",
+    "nepali": "ग्यास्ट्राइटिस"
+  },
+  {
+    "english": "Peptic Ulcer",
+    "nepali": "पेप्टिक अल्सर"
+  },
+  {
+    "english": "Gastroenteritis",
+    "nepali": "आँत्रिक संक्रमण"
+  },
+  {
+    "english": "Irritable Bowel Syndrome",
+    "nepali": "आईबीएस"
+  },
+  {
+    "english": "Crohn's Disease",
+    "nepali": "क्रोन्स रोग"
+  },
+  {
+    "english": "Ulcerative Colitis",
+    "nepali": "अल्सरेटिभ कोलाइटिस"
+  },
+  {
+    "english": "Liver Cirrhosis",
+    "nepali": "कलेजो सिरोसिस"
+  },
+  {
+    "english": "Hepatitis A",
+    "nepali": "हेपाटाइटिस ए"
+  },
+  {
+    "english": "Hepatitis B",
+    "nepali": "हेपाटाइटिस बी"
+  },
+  {
+    "english": "Hepatitis C",
+    "nepali": "हेपाटाइटिस सी"
+  },
+  {
+    "english": "Gallstones",
+    "nepali": "पित्तथैलीको ढुंगा"
+  },
+  {
+    "english": "Pancreatitis",
+    "nepali": "अग्न्याशय सुन्निने रोग"
+  },
+  {
+    "english": "Hemorrhoids",
+    "nepali": "बवासीर"
+  },
+  {
+    "english": "Kidney Failure",
+    "nepali": "मृगौला असफलता"
+  },
+  {
+    "english": "Acute Kidney Injury",
+    "nepali": "तीव्र मृगौला क्षति"
+  },
+  {
+    "english": "Nephritis",
+    "nepali": "मृगौला सुन्निने रोग"
+  },
+  {
+    "english": "Urinary Tract Infection",
+    "nepali": "मूत्रमार्ग संक्रमण"
+  },
+  {
+    "english": "Kidney Stones",
+    "nepali": "मृगौला ढुंगा"
+  },
+  {
+    "english": "Bladder Cancer",
+    "nepali": "मूत्राशय क्यान्सर"
+  },
+  {
+    "english": "Thyroiditis",
+    "nepali": "थाइरोइड सुन्निने रोग"
+  },
+  {
+    "english": "Hypothyroidism",
+    "nepali": "थाइरोइड कम हुनु"
+  },
+  {
+    "english": "Hyperthyroidism",
+    "nepali": "थाइरोइड बढ्नु"
+  },
+  {
+    "english": "Goiter",
+    "nepali": "घेंउगो"
+  },
+  {
+    "english": "Cushing's Syndrome",
+    "nepali": "कुशिङ्ग्स सिन्ड्रोम"
+  },
+  {
+    "english": "Addison's Disease",
+    "nepali": "एडिसन रोग"
+  },
+  {
+    "english": "Obesity",
+    "nepali": "मोटोपना"
+  },
+  {
+    "english": "Malnutrition",
+    "nepali": "पोषणअभाव"
+  },
+  {
+    "english": "Malaria",
+    "nepali": "मलेरिया"
+  },
+  {
+    "english": "Typhoid Fever",
+    "nepali": "टाइफाइड"
+  },
+  {
+    "english": "Dengue Fever",
+    "nepali": "डेङ्गु"
+  },
+  {
+    "english": "Cholera",
+    "nepali": "हैजा"
+  },
+  {
+    "english": "HIV/AIDS",
+    "nepali": "एचआईभी/एड्स"
+  },
+  {
+    "english": "Leprosy",
+    "nepali": "कुष्ठ रोग"
+  },
+  {
+    "english": "Measles",
+    "nepali": "दादुरा"
+  },
+  {
+    "english": "Mumps",
+    "nepali": "गलगण्ड"
+  },
+  {
+    "english": "Rubella",
+    "nepali": "रुबेला"
+  },
+  {
+    "english": "Polio",
+    "nepali": "पोलियो"
+  },
+  {
+    "english": "Whooping Cough",
+    "nepali": "कुकुरखोकी"
+  },
+  {
+    "english": "COVID-19",
+    "nepali": "कोभिड-१९"
+  },
+  {
+    "english": "Influenza",
+    "nepali": "फ्लु (इन्फ्लुएन्जा)"
+  },
+  {
+    "english": "Scabies",
+    "nepali": "खुजली"
+  },
+  {
+    "english": "Ringworm",
+    "nepali": "दाद"
+  },
+  {
+    "english": "Eczema",
+    "nepali": "एक्जिमा"
+  },
+  {
+    "english": "Psoriasis",
+    "nepali": "सोरायसिस"
+  },
+  {
+    "english": "Acne",
+    "nepali": "फुन्सी"
+  },
+  {
+    "english": "Vitiligo",
+    "nepali": "सेतो दाग"
+  },
+  {
+    "english": "Skin Cancer",
+    "nepali": "छालाको क्यान्सर"
+  },
+  {
+    "english": "Anemia",
+    "nepali": "रक्तअल्पता"
+  },
+  {
+    "english": "Leukemia",
+    "nepali": "रक्तक्यान्सर"
+  },
+  {
+    "english": "Lymphoma",
+    "nepali": "लिम्फोमा"
+  },
+  {
+    "english": "Hemophilia",
+    "nepali": "हिमोफिलिया"
+  },
+  {
+    "english": "Thalassemia",
+    "nepali": "थालासेमिया"
+  },
+  {
+    "english": "Sickle Cell Anemia",
+    "nepali": "सिकल सेल एनिमिया"
+  },
+  {
+    "english": "Allergy",
+    "nepali": "एलर्जी"
+  },
+  {
+    "english": "Rheumatoid Arthritis",
+    "nepali": "रुमाटोइड गठिया"
+  },
+  {
+    "english": "Systemic Lupus Erythematosus",
+    "nepali": "ल्युपस"
+  },
+  {
+    "english": "Osteoarthritis",
+    "nepali": "अस्थिगठिया"
+  },
+  {
+    "english": "Osteoporosis",
+    "nepali": "हड्डी पातलो हुने रोग"
+  },
+  {
+    "english": "Fracture",
+    "nepali": "हड्डी भाँचिनु"
+  },
+  {
+    "english": "Gout",
+    "nepali": "गठिया (गाउट)"
+  },
+  {
+    "english": "Muscular Dystrophy",
+    "nepali": "मांसपेशी कमजोरी"
+  },
+  {
+    "english": "Kwashiorkor",
+    "nepali": "क्वासिओरकोर"
+  },
+  {
+    "english": "Marasmus",
+    "nepali": "मरास्मस"
+  },
+  {
+    "english": "Neonatal Jaundice",
+    "nepali": "नवजात पीलिया"
+  },
+  {
+    "english": "Food Poisoning",
+    "nepali": "बासी खाना विषाक्तता"
+  },
+  {
+    "english": "Heat Stroke",
+    "nepali": "घाम लाग्ने"
+  },
+  {
+    "english": "Dehydration",
+    "nepali": "निर्जलीकरण"
+  },
+  {
+    "english": "Cataract",
+    "nepali": "मोतीबिन्दु"
+  },
+  {
+    "english": "Glaucoma",
+    "nepali": "कालोपाटी"
+  },
+  {
+    "english": "Conjunctivitis",
+    "nepali": "आँखा रातो हुने रोग"
+  },
+  {
+    "english": "Retinal Detachment",
+    "nepali": "रेटिना अलग्गिने"
+  },
+  {
+    "english": "Macular Degeneration",
+    "nepali": "म्याकुलर डिजेनरेसन"
+  },
+  {
+    "english": "Night Blindness",
+    "nepali": "रातमा नदेख्ने"
+  },
+  {
+    "english": "Color Blindness",
+    "nepali": "रङ अन्धोपन"
+  },
+  {
+    "english": "Trachoma",
+    "nepali": "ट्राकोमा"
+  },
+  {
+    "english": "Tonsillitis",
+    "nepali": "टन्सिल सुन्निने"
+  },
+  {
+    "english": "Sinusitis",
+    "nepali": "साइनस संक्रमण"
+  },
+  {
+    "english": "Otitis Media",
+    "nepali": "मध्य कानको संक्रमण"
+  },
+  {
+    "english": "Hearing Loss",
+    "nepali": "श्रवण शक्ति घट्नु"
+  },
+  {
+    "english": "Vertigo",
+    "nepali": "घुम्ती रोग"
+  },
+  {
+    "english": "Nasal Polyps",
+    "nepali": "नाकमा मासु बढ्नु"
+  },
+  {
+    "english": "Laryngitis",
+    "nepali": "घाँटी सुन्निने"
+  },
+  {
+    "english": "Endometriosis",
+    "nepali": "एन्डोमेट्रियोसिस"
+  },
+  {
+    "english": "Polycystic Ovary Syndrome",
+    "nepali": "पीसीओएस"
+  },
+  {
+    "english": "Fibroids",
+    "nepali": "गर्भाशयमा मासु"
+  },
+  {
+    "english": "Ovarian Cancer",
+    "nepali": "डिम्बाशय क्यान्सर"
+  },
+  {
+    "english": "Cervical Cancer",
+    "nepali": "गर्भाशयको मुखको क्यान्सर"
+  },
+  {
+    "english": "Breast Cancer",
+    "nepali": "स्तन क्यान्सर"
+  },
+  {
+    "english": "Preeclampsia",
+    "nepali": "गर्भावस्थामा उच्च रक्तचाप"
+  },
+  {
+    "english": "Eclampsia",
+    "nepali": "गर्भावस्थामा दौरा"
+  },
+  {
+    "english": "Gestational Diabetes",
+    "nepali": "गर्भावस्थाको मधुमेह"
+  },
+  {
+    "english": "Miscarriage",
+    "nepali": "गर्भपतन"
+  },
+  {
+    "english": "Stillbirth",
+    "nepali": "मृत शिशु जन्म"
+  },
+  {
+    "english": "Infertility",
+    "nepali": "बाँझोपन"
+  },
+  {
+    "english": "Prostate Cancer",
+    "nepali": "प्रोस्टेट क्यान्सर"
+  },
+  {
+    "english": "Stomach Cancer",
+    "nepali": "पेटको क्यान्सर"
+  },
+  {
+    "english": "Esophageal Cancer",
+    "nepali": "खाने नलीको क्यान्सर"
+  },
+  {
+    "english": "Colorectal Cancer",
+    "nepali": "मलद्वार/आन्द्राको क्यान्सर"
+  },
+  {
+    "english": "Pancreatic Cancer",
+    "nepali": "अग्न्याशयको क्यान्सर"
+  },
+  {
+    "english": "Liver Cancer",
+    "nepali": "कलेजोको क्यान्सर"
+  },
+  {
+    "english": "Skin Melanoma",
+    "nepali": "छालाको मेलानोमा"
+  },
+  {
+    "english": "Kala-azar",
+    "nepali": "कालाजार"
+  },
+  {
+    "english": "Japanese Encephalitis",
+    "nepali": "जापानी इन्सेफलाइटिस"
+  },
+  {
+    "english": "Filariasis",
+    "nepali": "फाइलेरिया"
+  },
+  {
+    "english": "Tetanus",
+    "nepali": "धनुषटंकार"
+  },
+  {
+    "english": "Rabies",
+    "nepali": "पागल कुकुर रोग"
+  },
+  {
+    "english": "Syphilis",
+    "nepali": "सिफिलिस"
+  },
+  {
+    "english": "Gonorrhea",
+    "nepali": "गोनोरिया"
+  },
+  {
+    "english": "Chlamydia",
+    "nepali": "क्लामाइडिया"
+  },
+  {
+    "english": "Appendicitis",
+    "nepali": "अपेन्डिसाइटिस"
+  },
+  {
+    "english": "Hernia",
+    "nepali": "हर्निया"
+  },
+  {
+    "english": "Gallbladder Inflammation",
+    "nepali": "पित्तथैली सुन्निने रोग"
+  },
+  {
+    "english": "Pancreatic Cyst",
+    "nepali": "अग्न्याशयको बोक्रा"
+  },
+  {
+    "english": "Burn Injury",
+    "nepali": "जलन"
+  },
+  {
+    "english": "Frostbite",
+    "nepali": "चिसोले जम्ने चोट"
+  },
+  {
+    "english": "Head Injury",
+    "nepali": "टाउकोको चोट"
+  },
+  {
+    "english": "Spinal Cord Injury",
+    "nepali": "मेरुदण्डको चोट"
+  },
+  {
+    "english": "Multiple Trauma",
+    "nepali": "एकैसाथ धेरै चोट"
+  },
+  {
+    "english": "Hashimoto's Thyroiditis",
+    "nepali": "हाशिमोटो थाइरोइडाइटिस"
+  },
+  {
+    "english": "Graves' Disease",
+    "nepali": "ग्रेभ्स रोग"
+  },
+  {
+    "english": "Celiac Disease",
+    "nepali": "सिलियाक रोग"
+  },
+  {
+    "english": "Scleroderma",
+    "nepali": "स्क्लेरोडर्मा"
+  },
+  {
+    "english": "Down Syndrome",
+    "nepali": "डाउन सिन्ड्रोम"
+  },
+  {
+    "english": "Turner Syndrome",
+    "nepali": "टर्नर सिन्ड्रोम"
+  },
+  {
+    "english": "Klinefelter Syndrome",
+    "nepali": "क्लाइनफेल्टर सिन्ड्रोम"
+  },
+  {
+    "english": "Hemolytic Disease of the Newborn",
+    "nepali": "नवजात शिशुको रक्त रोग"
+  },
+  {
+    "english": "Phenylketonuria",
+    "nepali": "फेनाइलकेटोनुरिया"
+  },
+  {
+    "english": "Cystic Fibrosis",
+    "nepali": "सिस्टिक फाइब्रोसिस"
+  },
+  {
+    "english": "Spina Bifida",
+    "nepali": "मेरुदण्ड खुला हुने दोष"
+  },
+  {
+    "english": "Sepsis",
+    "nepali": "सेप्सिस"
+  },
+  {
+    "english": "Shock",
+    "nepali": "सक"
+  },
+  {
+    "english": "Anaphylaxis",
+    "nepali": "गम्भीर एलर्जी प्रतिक्रिया"
+  },
+  {
+    "english": "Chronic Fatigue Syndrome",
+    "nepali": "दीर्घ थकान सिन्ड्रोम"
+  },
+  {
+    "english": "Fibromyalgia",
+    "nepali": "फाइब्रोमाइल्जिया"
+  },
+  {
+    "english": "Gouty Arthritis",
+    "nepali": "गाउटी गठिया"
+  },
+  {
+    "english": "Sarcoidosis",
+    "nepali": "सार्कोइडोसिस"
+  },
+  {
+    "english": "Blepharitis",
+    "nepali": "पल्काको सुन्निने रोग"
+  },
+  {
+    "english": "Keratitis",
+    "nepali": "कर्निया सुन्निने रोग"
+  },
+  {
+    "english": "Uveitis",
+    "nepali": "यूभाइटिस"
+  },
+  {
+    "english": "Diabetic Retinopathy",
+    "nepali": "मधुमेही रेटिनोप्याथी"
+  },
+  {
+    "english": "Strabismus",
+    "nepali": "भेंगो"
+  },
+  {
+    "english": "Pharyngitis",
+    "nepali": "घाँटी सुन्निने"
+  },
+  {
+    "english": "Epistaxis",
+    "nepali": "नाकबाट रगत बग्ने"
+  },
+  {
+    "english": "Meniere's Disease",
+    "nepali": "मेनीएर्स रोग"
+  },
+  {
+    "english": "Acoustic Neuroma",
+    "nepali": "श्रवण स्नायु ट्युमर"
+  },
+  {
+    "english": "Pelvic Inflammatory Disease",
+    "nepali": "श्रोणी सुन्निने रोग"
+  },
+  {
+    "english": "Endometrial Cancer",
+    "nepali": "गर्भाशयको भित्ताको क्यान्सर"
+  },
+  {
+    "english": "Hyperemesis Gravidarum",
+    "nepali": "गर्भावस्थामा अत्यधिक वान्ता"
+  },
+  {
+    "english": "Placenta Previa",
+    "nepali": "असामान्य स्थानमा प्लासेण्टा"
+  },
+  {
+    "english": "Placental Abruption",
+    "nepali": "प्लासेण्टा छुट्टिने"
+  },
+  {
+    "english": "Preterm Labor",
+    "nepali": "असमय प्रसव"
+  },
+  {
+    "english": "Postpartum Hemorrhage",
+    "nepali": "प्रसवपछिको रक्तस्राव"
+  },
+  {
+    "english": "Kidney Cancer",
+    "nepali": "मृगौला क्यान्सर"
+  },
+  {
+    "english": "Testicular Cancer",
+    "nepali": "वृषण क्यान्सर"
+  },
+  {
+    "english": "Bone Cancer",
+    "nepali": "हड्डी क्यान्सर"
+  },
+  {
+    "english": "Oral Cancer",
+    "nepali": "मुखको क्यान्सर"
+  },
+  {
+    "english": "Laryngeal Cancer",
+    "nepali": "घाँटीको क्यान्सर"
+  },
+  {
+    "english": "Plague",
+    "nepali": "प्लेग"
+  },
+  {
+    "english": "Smallpox",
+    "nepali": "चेचक"
+  },
+  {
+    "english": "Chickenpox",
+    "nepali": "बदिरा"
+  },
+  {
+    "english": "Herpes Zoster",
+    "nepali": "हरपिस जोस्टर"
+  },
+  {
+    "english": "Herpes Simplex",
+    "nepali": "हरपिस"
+  },
+  {
+    "english": "Brucellosis",
+    "nepali": "ब्रुसेलोसिस"
+  },
+  {
+    "english": "Leptospirosis",
+    "nepali": "लेप्टोस्पाइरोसिस"
+  },
+  {
+    "english": "Anthrax",
+    "nepali": "एनथ्राक्स"
+  },
+  {
+    "english": "Alopecia",
+    "nepali": "कपाल झर्ने"
+  },
+  {
+    "english": "Melasma",
+    "nepali": "मेलाज्मा"
+  },
+  {
+    "english": "Warts",
+    "nepali": "मस्सा"
+  },
+  {
+    "english": "Contact Dermatitis",
+    "nepali": "सम्पर्कजन्य छालाको रोग"
+  },
+  {
+    "english": "Vitiligo",
+    "nepali": "सेतो दाग"
+  },
+  {
+    "english": "Hives (Urticaria)",
+    "nepali": "चिलाउने दाग (हाइव्स)"
+  },
+  {
+    "english": "Ankylosing Spondylitis",
+    "nepali": "एङ्काइलोजिङ स्पन्डिलाइटिस"
+  },
+  {
+    "english": "Polymyositis",
+    "nepali": "पोलिमायोसाइटिस"
+  },
+  {
+    "english": "Dermatomyositis",
+    "nepali": "डर्माटोमायोसाइटिस"
+  },
+  {
+    "english": "Vasculitis",
+    "nepali": "रगत नली सुन्निने"
+  },
+  {
+    "english": "Sjogren's Syndrome",
+    "nepali": "स्जोग्रेन्स सिन्ड्रोम"
+  },
+  {
+    "english": "Guillain-Barre Syndrome",
+    "nepali": "गिलियन-बार्रे सिन्ड्रोम"
+  },
+  {
+    "english": "Huntington's Disease",
+    "nepali": "हंटिङ्टन रोग"
+  },
+  {
+    "english": "Amyotrophic Lateral Sclerosis",
+    "nepali": "एएलएस"
+  },
+  {
+    "english": "Neuropathy",
+    "nepali": "स्नायु रोग"
+  },
+  {
+    "english": "Brain Abscess",
+    "nepali": "मस्तिष्कमा फोको"
+  },
+  {
+    "english": "Panic Disorder",
+    "nepali": "आकस्मिक डर"
+  },
+  {
+    "english": "Phobia",
+    "nepali": "फोबिया"
+  },
+  {
+    "english": "Sleep Disorder",
+    "nepali": "निद्रा विकार"
+  },
+  {
+    "english": "Insomnia",
+    "nepali": "अनिद्रा"
+  },
+  {
+    "english": "Narcolepsy",
+    "nepali": "अत्यधिक निद्रा"
+  },
+  {
+    "english": "Substance Use Disorder",
+    "nepali": "लत रोग"
+  },
+  {
+    "english": "Alcoholism",
+    "nepali": "मद्यपानको लत"
+  },
+  {
+    "english": "Fragile X Syndrome",
+    "nepali": "फ्राजाइल एक्स सिन्ड्रोम"
+  },
+  {
+    "english": "Edwards Syndrome",
+    "nepali": "एडवर्ड्स सिन्ड्रोम"
+  },
+  {
+    "english": "Patau Syndrome",
+    "nepali": "पाटाउ सिन्ड्रोम"
+  },
+  {
+    "english": "Rickets",
+    "nepali": "रिकेट्स"
+  },
+  {
+    "english": "Scurvy",
+    "nepali": "स्कर्भी"
+  },
+  {
+    "english": "Hydrocephalus",
+    "nepali": "मस्तिष्कमा पानी बढ्ने"
+  },
+  {
+    "english": "Microcephaly",
+    "nepali": "सानो टाउको"
+  },
+  {
+    "english": "Diabetic Ketoacidosis",
+    "nepali": "मधुमेही किटोएसिडोसिस"
+  },
+  {
+    "english": "Hyperlipidemia",
+    "nepali": "रगतमा बोसो बढ्ने"
+  },
+  {
+    "english": "Metabolic Syndrome",
+    "nepali": "मेटाबोलिक सिन्ड्रोम"
+  },
+  {
+    "english": "Hypoglycemia",
+    "nepali": "रगतमा चिनी घट्ने"
+  },
+  {
+    "english": "Hyperglycemia",
+    "nepali": "रगतमा चिनी बढ्ने"
+  },
+  {
+    "english": "Iron Deficiency Anemia",
+    "nepali": "फलाम अभावजन्य रक्तअल्पता"
+  },
+  {
+    "english": "Vitamin B12 Deficiency",
+    "nepali": "भिटामिन बी१२ अभाव"
+  },
+  {
+    "english": "Folate Deficiency Anemia",
+    "nepali": "फोलिक एसिड अभावजन्य रक्तअल्पता"
+  },
+  {
+    "english": "Polycythemia Vera",
+    "nepali": "पोलिसाइथेमिया भेरा"
+  },
+  {
+    "english": "Myeloma",
+    "nepali": "मायलोमा"
+  },
+  {
+    "english": "Chronic Kidney Disease",
+    "nepali": "दीर्घ मृगौला रोग"
+  },
+  {
+    "english": "Septicemia",
+    "nepali": "सेप्टिसेमिया"
+  },
+  {
+    "english": "Hypothermia",
+    "nepali": "शरीरको तापक्रम घट्ने"
+  },
+  {
+    "english": "Hyperthermia",
+    "nepali": "शरीरको तापक्रम बढ्ने"
+  },
+  {
+    "english": "Poisoning",
+    "nepali": "विषाक्तता"
+  },
+  {
+    "english": "Snake Bite",
+    "nepali": "सर्पदंश"
+  },
+  {
+    "english": "Dog Bite",
+    "nepali": "कुकुरले टोकेको"
+  },
+  {
+    "english": "Burnout Syndrome",
+    "nepali": "थकान सिन्ड्रोम"
+  },
+  {
+    "english": "Astigmatism",
+    "nepali": "एस्टिग्माटिज्म"
+  },
+  {
+    "english": "Myopia",
+    "nepali": "नजिक नदेख्ने"
+  },
+  {
+    "english": "Hyperopia",
+    "nepali": "टाढा नदेख्ने"
+  },
+  {
+    "english": "Presbyopia",
+    "nepali": "बुढ्यौलीमा नदेख्ने"
+  },
+  {
+    "english": "Dry Eye Syndrome",
+    "nepali": "आँखा सुख्खा हुने"
+  },
+  {
+    "english": "Cholesteatoma",
+    "nepali": "कानमा मासु बढ्ने रोग"
+  },
+  {
+    "english": "Barotrauma",
+    "nepali": "दबाबको चोट (कान/नाक)"
+  },
+  {
+    "english": "Rhinitis",
+    "nepali": "नाक सुन्निने रोग"
+  },
+  {
+    "english": "Allergic Rhinitis",
+    "nepali": "एलर्जिक राइनाइटिस"
+  },
+  {
+    "english": "Deviated Nasal Septum",
+    "nepali": "नाकको पर्खाल बाङ्गो हुनु"
+  },
+  {
+    "english": "Menorrhagia",
+    "nepali": "अत्यधिक महिनावारी"
+  },
+  {
+    "english": "Amenorrhea",
+    "nepali": "महिनावारी नआउनु"
+  },
+  {
+    "english": "Dysmenorrhea",
+    "nepali": "महिनावारी दुखाइ"
+  },
+  {
+    "english": "Premenstrual Syndrome",
+    "nepali": "महिनावारी पूर्व लक्षण"
+  },
+  {
+    "english": "Menopause",
+    "nepali": "रजोनिवृत्ति"
+  },
+  {
+    "english": "Ovarian Cyst",
+    "nepali": "डिम्बाशयमा बोक्रा"
+  },
+  {
+    "english": "Pelvic Prolapse",
+    "nepali": "गर्भाशय तल झर्ने"
+  },
+  {
+    "english": "Mesothelioma",
+    "nepali": "मेसोथेलियोमा"
+  },
+  {
+    "english": "Glioblastoma",
+    "nepali": "ग्लियोब्लास्टोमा"
+  },
+  {
+    "english": "Hodgkin's Lymphoma",
+    "nepali": "हड्किन्स लिम्फोमा"
+  },
+  {
+    "english": "Non-Hodgkin's Lymphoma",
+    "nepali": "नन-हड्किन्स लिम्फोमा"
+  },
+  {
+    "english": "Multiple Myeloma",
+    "nepali": "मल्टिपल मायलोमा"
+  },
+  {
+    "english": "Typhus",
+    "nepali": "टाइफस"
+  },
+  {
+    "english": "Zika Virus Infection",
+    "nepali": "जिका भाइरस संक्रमण"
+  },
+  {
+    "english": "Ebola Virus Disease",
+    "nepali": "इबोला रोग"
+  },
+  {
+    "english": "Hantavirus",
+    "nepali": "हान्ताभाइरस"
+  },
+  {
+    "english": "Yellow Fever",
+    "nepali": "पँधेरे ज्वरो"
+  },
+  {
+    "english": "West Nile Virus",
+    "nepali": "वेस्ट नाइल भाइरस"
+  },
+  {
+    "english": "Crimean-Congo Hemorrhagic Fever",
+    "nepali": "क्रिमियन-कङ्गो हेमोराजिक फिभर"
+  },
+  {
+    "english": "Seborrheic Dermatitis",
+    "nepali": "सेबोरियक डर्माटाइटिस"
+  },
+  {
+    "english": "Rosacea",
+    "nepali": "रोसासिया"
+  },
+  {
+    "english": "Actinic Keratosis",
+    "nepali": "एक्टिनिक केरेटोसिस"
+  },
+  {
+    "english": "Basal Cell Carcinoma",
+    "nepali": "बेसल सेल कार्सिनोमा"
+  },
+  {
+    "english": "Squamous Cell Carcinoma",
+    "nepali": "स्क्वामस सेल कार्सिनोमा"
+  },
+  {
+    "english": "Psoriatic Arthritis",
+    "nepali": "सोरियाटिक गठिया"
+  },
+  {
+    "english": "Temporal Arteritis",
+    "nepali": "टेम्पोरल आर्टेराइटिस"
+  },
+  {
+    "english": "Takayasu Arteritis",
+    "nepali": "ताकायासु आर्टेराइटिस"
+  },
+  {
+    "english": "Wegener's Granulomatosis",
+    "nepali": "वेगेनर्स ग्रानुलोमाटोसिस"
+  },
+  {
+    "english": "Goodpasture Syndrome",
+    "nepali": "गुडपास्तुर सिन्ड्रोम"
+  },
+  {
+    "english": "Transient Ischemic Attack",
+    "nepali": "क्षणिक घात"
+  },
+  {
+    "english": "Cluster Headache",
+    "nepali": "क्लस्टर टाउको दुखाइ"
+  },
+  {
+    "english": "Tension Headache",
+    "nepali": "तनावजन्य टाउको दुखाइ"
+  },
+  {
+    "english": "Myasthenia Gravis",
+    "nepali": "मायस्थेनिया ग्राभिस"
+  },
+  {
+    "english": "Restless Leg Syndrome",
+    "nepali": "रेस्टलेस लेग सिन्ड्रोम"
+  },
+  {
+    "english": "Mania",
+    "nepali": "म्यानिया"
+  },
+  {
+    "english": "Hypomania",
+    "nepali": "हाइपोम्यानिया"
+  },
+  {
+    "english": "Borderline Personality Disorder",
+    "nepali": "बर्डरलाइन व्यक्तित्व विकार"
+  },
+  {
+    "english": "Antisocial Personality Disorder",
+    "nepali": "विपरित सामाजिक व्यक्तित्व विकार"
+  },
+  {
+    "english": "Paranoid Personality Disorder",
+    "nepali": "प्यारानॉइड व्यक्तित्व विकार"
+  },
+  {
+    "english": "Dissociative Identity Disorder",
+    "nepali": "द्वैध पहिचान विकार"
+  },
+  {
+    "english": "Williams Syndrome",
+    "nepali": "विलियम्स सिन्ड्रोम"
+  },
+  {
+    "english": "Prader-Willi Syndrome",
+    "nepali": "प्राडर-वि‍ल्ली सिन्ड्रोम"
+  },
+  {
+    "english": "Angelman Syndrome",
+    "nepali": "एन्जेलम्यान सिन्ड्रोम"
+  },
+  {
+    "english": "Noonan Syndrome",
+    "nepali": "नूनन सिन्ड्रोम"
+  },
+  {
+    "english": "Albinism",
+    "nepali": "अल्बिनिज्म"
+  },
+  {
+    "english": "Hyperparathyroidism",
+    "nepali": "प्याराथाइरोइड बढ्नु"
+  },
+  {
+    "english": "Hypoparathyroidism",
+    "nepali": "प्याराथाइरोइड कम हुनु"
+  },
+  {
+    "english": "Hypercalcemia",
+    "nepali": "क्याल्सियम बढ्नु"
+  },
+  {
+    "english": "Hypocalcemia",
+    "nepali": "क्याल्सियम कम हुनु"
+  },
+  {
+    "english": "Diabetes Insipidus",
+    "nepali": "डायबिटिज इन्सिपिडस"
+  },
+  {
+    "english": "Aplastic Anemia",
+    "nepali": "एप्लास्टिक एनिमिया"
+  },
+  {
+    "english": "Myelodysplastic Syndrome",
+    "nepali": "मायलोडिस्प्लास्टिक सिन्ड्रोम"
+  },
+  {
+    "english": "Hemolytic Anemia",
+    "nepali": "रगत फुट्ने एनिमिया"
+  },
+  {
+    "english": "Idiopathic Thrombocytopenic Purpura",
+    "nepali": "आईटीपी"
+  },
+  {
+    "english": "Disseminated Intravascular Coagulation",
+    "nepali": "डिआईसी"
+  },
+  {
+    "english": "Radiation Sickness",
+    "nepali": "विकिरण रोग"
+  },
+  {
+    "english": "Motion Sickness",
+    "nepali": "गाडी/विमानमा वाकवाकी"
+  },
+  {
+    "english": "Altitude Sickness",
+    "nepali": "उचाइ रोग"
+  },
+  {
+    "english": "Jet Lag",
+    "nepali": "समय फरकको असर"
+  },
+  {
+    "english": "Chronic Pain Syndrome",
+    "nepali": "दीर्घ पीडा सिन्ड्रोम"
+  },
+  {
+    "english": "Electrolyte Imbalance",
+    "nepali": "इलेक्ट्रोलाइट असन्तुलन"
+  },
+  {
+    "english": "Rheumatic Heart Disease",
+    "nepali": "रुमाटिक हृदय रोग"
+  },
+  {
+    "english": "Mitral Valve Prolapse",
+    "nepali": "माइट्रल भल्भ प्रोल्याप्स"
+  },
+  {
+    "english": "Aortic Stenosis",
+    "nepali": "एओर्टिक स्टेनोसिस"
+  },
+  {
+    "english": "Mitral Stenosis",
+    "nepali": "माइट्रल स्टेनोसिस"
+  },
+  {
+    "english": "Tricuspid Regurgitation",
+    "nepali": "ट्राइकसपिड रिगर्गिटेसन"
+  },
+  {
+    "english": "Pulmonary Hypertension",
+    "nepali": "फोक्सो सम्बन्धी उच्च रक्तचाप"
+  },
+  {
+    "english": "Cardiomyopathy",
+    "nepali": "कार्डियोमायोप्याथी"
+  },
+  {
+    "english": "Hypertrophic Cardiomyopathy",
+    "nepali": "हाइपरट्रोफिक कार्डियोमायोप्याथी"
+  },
+  {
+    "english": "Dilated Cardiomyopathy",
+    "nepali": "डाइलेटेड कार्डियोमायोप्याथी"
+  },
+  {
+    "english": "Restrictive Cardiomyopathy",
+    "nepali": "रिस्ट्रिक्टिभ कार्डियोमायोप्याथी"
+  },
+  {
+    "english": "Endocardial Fibroelastosis",
+    "nepali": "एन्डोकार्डियल फाइब्रोइलास्टोसिस"
+  },
+  {
+    "english": "Peripartum Cardiomyopathy",
+    "nepali": "प्रसवपश्चात कार्डियोमायोप्याथी"
+  },
+  {
+    "english": "Trigeminal Neuralgia",
+    "nepali": "ट्राइजेमिनल न्युराल्जिया"
+  },
+  {
+    "english": "Peripheral Neuropathy",
+    "nepali": "पेरिफेरल न्युरोप्याथी"
+  },
+  {
+    "english": "Spinal Muscular Atrophy",
+    "nepali": "स्पाइनल मस्कुलर एट्रोफी"
+  },
+  {
+    "english": "Ataxia",
+    "nepali": "एटाक्सिया"
+  },
+  {
+    "english": "Tourette Syndrome",
+    "nepali": "टुरेट सिन्ड्रोम"
+  },
+  {
+    "english": "Dystonia",
+    "nepali": "डिस्टोनिया"
+  },
+  {
+    "english": "Essential Tremor",
+    "nepali": "एसेन्सियल ट्रेमर"
+  },
+  {
+    "english": "Epileptic Status",
+    "nepali": "एपिलेप्टिक स्टाटस"
+  },
+  {
+    "english": "Hemiplegia",
+    "nepali": "अर्धाङ्गघात"
+  },
+  {
+    "english": "Paraplegia",
+    "nepali": "तल्लो भाग पक्षघात"
+  },
+  {
+    "english": "Quadriplegia",
+    "nepali": "चारै भाग पक्षघात"
+  },
+  {
+    "english": "Typhus Fever",
+    "nepali": "टाइफस ज्वरो"
+  },
+  {
+    "english": "Relapsing Fever",
+    "nepali": "रिलाप्सिङ ज्वरो"
+  },
+  {
+    "english": "Q Fever",
+    "nepali": "क्यु फिभर"
+  },
+  {
+    "english": "Scrub Typhus",
+    "nepali": "स्क्रब टाइफस"
+  },
+  {
+    "english": "Listeriosis",
+    "nepali": "लिस्टेरियोसिस"
+  },
+  {
+    "english": "Diphtheria",
+    "nepali": "डिप्थेरिया"
+  },
+  {
+    "english": "Pertussis",
+    "nepali": "पर्टुसिस"
+  },
+  {
+    "english": "Shigellosis",
+    "nepali": "शिगेल्लोसिस"
+  },
+  {
+    "english": "Campylobacteriosis",
+    "nepali": "क्याम्पिलोब्याक्टेरियोसिस"
+  },
+  {
+    "english": "Histoplasmosis",
+    "nepali": "हिस्टोप्लाज्मोसिस"
+  },
+  {
+    "english": "Cryptococcosis",
+    "nepali": "क्रिप्टोकोकोसिस"
+  },
+  {
+    "english": "Aspergillosis",
+    "nepali": "एस्परगिलोसिस"
+  },
+  {
+    "english": "Candidiasis",
+    "nepali": "क्यान्डिडायसिस"
+  },
+  {
+    "english": "Toxoplasmosis",
+    "nepali": "टोक्सोप्लाज्मोसिस"
+  },
+  {
+    "english": "Giardiasis",
+    "nepali": "जियार्डियासिस"
+  },
+  {
+    "english": "Amebiasis",
+    "nepali": "अमीबियासिस"
+  },
+  {
+    "english": "Trichomoniasis",
+    "nepali": "ट्राइकोमोनियासिस"
+  },
+  {
+    "english": "Marfan Syndrome",
+    "nepali": "मार्फान सिन्ड्रोम"
+  },
+  {
+    "english": "Ehlers-Danlos Syndrome",
+    "nepali": "एलर्स-डान्लोस सिन्ड्रोम"
+  },
+  {
+    "english": "Neurofibromatosis",
+    "nepali": "न्युरोफाइब्रोमाटोसिस"
+  },
+  {
+    "english": "Von Hippel-Lindau Disease",
+    "nepali": "भोन हिप्पेल-लिन्डाउ रोग"
+  },
+  {
+    "english": "Tay-Sachs Disease",
+    "nepali": "टे-साक्स रोग"
+  },
+  {
+    "english": "Gaucher Disease",
+    "nepali": "गौचर रोग"
+  },
+  {
+    "english": "Pompe Disease",
+    "nepali": "पोम्पे रोग"
+  },
+  {
+    "english": "Maple Syrup Urine Disease",
+    "nepali": "मेपल सिरप युरिन रोग"
+  },
+  {
+    "english": "Wilson's Disease",
+    "nepali": "विल्सन रोग"
+  },
+  {
+    "english": "Hemochromatosis",
+    "nepali": "हेमोक्रोमाटोसिस"
+  },
+  {
+    "english": "Alkaptonuria",
+    "nepali": "अल्काप्टोनुरिया"
+  },
+  {
+    "english": "Galactosemia",
+    "nepali": "गालाक्टोसेमिया"
+  },
+  {
+    "english": "Polymyalgia Rheumatica",
+    "nepali": "पोलिमायल्जिया रुमाटिका"
+  },
+  {
+    "english": "Chondromalacia Patellae",
+    "nepali": "कन्ड्रोमालासिया पटेला"
+  },
+  {
+    "english": "Paget's Disease of Bone",
+    "nepali": "हड्डीको पेजेट रोग"
+  },
+  {
+    "english": "Fibrous Dysplasia",
+    "nepali": "फाइब्रस डिस्प्लासिया"
+  },
+  {
+    "english": "Ewing Sarcoma",
+    "nepali": "युइङ सार्कोमा"
+  },
+  {
+    "english": "Osteosarcoma",
+    "nepali": "ओस्टियोसार्कोमा"
+  },
+  {
+    "english": "Bronchiectasis",
+    "nepali": "ब्रङ्किइक्टेसिस"
+  },
+  {
+    "english": "Silicosis",
+    "nepali": "सिलिकोसिस"
+  },
+  {
+    "english": "Asbestosis",
+    "nepali": "एस्बेस्टोसिस"
+  },
+  {
+    "english": "Coal Workers’ Pneumoconiosis",
+    "nepali": "कोइला कामदारको फोक्सो रोग"
+  },
+  {
+    "english": "Hypersensitivity Pneumonitis",
+    "nepali": "अत्यधिक संवेदनशीलता निमोनाइटिस"
+  },
+  {
+    "english": "Acute Respiratory Distress Syndrome",
+    "nepali": "एआरडिएस"
+  },
+  {
+    "english": "Disseminated Tuberculosis",
+    "nepali": "फैलिएको क्षयरोग"
+  },
+  {
+    "english": "Agranulocytosis",
+    "nepali": "एग्रानुलोसाइटोसिस"
+  },
+  {
+    "english": "Neutropenia",
+    "nepali": "न्युट्रोपेनिया"
+  },
+  {
+    "english": "Eosinophilia",
+    "nepali": "इओसिनोफिलिया"
+  },
+  {
+    "english": "Mononucleosis",
+    "nepali": "मोनोन्यूक्लियोसिस"
+  },
+  {
+    "english": "Waldenstrom Macroglobulinemia",
+    "nepali": "वाल्डेनस्ट्रोम म्याक्रोग्लोबुलिनेमिया"
+  },
+  {
+    "english": "Impetigo",
+    "nepali": "इम्पेटिगो"
+  },
+  {
+    "english": "Cellulitis",
+    "nepali": "सेलुलाइटिस"
+  },
+  {
+    "english": "Erysipelas",
+    "nepali": "एरिसिपेलस"
+  },
+  {
+    "english": "Folliculitis",
+    "nepali": "फलिकुलाइटिस"
+  },
+  {
+    "english": "Carbuncle",
+    "nepali": "कार्बन्कल"
+  },
+  {
+    "english": "Melanoma",
+    "nepali": "मेलानोमा"
+  },
+  {
+    "english": "Actinic Keratosis",
+    "nepali": "एक्टिनिक केरेटोसिस"
+  },
+  {
+    "english": "Basal Cell Carcinoma",
+    "nepali": "बेसल सेल कार्सिनोमा"
+  },
+  {
+    "english": "Squamous Cell Carcinoma",
+    "nepali": "स्क्वामस सेल कार्सिनोमा"
+  },
+  {
+    "english": "Lichen Planus",
+    "nepali": "लाइकेन प्लानस"
+  },
+  {
+    "english": "Pityriasis Rosea",
+    "nepali": "पिटिरियासिस रोजिया"
+  },
+  {
+    "english": "Pityriasis Versicolor",
+    "nepali": "पिटिरियासिस भर्सिकलर"
+  },
+  {
+    "english": "Keratosis Pilaris",
+    "nepali": "केराटोसिस पिलारिस"
+  },
+  {
+    "english": "Ichthyosis",
+    "nepali": "इक्थियोसिस"
+  },
+  {
+    "english": "Xeroderma Pigmentosum",
+    "nepali": "जेरोडर्मा पिग्मेन्टोसुम"
+  },
+  {
+    "english": "Hidradenitis Suppurativa",
+    "nepali": "हाइड्राडेनाइटिस सुप्पुराटिभा"
+  },
+  {
+    "english": "Blepharospasm",
+    "nepali": "ब्लेफारोस्पाज्म"
+  },
+  {
+    "english": "Keratoconus",
+    "nepali": "केराटोकोनस"
+  },
+  {
+    "english": "Pterygium",
+    "nepali": "प्टेरिजियम"
+  },
+  {
+    "english": "Stye (Hordeolum)",
+    "nepali": "अन्जिरा (स्टाइ)"
+  },
+  {
+    "english": "Chalazion",
+    "nepali": "चालाजियन"
+  },
+  {
+    "english": "Retinitis Pigmentosa",
+    "nepali": "रेटिनाइटिस पिग्मेन्टोसा"
+  },
+  {
+    "english": "Macular Hole",
+    "nepali": "म्याकुलर प्वाल"
+  },
+  {
+    "english": "Central Retinal Vein Occlusion",
+    "nepali": "केन्द्रिय रेटिनल शिरा अवरुद्ध"
+  },
+  {
+    "english": "Central Retinal Artery Occlusion",
+    "nepali": "केन्द्रिय रेटिनल धमनी अवरुद्ध"
+  },
+  {
+    "english": "Optic Neuritis",
+    "nepali": "अप्टिक न्युराइटिस"
+  },
+  {
+    "english": "Papilledema",
+    "nepali": "प्यापिलेडेमा"
+  },
+  {
+    "english": "Globe Rupture",
+    "nepali": "आँखा फुट्ने चोट"
+  },
+  {
+    "english": "Barrett's Esophagus",
+    "nepali": "ब्यारेट्स इसोफेगस"
+  },
+  {
+    "english": "Achalasia",
+    "nepali": "अकालासिया"
+  },
+  {
+    "english": "Esophageal Varices",
+    "nepali": "इसोफेगियल भ्यारीसिस"
+  },
+  {
+    "english": "Hiatal Hernia",
+    "nepali": "हायाटल हर्निया"
+  },
+  {
+    "english": "Zollinger-Ellison Syndrome",
+    "nepali": "जोलिङ्गर-एलिसन सिन्ड्रोम"
+  },
+  {
+    "english": "Whipple's Disease",
+    "nepali": "ह्विपल्स रोग"
+  },
+  {
+    "english": "Primary Biliary Cirrhosis",
+    "nepali": "प्राइमरी बिलियरी सिरोसिस"
+  },
+  {
+    "english": "Primary Sclerosing Cholangitis",
+    "nepali": "प्राइमरी स्क्लेरोसिङ कोलाङ्जाइटिस"
+  },
+  {
+    "english": "Hemochromatosis",
+    "nepali": "हेमोक्रोमाटोसिस"
+  },
+  {
+    "english": "Wilson’s Disease",
+    "nepali": "विल्सन रोग"
+  },
+  {
+    "english": "Non-alcoholic Fatty Liver Disease",
+    "nepali": "अल्कोहल नभएको कलेजोमा बोसो रोग"
+  },
+  {
+    "english": "Gilbert’s Syndrome",
+    "nepali": "गिल्बर्ट सिन्ड्रोम"
+  },
+  {
+    "english": "Hemobilia",
+    "nepali": "हेमोबिलिया"
+  },
+  {
+    "english": "Peritonitis",
+    "nepali": "पेरीटोनाइटिस"
+  },
+  {
+    "english": "Volvulus",
+    "nepali": "भोल्भुलस"
+  },
+  {
+    "english": "Intussusception",
+    "nepali": "इन्टुससेप्सन"
+  },
+  {
+    "english": "Mesenteric Ischemia",
+    "nepali": "मेसेन्टेरिक इस्केमिया"
+  },
+  {
+    "english": "Diverticulitis",
+    "nepali": "डिभर्टिकुलाइटिस"
+  },
+  {
+    "english": "Ischemic Bowel Disease",
+    "nepali": "आन्द्राको इस्केमिक रोग"
+  },
+  {
+    "english": "Pancreatic Pseudocyst",
+    "nepali": "अग्न्याशयको स्यूडोसिस्ट"
+  },
+  {
+    "english": "Splenic Rupture",
+    "nepali": "प्लीहा फुट्ने"
+  },
+  {
+    "english": "Acute Cholecystitis",
+    "nepali": "तीव्र पित्तथैली सुन्निने"
+  },
+  {
+    "english": "Bowel Obstruction",
+    "nepali": "आन्द्रा अवरोध"
+  },
+  {
+    "english": "Rectal Prolapse",
+    "nepali": "मलद्वार बाहिर निस्कने"
+  },
+  {
+    "english": "Fistula-in-ano",
+    "nepali": "गुदद्वारमा फिस्टुला"
+  },
+  {
+    "english": "Pilonidal Sinus",
+    "nepali": "पाइलोनाइडल साइनस"
+  },
+  {
+    "english": "Pituitary Adenoma",
+    "nepali": "पिट्युटरी एडेनोमा"
+  },
+  {
+    "english": "Acromegaly",
+    "nepali": "एकोमिग्याली"
+  },
+  {
+    "english": "Gigantism",
+    "nepali": "जाइन्टिज्म"
+  },
+  {
+    "english": "Prolactinoma",
+    "nepali": "प्रोलाक्टिनोमा"
+  },
+  {
+    "english": "Sheehan’s Syndrome",
+    "nepali": "शिहान सिन्ड्रोम"
+  },
+  {
+    "english": "Empty Sella Syndrome",
+    "nepali": "खाली सेला सिन्ड्रोम"
+  },
+  {
+    "english": "Diabetes Insipidus",
+    "nepali": "डायबिटिज इन्सिपिडस"
+  },
+  {
+    "english": "Hyperprolactinemia",
+    "nepali": "हाइपरप्रोलाक्टिनेमिया"
+  },
+  {
+    "english": "Pheochromocytoma",
+    "nepali": "फियोक्रोमोसाइटोमा"
+  },
+  {
+    "english": "Carcinoid Syndrome",
+    "nepali": "कार्सिनोइड सिन्ड्रोम"
+  },
+  {
+    "english": "Hypopituitarism",
+    "nepali": "हाइपोपिट्युट्यारिज्म"
+  }
+]
