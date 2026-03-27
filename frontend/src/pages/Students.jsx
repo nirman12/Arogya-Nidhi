@@ -6,6 +6,7 @@ import MedicineInfo from "../components/students/MedicineInfo";
 import FdaLabel from "../components/students/FdaLabel";
 import MRI from "../components/students/MRI";
 import Pneumonia from "../components/students/Pneumonia";
+import DiseaseGlossary from "../components/students/DiseaseGlossary";
 
 const NAV = [
   { id: "mcq", label: "MCQs", desc: "Practice questions" },
@@ -15,6 +16,7 @@ const NAV = [
   { id: "fda", label: "FDA Drug Labelling", desc: "Indications, Contraindications, Warnings, Pharmacology" },
   { id: "mri", label: "MRI", desc: "Model viewer" },
   { id: "pneumonia", label: "Pneumonia", desc: "Chest AI" },
+  { id: "glossary", label: "EN-NE Disease Glossary", desc: "English ↔ Nepali translations" },
 ];
 
 const Students = () => {
@@ -36,6 +38,8 @@ const Students = () => {
         return <MRI />;
       case "pneumonia":
         return <Pneumonia />;
+      case "glossary":
+        return <DiseaseGlossary />;
       default:
         return null;
     }
