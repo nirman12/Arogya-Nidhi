@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 const Login = () => {
-  const { backendUrl, setToken, token } = useContext(AppContext);
+  const { backendUrl, setToken, token, userData } = useContext(AppContext);
   const navigate = useNavigate();
   const [state, setState] = useState("log in");
   const [email, setEmail] = useState("");
@@ -19,29 +19,34 @@ const Login = () => {
 
     try {
       if (state === "Sign Up") {
-        const { data } = await axios.post(backendUrl + "/api/user/register", {
+        const { data } = await axios.post(backendUrl + "/api/auth/register", {
           name,
           email,
           password,
+          role: 'patient'
         });
 
         if (data.success) {
-          localStorage.setItem("token", data.token);
-          setToken(data.token);
+          localStorage.setItem("token", data.data.accessToken);
+          setToken(data.data.accessToken);
           toast.success("Account created successfully!");
+          if (data.data.user.role === 'patient') navigate('/patient-portal');
+          else navigate('/');
         } else {
           toast.error(data.message || "Failed to create account");
         }
       } else {
-        const { data } = await axios.post(backendUrl + "/api/user/login", {
+        const { data } = await axios.post(backendUrl + "/api/auth/login", {
           email,
           password,
         });
 
         if (data.success) {
-          localStorage.setItem("token", data.token);
-          setToken(data.token);
+          localStorage.setItem("token", data.data.accessToken);
+          setToken(data.data.accessToken);
           toast.success("Logged in successfully!");
+          if (data.data.user.role === 'patient') navigate('/patient-portal');
+          else navigate('/');
         } else {
           toast.error(data.message || "Failed to log in");
         }
@@ -52,10 +57,11 @@ const Login = () => {
   };
 
   useEffect(() => {
-    if (token) {
-      navigate("/");
+    if (token && userData) {
+      if (userData.user?.role === 'patient' || userData.role === 'patient') navigate("/patient-portal");
+      else navigate("/");
     }
-  }, [token]);
+  }, [token, userData]);
 
   return (
     <form
