@@ -59,6 +59,14 @@ const Navbar = () => {
               } absolute top-0 right-0 pt-14 text-base font-medium text-gray-600 z-20`}
             >
               <div className="min-w-48 bg-stone-100 rounded flex flex-col gap-4 p-4">
+                {userData?.user?.role === 'patient' && (
+                  <p
+                    onClick={() => navigate("/patient-portal")}
+                    className="hover:text-black cursor-pointer"
+                  >
+                    Patient Dashboard
+                  </p>
+                )}
                 <p
                   onClick={() => navigate("/profile")}
                   className="hover:text-black cursor-pointer"

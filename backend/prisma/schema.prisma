@@ -56,6 +56,10 @@ model Patient {
   address       String?  @db.VarChar
   medicalHistory String? @map("medical_history") @db.Text
   allergies     String?  @db.Text
+  height          Float?   @map("height")
+  weight          Float?   @map("weight")
+  chronicConditions String? @map("chronic_conditions") @db.Text
+  currentMedications String? @map("current_medications") @db.Text
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
@@ -64,6 +68,9 @@ model Patient {
   queries      PatientQuery[]
   iotReadings  IotReading[]
   payments     Payment[]
+  emergencyContacts EmergencyContact[]
+  addressInfo       PatientAddress?
+  medicalReports    MedicalReport[]
 
   @@map("patients")
 }
@@ -332,4 +339,54 @@ model AiInteractionLog {
   user User @relation(fields: [userId], references: [id])
 
   @@map("ai_interaction_logs")
+}
+
+model EmergencyContact {
+  id             String   @id @default(uuid()) @db.Uuid
+  patientId      String   @map("patient_id") @db.Uuid
+  contactName    String   @map("contact_name") @db.VarChar
+  relationship   String   @db.VarChar
+  contactPhone   String   @map("contact_phone") @db.VarChar
+  alternatePhone String?  @map("alternate_phone") @db.VarChar
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@map("emergency_contacts")
+}
+
+model PatientAddress {
+  id            String   @id @default(uuid()) @db.Uuid
+  patientId     String   @unique @map("patient_id") @db.Uuid
+  streetAddress String?  @map("street_address") @db.VarChar
+  city          String?  @db.VarChar
+  state         String?  @db.VarChar
+  pinCode       String?  @map("pin_code") @db.VarChar
+  country       String?  @default("Nepal") @db.VarChar
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@map("patient_addresses")
+}
+
+model MedicalReport {
+  id           String   @id @default(uuid()) @db.Uuid
+  patientId    String   @map("patient_id") @db.Uuid
+  title        String   @db.VarChar
+  category     String   @db.VarChar  // blood_test | x_ray | mri | ct_scan | prescription | other
+  fileUrl      String   @map("file_url") @db.VarChar
+  fileName     String   @map("file_name") @db.VarChar
+  fileSize     Int?     @map("file_size")
+  mimeType     String?  @map("mime_type") @db.VarChar
+  notes        String?  @db.Text
+  reportDate   DateTime? @map("report_date")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@map("medical_reports")
 }

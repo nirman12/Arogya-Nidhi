@@ -109,7 +109,7 @@ async function logoutAll(userId) {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function _issueTokens(user, meta) {
-  const payload = { sub: user.id, role: user.role, email: user.email };
+  const payload = { userId: user.id, role: user.role, email: user.email };
 
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(payload);

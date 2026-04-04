@@ -16,6 +16,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import { ToastContainer, toast } from "react-toastify";
 import NotFound from "./pages/NotFound";
 import IoTPage from "./pages/IoT";
+import PatientPortal from "./pages/PatientPortal";
 
 const App = () => {
   return (
@@ -37,6 +38,7 @@ const App = () => {
         <Route path="/my-appointments" element={<Appointments />} />
         <Route path="/appointment/:docId" element={<Appointment />} />
         <Route path="/iot" element={<IoTPage />} />
+        <Route path="/patient-portal" element={<PatientPortal />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
