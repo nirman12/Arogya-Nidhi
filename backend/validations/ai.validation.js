@@ -4,9 +4,9 @@ export const chatSchema = z.object({
   body: z.object({
     messages: z.array(
       z.object({
-        role: z.enum(['user', 'assistant', 'system']),
-        content: z.string().min(1),
+        text: z.string().min(1),
       })
     ).min(1, 'At least one message is required'),
   }),
 });
+

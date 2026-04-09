@@ -1,39 +1,116 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../context/AppContext";
 import { assets } from "../assets/assets_frontend/assets";
 import axios from "axios";
 import { toast } from "react-toastify";
 
 const Profile = () => {
-  const { userData, setUserData, backendUrl, token, loadUserProfileData } =
-    useContext(AppContext);
+  const { userData, backendUrl, token, loadUserProfileData } = useContext(AppContext);
 
   const [isEdit, setIsEdit] = useState(false);
   const [image, setImage] = useState(false);
 
+  const normalizeGender = (value) => {
+    if (!value) return "";
+    const v = String(value).toLowerCase();
+    if (["male", "female", "other", "prefer_not_to_say"].includes(v)) return v;
+    if (v === "others") return "other";
+    return "";
+  };
+
+  const capitalizeGender = (value) => {
+    if (!value) return "";
+    if (value === "prefer_not_to_say") return "Prefer not to say";
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  };
+
+  const splitAddress = (streetAddress = "") => {
+    const parts = streetAddress.split(",").map((p) => p.trim()).filter(Boolean);
+    return {
+      line1: parts[0] || "",
+      line2: parts.slice(1).join(", "),
+    };
+  };
+
+  const currentAddress = splitAddress(userData?.addressInfo?.streetAddress || "");
+
+  const [formData, setFormData] = useState({
+    name: userData?.user?.name || "",
+    phone: userData?.user?.phone || "",
+    gender: normalizeGender(userData?.gender || ""),
+    dob: userData?.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().slice(0, 10) : "",
+    address: {
+      line1: currentAddress.line1,
+      line2: currentAddress.line2,
+    },
+  });
+
+  useEffect(() => {
+    const address = splitAddress(userData?.addressInfo?.streetAddress || "");
+    setFormData({
+      name: userData?.user?.name || "",
+      phone: userData?.user?.phone || "",
+      gender: normalizeGender(userData?.gender || ""),
+      dob: userData?.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().slice(0, 10) : "",
+      address: {
+        line1: address.line1,
+        line2: address.line2,
+      },
+    });
+  }, [userData]);
+
+  const getAvatar = () => {
+    const avatarUrl = userData?.user?.avatarUrl;
+    if (!avatarUrl) return assets.profile_pic;
+    if (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://")) return avatarUrl;
+    return `${backendUrl}/${avatarUrl}`;
+  };
+
   const updateUserProfileData = async () => {
     try {
-      const formData = new FormData();
-      formData.append("name", userData.name);
-      formData.append("phone", userData.phone);
-      formData.append("address", JSON.stringify(userData.address));
-      formData.append("gender", userData.gender);
-      formData.append("dob", userData.dob);
+      const headers = { Authorization: `Bearer ${token}` };
 
-      image && formData.append("image", image);
-
-      const { data } = await axios.post(
-        backendUrl + "/api/user/update-profile",
-        formData,
-        { headers: { token } }
+      await axios.patch(
+        backendUrl + "/api/patient/profile",
+        {
+          name: formData.name,
+          phone: formData.phone,
+        },
+        { headers }
       );
 
-      if (data.success) {
-        toast.success(data.message || "Profile updated successfully");
-        await loadUserProfileData();
-        setIsEdit(false);
-        setImage(false);
+      await axios.patch(
+        backendUrl + "/api/patient/profile/health",
+        {
+          gender: formData.gender || null,
+          dateOfBirth: formData.dob || null,
+        },
+        { headers }
+      );
+
+      const streetAddress = [formData.address.line1, formData.address.line2]
+        .map((p) => p?.trim())
+        .filter(Boolean)
+        .join(", ");
+
+      await axios.put(
+        backendUrl + "/api/patient/address",
+        { streetAddress: streetAddress || null },
+        { headers }
+      );
+
+      if (image) {
+        const avatarData = new FormData();
+        avatarData.append("avatar", image);
+        await axios.patch(backendUrl + "/api/patient/profile/avatar", avatarData, {
+          headers,
+        });
       }
+
+      toast.success("Profile updated successfully");
+      await loadUserProfileData();
+      setIsEdit(false);
+      setImage(false);
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to update profile");
     }
@@ -47,7 +124,7 @@ const Profile = () => {
             <div className="inline-block relative cursor-pointer">
               <img
                 className="w-36 rounded opacity-75"
-                src={image ? URL.createObjectURL(image) : userData.image}
+                src={image ? URL.createObjectURL(image) : getAvatar()}
                 alt=""
               />
               <img
@@ -64,21 +141,19 @@ const Profile = () => {
             />
           </label>
         ) : (
-          <img className="w-36 rounded" src={userData.image} alt="" />
+          <img className="w-36 rounded" src={getAvatar()} alt="" />
         )}
 
         {isEdit ? (
           <input
             className="bg-gray-100 text-3xl font-medium max-w-80 mt-4"
-            onChange={(e) =>
-              setUserData((prev) => ({ ...prev, name: e.target.value }))
-            }
-            value={userData.name}
+            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+            value={formData.name}
             type="text"
           />
         ) : (
           <p className="text-3xl font-medium text-neutral-800 mt-4">
-            {userData.name}
+            {userData?.user?.name}
           </p>
         )}
         <hr className="bg-zinc-400 h-[1px] border-none" />
@@ -86,19 +161,17 @@ const Profile = () => {
           <p className="text-neutral-500 underline mt-3">CONTACT INFORMATION</p>
           <div className="grid grid-cols-[1fr_3fr] gap-y-2.5 mt-3 text-neutral-700">
             <p className="font-medium">Email Id:</p>
-            <p className="text-blue-500">{userData.email}</p>
+            <p className="text-blue-500">{userData?.user?.email}</p>
             <p className="font-medium">Phone:</p>
             {isEdit ? (
               <input
                 className="bg-gray-100 max-w-47"
-                onChange={(e) =>
-                  setUserData((prev) => ({ ...prev, phone: e.target.value }))
-                }
-                value={userData.phone}
+                onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                value={formData.phone}
                 type="text"
               />
             ) : (
-              <p className="text-blue-400">{userData.phone}</p>
+              <p className="text-blue-400">{userData?.user?.phone || "Not set"}</p>
             )}
             <p className="font-medium">Address:</p>
             {isEdit ? (
@@ -106,32 +179,32 @@ const Profile = () => {
                 <input
                   className="bg-gray-100"
                   onChange={(e) =>
-                    setUserData((prev) => ({
+                    setFormData((prev) => ({
                       ...prev,
                       address: { ...prev.address, line1: e.target.value },
                     }))
                   }
-                  value={userData.address.line1}
+                  value={formData.address.line1}
                   type="text"
                 />
                 <br />
                 <input
                   className="bg-gray-100"
                   onChange={(e) =>
-                    setUserData((prev) => ({
+                    setFormData((prev) => ({
                       ...prev,
                       address: { ...prev.address, line2: e.target.value },
                     }))
                   }
-                  value={userData.address.line2}
+                  value={formData.address.line2}
                   type="text"
                 />
               </p>
             ) : (
               <p className="text-gray-500">
-                {userData.address.line1}
+                {currentAddress.line1 || "Not set"}
                 <br />
-                {userData.address.line2}
+                {currentAddress.line2}
               </p>
             )}
           </div>
@@ -144,29 +217,31 @@ const Profile = () => {
               <select
                 className="max-w-47 bg-gray-100"
                 onChange={(e) =>
-                  setUserData((prev) => ({ ...prev, gender: e.target.value }))
+                  setFormData((prev) => ({ ...prev, gender: e.target.value }))
                 }
-                value={userData.gender}
+                value={formData.gender || ""}
               >
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Others">Others</option>
+                <option value="">Select</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
               </select>
             ) : (
-              <p className="text-gray-400">{userData.gender}</p>
+              <p className="text-gray-400">{capitalizeGender(normalizeGender(userData?.gender)) || "Not set"}</p>
             )}
             <p className="font-medium">Birthday:</p>
             {isEdit ? (
               <input
                 className="bg-gray-100 max-w-47"
                 onChange={(e) =>
-                  setUserData((prev) => ({ ...prev, dob: e.target.value }))
+                  setFormData((prev) => ({ ...prev, dob: e.target.value }))
                 }
-                value={userData.dob}
+                value={formData.dob}
                 type="date"
               />
             ) : (
-              <p className="text-gray-400">{userData.dob}</p>
+              <p className="text-gray-400">{formData.dob || "Not set"}</p>
             )}
           </div>
         </div>

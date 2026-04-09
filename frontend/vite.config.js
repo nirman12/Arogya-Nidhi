@@ -32,7 +32,7 @@ export default defineConfig({
     allowedHosts: ['unsoaked-cuspidate-karson.ngrok-free.dev'],
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:3001',
         changeOrigin: true,
         secure: false,
       }
