@@ -1,135 +1,293 @@
-import { useState, useEffect, useRef } from 'react';
+import { useContext, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import PatientSidebar from "../components/PatientSidebar";
+import { ArrowLeftIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { AppContext } from "../context/AppContext";
+import "./IoT.css";
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-const VisualTest = ({ onResult }) => {
-  const [phase, setPhase] = useState('idle'); // idle | countdown | ready | done
-  const [count, setCount] = useState(3);
-  const startTs = useRef(null);
+// ─── Score helpers ────────────────────────────────────────────────────────────
 
-  const start = () => {
-    setPhase('countdown');
-    setCount(3);
+/** Convert reaction time (ms) to a 0-100 score */
+function reactionScore(ms) {
+  return Math.max(0, Math.min(100, Math.round(100 - (ms - 150) / 5)));
+}
+
+/** Compute tremor amplitude from data array and convert to 0-100 score */
+function tremorScore(data) {
+  if (!data || data.length === 0) return 50;
+  const rms = Math.sqrt(
+    data.reduce((s, p) => s + p.x * p.x + p.y * p.y + p.z * p.z, 0) / data.length
+  );
+  // rms near 0 = no tremor = 100; rms ≥ 10 = severe tremor = 0
+  return Math.max(0, Math.min(100, Math.round(100 - rms * 10)));
+}
+
+function tremorAmplitude(data) {
+  if (!data || data.length === 0) return 0;
+  const rms = Math.sqrt(
+    data.reduce((s, p) => s + p.x * p.x + p.y * p.y + p.z * p.z, 0) / data.length
+  );
+  return rms.toFixed(2);
+}
+
+// ─── Reaction Time Card ───────────────────────────────────────────────────────
+
+const ReactionCard = ({ onSaveResult, lastSaved }) => {
+  const [mode, setMode] = useState("visual"); // visual | sound
+  // visual state
+  const [vPhase, setVPhase] = useState("idle"); // idle | countdown | ready | done
+  const [vCount, setVCount] = useState(3);
+  const [vResult, setVResult] = useState(null);
+  const vStartTs = useRef(null);
+  // sound state
+  const [sStatus, setSStatus] = useState("idle"); // idle | waiting | played | done
+  const [sResult, setSResult] = useState(null);
+  const sStartTs = useRef(null);
+  const sRunning = useRef(false);
+
+  const isRunning = vPhase === "countdown" || vPhase === "ready" || sStatus === "waiting" || sStatus === "played";
+
+  const startVisual = () => {
+    setVPhase("countdown");
+    setVResult(null);
+    setVCount(3);
     let c = 3;
     const iv = setInterval(() => {
       c -= 1;
-      setCount(c);
+      setVCount(c);
       if (c <= 0) {
         clearInterval(iv);
-        setPhase('ready');
-        startTs.current = Date.now();
+        setVPhase("ready");
+        vStartTs.current = Date.now();
       }
     }, 1000);
   };
 
-  const tap = () => {
-    if (phase !== 'ready') return;
-    const rt = Date.now() - startTs.current;
-    setPhase('done');
-    onResult(rt);
+  const tapVisual = () => {
+    if (vPhase !== "ready") return;
+    const rt = Date.now() - vStartTs.current;
+    setVPhase("done");
+    setVResult(rt);
   };
 
-  return (
-    <div className="p-6 bg-white rounded-lg shadow">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Visual Reaction</h3>
-        <button className="bg-primary text-white px-3 py-1 rounded" onClick={start} disabled={phase === 'countdown' || phase === 'ready'}>Start</button>
-      </div>
-      <div className="flex flex-col items-center gap-4">
-        {phase === 'countdown' && <div className="text-6xl font-bold">{count}</div>}
-        {phase === 'idle' && <div className="text-sm text-gray-600">Press Start and wait for the screen to turn green.</div>}
-        {phase === 'ready' && (
-          <button onClick={tap} className="w-full md:w-64 h-28 rounded bg-emerald-400 text-white text-2xl">Tap!</button>
-        )}
-        {phase === 'done' && <div className="text-sm text-gray-700">Reaction: <strong>{/* result shown via parent */}</strong></div>}
-      </div>
-    </div>
-  );
-};
+  const startSound = () => {
+    setSStatus("waiting");
+    setSResult(null);
+    sRunning.current = true;
+    const delay = Math.floor(Math.random() * 4000) + 1000;
+    setTimeout(() => {
+      if (!sRunning.current) return;
+      try {
+        const ctx = new AudioContext();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "sine";
+        o.frequency.value = 880;
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start();
+        g.gain.setValueAtTime(0.001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.5, ctx.currentTime + 0.02);
+        setTimeout(() => {
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+          o.stop(ctx.currentTime + 0.2);
+        }, 150);
+      } catch (e) {}
+      sStartTs.current = Date.now();
+      setSStatus("played");
+    }, delay);
+  };
 
-const SoundTest = ({ onResult }) => {
-  const [status, setStatus] = useState('idle'); // idle | waiting | played | done
-  const [running, setRunning] = useState(false);
-  const startTs = useRef(null);
+  const tapSound = () => {
+    if (sStatus !== "played") return;
+    const rt = Date.now() - sStartTs.current;
+    sRunning.current = false;
+    setSStatus("done");
+    setSResult(rt);
+  };
 
-  const playBeep = () => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = 'sine';
-      o.frequency.value = 880;
-      o.connect(g); g.connect(ctx.destination);
-      o.start();
-      g.gain.setValueAtTime(0.001, ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.5, ctx.currentTime + 0.02);
-      setTimeout(() => { g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18); o.stop(ctx.currentTime + 0.2); }, 150);
-    } catch (e) {
-      const a = new Audio(); a.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA='; a.play().catch(()=>{});
+  const result = mode === "visual" ? vResult : sResult;
+  const phase = mode === "visual" ? vPhase : sStatus;
+
+  const renderInterface = () => {
+    if (mode === "visual") {
+      if (vPhase === "idle")
+        return (
+          <>
+            <span className="iot-test-icon">👆</span>
+            <span style={{ fontSize: "0.8125rem", color: "var(--iot-text-muted)" }}>
+              Press Start — tap when screen turns green
+            </span>
+          </>
+        );
+      if (vPhase === "countdown")
+        return <div className="iot-countdown-display">{vCount}</div>;
+      if (vPhase === "ready")
+        return (
+          <button className="iot-tap-area iot-tap-ready" onClick={tapVisual}>
+            TAP!
+          </button>
+        );
+      if (vPhase === "done")
+        return (
+          <>
+            <div className="iot-result-display">{vResult} ms</div>
+            <div className="iot-result-label">
+              Score: {reactionScore(vResult)}/100
+            </div>
+          </>
+        );
+    }
+
+    if (mode === "sound") {
+      if (sStatus === "idle")
+        return (
+          <>
+            <span className="iot-test-icon">🔊</span>
+            <span style={{ fontSize: "0.8125rem", color: "var(--iot-text-muted)" }}>
+              Press Start — tap when you hear the beep
+            </span>
+          </>
+        );
+      if (sStatus === "waiting")
+        return (
+          <button className="iot-sound-btn iot-sound-waiting" disabled>
+            Waiting for beep...
+          </button>
+        );
+      if (sStatus === "played")
+        return (
+          <button className="iot-sound-btn iot-sound-active" onClick={tapSound}>
+            Tap now!
+          </button>
+        );
+      if (sStatus === "done")
+        return (
+          <>
+            <div className="iot-result-display">{sResult} ms</div>
+            <div className="iot-result-label">
+              Score: {reactionScore(sResult)}/100
+            </div>
+          </>
+        );
     }
   };
 
-  const start = () => {
-    setStatus('waiting');
-    setRunning(true);
-    setTimeout(() => {
-      playBeep();
-      startTs.current = Date.now();
-      setStatus('played');
-    }, Math.floor(Math.random() * 15000) + 500);
+  const handleStart = () => {
+    if (mode === "visual") startVisual();
+    else startSound();
   };
 
-  const press = () => {
-    if (status !== 'played') return;
-    const rt = Date.now() - startTs.current;
-    setStatus('done');
-    setRunning(false);
-    onResult(rt);
+  const handleReset = () => {
+    setVPhase("idle"); setVResult(null);
+    setSStatus("idle"); setSResult(null);
+    sRunning.current = false;
   };
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Sound Reaction</h3>
-        <button className="bg-primary text-white px-3 py-1 rounded" onClick={start} disabled={running}>Start</button>
+    <div className="iot-test-card">
+      <div className="iot-test-header">
+        <div className="iot-test-title">⚡ Reaction Time Test</div>
+        <span className={`iot-status-badge ${isRunning ? "iot-status-running" : phase === "done" || phase === "done" ? "iot-status-done" : ""}`}>
+          {isRunning ? "Running" : result != null ? "Done" : "Ready"}
+        </span>
       </div>
-      <div className="flex flex-col items-center gap-4">
-        <div className="text-sm text-gray-600">Listen for the beep and press the button as soon as you hear it.</div>
-        <button onClick={press} className={`w-full md:w-64 h-14 rounded ${status==='played' ? 'bg-emerald-400 text-white' : 'bg-gray-100 text-gray-700'}`}>
-          {status === 'idle' && 'Press Start'}
-          {status === 'waiting' && 'Waiting...' }
-          {status === 'played' && 'Tap!'}
-          {status === 'done' && 'Done'}
-        </button>
+
+      <div className={`iot-test-interface ${isRunning || result != null ? "iot-interface-active" : ""}`}>
+        <div className="iot-mode-tabs">
+          <button className={`iot-mode-tab ${mode === "visual" ? "iot-mode-active" : ""}`} onClick={() => { setMode("visual"); handleReset(); }} disabled={isRunning}>
+            Visual
+          </button>
+          <button className={`iot-mode-tab ${mode === "sound" ? "iot-mode-active" : ""}`} onClick={() => { setMode("sound"); handleReset(); }} disabled={isRunning}>
+            Sound
+          </button>
+        </div>
+        {renderInterface()}
+      </div>
+
+      <div className="iot-test-content">
+        <div className="iot-test-description">
+          <div className="iot-test-description-label">Description</div>
+          <div className="iot-test-description-text">
+            Measures your cognitive response time to {mode === "visual" ? "visual" : "auditory"} stimuli.
+            Useful for monitoring neurological health and cognitive function.
+          </div>
+        </div>
+
+        {result != null && (
+          <div className="iot-test-stats">
+            <div className="iot-stat">
+              <div className="iot-stat-label">Result</div>
+              <div className="iot-stat-value">{result} ms</div>
+            </div>
+            <div className="iot-stat">
+              <div className="iot-stat-label">Score</div>
+              <div className="iot-stat-value">{reactionScore(result)}/100</div>
+            </div>
+          </div>
+        )}
+
+        {lastSaved && !result && (
+          <div className="iot-test-stats">
+            <div className="iot-stat">
+              <div className="iot-stat-label">Last Result</div>
+              <div className="iot-stat-value">{lastSaved.value}</div>
+            </div>
+            <div className="iot-stat">
+              <div className="iot-stat-label">Score</div>
+              <div className="iot-stat-value">{lastSaved.score}/100</div>
+            </div>
+          </div>
+        )}
+
+        <div className="iot-test-actions">
+          {result != null ? (
+            <>
+              <button className="iot-btn iot-btn-primary" onClick={() => onSaveResult({ resultMs: result, mode, score: reactionScore(result) })}>
+                Save Result
+              </button>
+              <button className="iot-btn iot-btn-secondary" onClick={handleReset}>
+                Retry
+              </button>
+            </>
+          ) : (
+            <button className="iot-btn iot-btn-primary" onClick={handleStart} disabled={isRunning}>
+              {isRunning ? "Running..." : "▶ Start Test"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
-const TremorTest = ({ onResult }) => {
+// ─── Tremor Card ──────────────────────────────────────────────────────────────
+
+const TremorCard = ({ onSaveResult, lastSaved }) => {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const sphereRef = useRef(null);
   const graphRef = useRef(null);
   const [running, setRunning] = useState(false);
-  const [available, setAvailable] = useState(false);
-  const [lastReading, setLastReading] = useState({ x: 0, y: 0, z: 0 });
+  const [result, setResult] = useState(null);
+  const [available, setAvailable] = useState(true);
   const lastReadingRef = useRef({ x: 0, y: 0, z: 0 });
-  const [orientation, setOrientation] = useState({ alpha: 0, beta: 0, gamma: 0 });
   const orientationRef = useRef({ alpha: 0, beta: 0, gamma: 0 });
-  const [log, setLog] = useState([]);
-  const [errorMsg, setErrorMsg] = useState(null);
   const dataRef = useRef([]);
   const rafRef = useRef(null);
   const motionHandlerRef = useRef(null);
+  const [timeLeft, setTimeLeft] = useState(5);
 
-  // Detect support
   useEffect(() => {
-    const hasMotion = ('Gyroscope' in window) || ('DeviceMotionEvent' in window) || ('DeviceOrientationEvent' in window) || ('ondevicemotion' in window) || ('ondeviceorientation' in window);
-    setAvailable(!!hasMotion);
+    const has = "DeviceMotionEvent" in window || "DeviceOrientationEvent" in window || "Gyroscope" in window;
+    setAvailable(has);
   }, []);
 
-  // Resize canvas to container and scale for DPR
+  // Scatter plot canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -138,371 +296,497 @@ const TremorTest = ({ onResult }) => {
       const dpr = window.devicePixelRatio || 1;
       const rect = container.getBoundingClientRect();
       canvas.width = Math.floor(rect.width * dpr);
-      canvas.height = Math.floor((rect.height || 240) * dpr);
-      canvas.style.width = rect.width + 'px';
-      canvas.style.height = (rect.height || 240) + 'px';
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      canvas.height = Math.floor((rect.height || 120) * dpr);
+      canvas.style.width = rect.width + "px";
+      canvas.style.height = (rect.height || 120) + "px";
+      canvas.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(container);
-    window.addEventListener('orientationchange', resize);
-    return () => { ro.disconnect(); window.removeEventListener('orientationchange', resize); };
+    return () => ro.disconnect();
   }, []);
 
-  // draw loop
+  // Draw scatter
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-
+    const ctx = canvas.getContext("2d");
     const draw = () => {
       const w = canvas.width; const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = '#ef4444';
-      const d = dataRef.current.slice(-300);
-      for (let i = 0; i < d.length; i++) {
-        const p = d[i];
-        const cx = w / 2 + clamp(p.x, -10, 10) * 12;
-        const cy = h / 2 - clamp(p.y, -10, 10) * 12;
+      ctx.fillStyle = "#f8fafc"; ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = "#ef4444";
+      dataRef.current.slice(-300).forEach((p) => {
+        const cx = w / 2 + clamp(p.x, -10, 10) * 10;
+        const cy = h / 2 - clamp(p.y, -10, 10) * 10;
         ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
-      }
+      });
       rafRef.current = requestAnimationFrame(draw);
     };
-
     if (running) rafRef.current = requestAnimationFrame(draw);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [running]);
 
-  // sync lastReadingRef -> lastReading state at animation frame rate (lightweight)
-  useEffect(() => {
-    let raf = null;
-    const loop = () => {
-      setLastReading({ ...lastReadingRef.current });
-      raf = requestAnimationFrame(loop);
-    };
-    if (running) raf = requestAnimationFrame(loop);
-    return () => { if (raf) cancelAnimationFrame(raf); };
-  }, [running]);
 
-  // deviceorientation listener used for UI indicator (works on Chrome Android)
+  // deviceorientation for sphere
   useEffect(() => {
     const handler = (ev) => {
-      const a = ev.alpha || 0;
-      const b = ev.beta || 0;
-      const g = ev.gamma || 0;
-      orientationRef.current = { alpha: a, beta: b, gamma: g };
-      setOrientation({ alpha: a, beta: b, gamma: g });
+      orientationRef.current = { alpha: ev.alpha || 0, beta: ev.beta || 0, gamma: ev.gamma || 0 };
     };
-
-    // add listener; keep passive where supported
-    window.addEventListener('deviceorientation', handler, { passive: true });
-    return () => window.removeEventListener('deviceorientation', handler);
+    window.addEventListener("deviceorientation", handler, { passive: true });
+    return () => window.removeEventListener("deviceorientation", handler);
   }, []);
 
-  // draw a 3D-looking sphere with rotated axes based on deviceorientation (responsive)
+  // Sphere canvas
   useEffect(() => {
     const canvas = sphereRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
-
-    const resize = () => {
-      const sizeCss = Math.max(64, Math.min(240, canvas.clientWidth || 160));
-      const size = Math.floor(sizeCss * dpr);
-      canvas.width = size; canvas.height = size;
-      canvas.style.width = sizeCss + 'px'; canvas.style.height = sizeCss + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-    resize();
-
+    const size = 100;
+    canvas.width = size * dpr; canvas.height = size * dpr;
+    canvas.style.width = size + "px"; canvas.style.height = size + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     let raf;
     const draw = () => {
-      const { alpha = 0, beta = 0, gamma = 0 } = orientationRef.current || {};
-      const w = canvas.width / dpr; const h = canvas.height / dpr;
+      const { alpha = 0, beta = 0, gamma = 0 } = orientationRef.current;
+      const w = size; const h = size;
       ctx.clearRect(0, 0, w, h);
-      // background / rim
-      const cx = w / 2; const cy = h / 2; const r = Math.min(w, h) / 2 - 8;
-      // soft background
-      ctx.fillStyle = '#0f172a';
-      ctx.beginPath(); ctx.arc(cx, cy, r + 6, 0, Math.PI * 2); ctx.fill();
-      // sphere base
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
-      // rim
-      ctx.strokeStyle = 'rgba(2,6,23,0.06)'; ctx.lineWidth = 2; ctx.stroke();
-
-      // compute rotated axes
+      const cx = w / 2; const cy = h / 2; const r = Math.min(w, h) / 2 - 6;
+      ctx.fillStyle = "#0f172a"; ctx.beginPath(); ctx.arc(cx, cy, r + 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
       const a = (alpha * Math.PI) / 180;
       const b = (beta * Math.PI) / 180;
       const g = (gamma * Math.PI) / 180;
       const sin = Math.sin, cos = Math.cos;
-      const Rx = (v) => { const [x, y, z] = v; return [x, y * cos(b) - z * sin(b), y * sin(b) + z * cos(b)]; };
-      const Ry = (v) => { const [x, y, z] = v; return [x * cos(g) + z * sin(g), y, -x * sin(g) + z * cos(g)]; };
-      const Rz = (v) => { const [x, y, z] = v; return [x * cos(a) - y * sin(a), x * sin(a) + y * cos(a), z]; };
+      const Rx = ([x, y, z]) => [x, y * cos(b) - z * sin(b), y * sin(b) + z * cos(b)];
+      const Ry = ([x, y, z]) => [x * cos(g) + z * sin(g), y, -x * sin(g) + z * cos(g)];
+      const Rz = ([x, y, z]) => [x * cos(a) - y * sin(a), x * sin(a) + y * cos(a), z];
       const apply = (v) => Rz(Ry(Rx(v)));
-      const axes = { x: apply([1, 0, 0]), y: apply([0, 1, 0]), z: apply([0, 0, 1]) };
-
       const drawAxis = (vec, color) => {
-        const x2 = cx + vec[0] * r * 0.9;
-        const y2 = cy - vec[1] * r * 0.9;
-        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x2, y2); ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.stroke();
-        ctx.beginPath(); ctx.arc(x2, y2, 6, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
+        const x2 = cx + vec[0] * r * 0.85; const y2 = cy - vec[1] * r * 0.85;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x2, y2); ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.beginPath(); ctx.arc(x2, y2, 4, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
       };
-
-      drawAxis(axes.x, '#ef4444');
-      drawAxis(axes.y, '#10b981');
-      drawAxis(axes.z, '#3b82f6');
-
-      // small center highlight
-      ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fillStyle = 'rgba(2,6,23,0.6)'; ctx.fill();
-
+      drawAxis(apply([1, 0, 0]), "#ef4444");
+      drawAxis(apply([0, 1, 0]), "#10b981");
+      drawAxis(apply([0, 0, 1]), "#3b82f6");
+      ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fillStyle = "rgba(2,6,23,0.6)"; ctx.fill();
       raf = requestAnimationFrame(draw);
     };
     draw();
-    window.addEventListener('resize', resize);
-    return () => { if (raf) cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+    return () => { if (raf) cancelAnimationFrame(raf); };
   }, []);
 
-  // realtime graph for x/y/z values using dataRef
+  // Realtime graph
   useEffect(() => {
     const canvas = graphRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
-
+    const h = 70;
     const resize = () => {
       const w = Math.floor(canvas.clientWidth * dpr) || Math.floor(300 * dpr);
-      const h = Math.floor(80 * dpr);
-      canvas.width = w; canvas.height = h;
+      canvas.width = w; canvas.height = Math.floor(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      canvas.style.height = '80px';
     };
     resize();
-    window.addEventListener('resize', resize);
-
     let raf;
     const draw = () => {
       resize();
-      const w = canvas.width / dpr; const h = canvas.height / dpr;
-      // background
-      ctx.fillStyle = '#0b1220'; ctx.fillRect(0, 0, w, h);
+      const w = canvas.width / dpr;
+      ctx.fillStyle = "#0b1220"; ctx.fillRect(0, 0, w, h);
       const d = dataRef.current.slice(-200);
       if (d.length > 1) {
-        const max = 12; const mid = h / 2;
-        const step = w / (d.length - 1);
-        ['x', 'y', 'z'].forEach((k, i) => {
+        const max = 12; const mid = h / 2; const step = w / (d.length - 1);
+        ["x", "y", "z"].forEach((k, i) => {
           ctx.beginPath();
-          ctx.strokeStyle = i === 0 ? '#ef4444' : i === 1 ? '#10b981' : '#3b82f6';
-          ctx.lineWidth = 2;
-          for (let j = 0; j < d.length; j++) {
-            const v = clamp(d[j][k], -max, max);
+          ctx.strokeStyle = i === 0 ? "#ef4444" : i === 1 ? "#10b981" : "#3b82f6";
+          ctx.lineWidth = 1.5;
+          d.forEach((p, j) => {
             const x = j * step;
-            const y = mid - (v / max) * (h * 0.4);
+            const y = mid - (clamp(p[k], -max, max) / max) * (h * 0.4);
             if (j === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-          }
+          });
           ctx.stroke();
         });
       } else {
-        // no data
-        ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.font = '12px sans-serif'; ctx.fillText('No sensor data yet', 10, h / 2 + 4);
+        ctx.fillStyle = "rgba(255,255,255,0.15)";
+        ctx.font = "11px sans-serif";
+        ctx.fillText("No sensor data — start the test", 8, h / 2 + 4);
       }
       raf = requestAnimationFrame(draw);
     };
     draw();
-    return () => { if (raf) cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+    return () => { if (raf) cancelAnimationFrame(raf); };
   }, []);
 
-  // Request motion permission on iOS 13+ when needed
   const requestMotionPermission = async () => {
     try {
-      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-        const resp = await DeviceMotionEvent.requestPermission();
-        return resp === 'granted';
+      if (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function") {
+        return (await DeviceMotionEvent.requestPermission()) === "granted";
       }
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        const resp = await DeviceOrientationEvent.requestPermission();
-        return resp === 'granted';
-      }
-    } catch (e) {
-      // ignore
-    }
-    return true; // assume allowed on non-iOS or already permitted
+    } catch (e) {}
+    return true;
   };
 
   const start = async () => {
     const ok = await requestMotionPermission();
-    if (!ok) return;
+    if (!ok) { toast.error("Motion permission denied"); return; }
     dataRef.current = [];
+    setResult(null);
     setRunning(true);
+    setTimeLeft(5);
 
-    // Prefer Generic Sensor API Gyroscope if available (better on some Android devices)
-    let used = null;
-    let gyro = null;
+    const countdown = setInterval(() => setTimeLeft((t) => t - 1), 1000);
 
     const pushPoint = (x, y, z) => {
       const entry = { x: x || 0, y: y || 0, z: z || 0, t: Date.now() };
       dataRef.current.push(entry);
-      if (dataRef.current.length > 3000) dataRef.current.splice(0, dataRef.current.length - 3000);
-      // update quick-ref for render loop
+      if (dataRef.current.length > 3000) dataRef.current.splice(0, 1500);
       lastReadingRef.current = entry;
-      // append to log (cap 40)
-      setLog((prev) => {
-        const text = `${new Date(entry.t).toLocaleTimeString()}: x=${entry.x.toFixed(2)}, y=${entry.y.toFixed(2)}, z=${entry.z.toFixed(2)}`;
-        const next = [text, ...prev];
-        return next.slice(0, 40);
-      });
     };
 
+    let gyro = null;
     try {
-      if ('Gyroscope' in window) {
+      if ("Gyroscope" in window) {
         gyro = new window.Gyroscope({ frequency: 60 });
-        gyro.addEventListener('reading', () => {
-          // Gyroscope gives rotational rates; use them for tremor visualization
-          pushPoint(gyro.x, gyro.y, gyro.z);
-        });
-        gyro.addEventListener('error', (err) => {
-          setErrorMsg(String(err && err.error ? err.error : err));
-        });
+        gyro.addEventListener("reading", () => pushPoint(gyro.x, gyro.y, gyro.z));
         gyro.start();
-        used = 'gyroscope';
-        motionHandlerRef.current = () => { if (gyro) try { gyro.stop(); } catch(e){} };
+        motionHandlerRef.current = () => { try { gyro.stop(); } catch (e) {} };
       }
-    } catch (e) {
-      // Generic Sensor API may throw if not allowed
-      gyro = null;
-      setErrorMsg(String(e));
-    }
+    } catch (e) { gyro = null; }
 
-    // If Gyroscope not used, set up devicemotion fallback
-    if (!used) {
+    if (!gyro) {
       const dmHandler = (ev) => {
-        // Prefer rotationRate when available (gyroscope-like)
-        if (ev.rotationRate && (ev.rotationRate.alpha || ev.rotationRate.beta || ev.rotationRate.gamma)) {
-          const r = ev.rotationRate;
-          // rotationRate values are in deg/sec — scale them
-          pushPoint(r.alpha || 0, r.beta || 0, r.gamma || 0);
-          return;
-        }
+        const r = ev.rotationRate;
+        if (r && (r.alpha || r.beta || r.gamma)) { pushPoint(r.alpha, r.beta, r.gamma); return; }
         const a = ev.accelerationIncludingGravity || ev.acceleration || { x: 0, y: 0, z: 0 };
-        pushPoint(a.x || 0, a.y || 0, a.z || 0);
+        pushPoint(a.x, a.y, a.z);
       };
-
-      const orientHandler = (ev) => {
-        if (ev.beta != null || ev.gamma != null) {
-          const x = (ev.gamma || 0) / 90 * 9;
-          const y = (ev.beta || 0) / 90 * 9;
-          pushPoint(x, y, 0);
-        }
-      };
-
-      window.addEventListener('devicemotion', dmHandler, { passive: true });
-      window.addEventListener('deviceorientation', orientHandler);
-      motionHandlerRef.current = () => {
-        window.removeEventListener('devicemotion', dmHandler);
-        window.removeEventListener('deviceorientation', orientHandler);
-      };
+      window.addEventListener("devicemotion", dmHandler, { passive: true });
+      motionHandlerRef.current = () => window.removeEventListener("devicemotion", dmHandler);
     }
 
-    // Stop and return collected data after 5 seconds
     setTimeout(() => {
-      try { if (gyro) gyro.stop(); } catch (e) {}
+      clearInterval(countdown);
       if (motionHandlerRef.current) motionHandlerRef.current();
+      const collected = dataRef.current.slice();
       setRunning(false);
-      onResult(dataRef.current.slice());
+      setResult(collected);
     }, 5000);
   };
 
+  const amp = result ? tremorAmplitude(result) : null;
+  const score = result ? tremorScore(result) : null;
+
   return (
-    <div className="p-6 bg-white rounded-lg shadow">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Tremor Analysis</h3>
-        <button className="bg-primary text-white px-4 py-2 rounded w-full md:w-auto" onClick={start} disabled={running}>{running ? 'Recording...' : 'Start'}</button>
+    <div className="iot-test-card">
+      <div className="iot-test-header">
+        <div className="iot-test-title">〰 Tremor Analysis Test</div>
+        <span className={`iot-status-badge ${running ? "iot-status-running" : result ? "iot-status-done" : ""}`}>
+          {running ? `Recording ${timeLeft}s` : result ? "Done" : "Ready"}
+        </span>
       </div>
-      {!available && <div className="text-sm text-gray-500">Gyroscope / motion not available on this device. On iOS, enable Motion & Orientation permission in Safari settings.</div>}
 
-      {/* 3D sphere indicator + realtime graph */}
-      <div className="flex flex-col items-center gap-3 my-3">
-        <div className="flex items-center gap-4 w-full">
-          <canvas ref={sphereRef} className="w-24 md:w-40 rounded bg-white" style={{boxShadow:'0 12px 30px rgba(2,6,23,0.06)'}} />
-          <div style={{flex:1}}>
-            <canvas ref={graphRef} style={{width:'100%', height:80, borderRadius:8, background:'#0f172a'}} />
-            <div className="text-xs text-gray-500 mt-2">Realtime tremor (last samples): <span className="text-red-500">X</span> <span className="text-green-500">Y</span> <span className="text-blue-500">Z</span></div>
+      <div className={`iot-test-interface iot-interface-active`} style={{ padding: "0.75rem" }}>
+        {!available && (
+          <div style={{ fontSize: "0.8125rem", color: "var(--iot-text-secondary)", textAlign: "center" }}>
+            Motion sensor not available. Try on a mobile device with gyroscope.
+          </div>
+        )}
+        <div className="iot-tremor-wrapper">
+          <div className="iot-tremor-visuals">
+            <canvas ref={sphereRef} className="iot-sphere-canvas" />
+            <canvas ref={graphRef} className="iot-graph-canvas" style={{ width: "100%", height: 70 }} />
+          </div>
+          {running && (
+            <div className="iot-recording-indicator">
+              <div className="iot-rec-dot" />
+              Recording... {timeLeft}s remaining
+            </div>
+          )}
+          {result && !running && (
+            <div className="iot-tremor-reading">
+              Amplitude: {amp} · Score: {score}/100 · {result.length} points captured
+            </div>
+          )}
+          {!running && !result && (
+            <div className="iot-tremor-reading" style={{ color: "var(--iot-text-muted)" }}>
+              Hold device steady · 5 second recording
+            </div>
+          )}
+          <div ref={containerRef} style={{ height: 100 }}>
+            <canvas ref={canvasRef} style={{ width: "100%", height: "100%", borderRadius: 6, border: "1px solid var(--iot-border)" }} />
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="p-3 bg-gray-50 rounded border">
-          <div className="text-xs text-gray-500">Last reading</div>
-          <div className="text-sm font-medium">x: {lastReading.x.toFixed(2)} &nbsp; y: {lastReading.y.toFixed(2)} &nbsp; z: {lastReading.z.toFixed(2)}</div>
-          {errorMsg && <div className="mt-2 text-xs text-red-500">Error: {errorMsg}</div>}
-        </div>
-        <div className="p-3 bg-gray-50 rounded border">
-          <div className="text-xs text-gray-500">Sensor log (most recent)</div>
-          <div className="mt-2 h-28 overflow-auto text-xs font-mono bg-white p-2 rounded border">
-            {log.length === 0 ? <div className="text-gray-400">No events yet</div> : log.map((l, i) => <div key={i}>{l}</div>)}
+      <div className="iot-test-content">
+        <div className="iot-test-description">
+          <div className="iot-test-description-label">Description</div>
+          <div className="iot-test-description-text">
+            Analyzes hand tremors using your device's accelerometer and gyroscope to detect irregular movements.
+            Important for Parkinson's and Essential Tremor screening.
           </div>
         </div>
-      </div>
 
-      <div ref={containerRef} className="mt-4" style={{height: 240}}>
-        <canvas ref={canvasRef} className="w-full h-full border rounded bg-gray-50" />
+        {result && (
+          <div className="iot-test-stats">
+            <div className="iot-stat">
+              <div className="iot-stat-label">Amplitude</div>
+              <div className="iot-stat-value">{amp} u</div>
+            </div>
+            <div className="iot-stat">
+              <div className="iot-stat-label">Score</div>
+              <div className="iot-stat-value">{score}/100</div>
+            </div>
+          </div>
+        )}
+
+        {!result && lastSaved && (
+          <div className="iot-test-stats">
+            <div className="iot-stat">
+              <div className="iot-stat-label">Last Result</div>
+              <div className="iot-stat-value">{lastSaved.value}</div>
+            </div>
+            <div className="iot-stat">
+              <div className="iot-stat-label">Score</div>
+              <div className="iot-stat-value">{lastSaved.score}/100</div>
+            </div>
+          </div>
+        )}
+
+        <div className="iot-test-actions">
+          {result ? (
+            <>
+              <button className="iot-btn iot-btn-primary" onClick={() => onSaveResult({ data: result, amplitude: amp, score })}>
+                Save Result
+              </button>
+              <button className="iot-btn iot-btn-secondary" onClick={() => setResult(null)}>
+                Retry
+              </button>
+            </>
+          ) : (
+            <button className="iot-btn iot-btn-primary" onClick={start} disabled={running}>
+              {running ? `Recording ${timeLeft}s...` : "▶ Start Test"}
+            </button>
+          )}
+        </div>
       </div>
-      <div className="mt-2 text-xs text-gray-500">Tip: hold the phone steady or place on a flat surface when recording.</div>
     </div>
   );
 };
 
+// ─── Main IoT Page ────────────────────────────────────────────────────────────
+
 const IoTPage = () => {
-  const [activeTest, setActiveTest] = useState('visual');
-  const [visualResult, setVisualResult] = useState(null);
-  const [soundResult, setSoundResult] = useState(null);
-  const [tremorResult, setTremorResult] = useState([]);
+  const { setToken, backendUrl, token } = useContext(AppContext);
+  const [recentResults, setRecentResults] = useState([]);
+  const [loadingResults, setLoadingResults] = useState(true);
+  const [lastReaction, setLastReaction] = useState(null);
+  const [lastTremor, setLastTremor] = useState(null);
+
+  const headers = { Authorization: `Bearer ${token}` };
+
+  useEffect(() => {
+    if (!token) { setLoadingResults(false); return; }
+    axios
+      .get(backendUrl + "/api/patient/iot/recent", { headers })
+      .then(({ data }) => {
+        if (data.success) {
+          const results = Array.isArray(data.data) ? data.data : data.data?.readings || [];
+          setRecentResults(results);
+          // populate last saved stats
+          const lastR = results.find((r) => r.sensorData?.test === "reaction_time");
+          const lastT = results.find((r) => r.sensorData?.test === "tremor_analysis");
+          if (lastR) setLastReaction({ value: `${lastR.sensorData.reactionTimeMs}ms`, score: lastR.resultScore });
+          if (lastT) setLastTremor({ value: `${lastT.sensorData.amplitude}u`, score: lastT.resultScore });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingResults(false));
+  }, [token, backendUrl]);
+
+  const saveReactionResult = async ({ resultMs, mode, score }) => {
+    if (!token) { toast.error("Please log in to save results"); return; }
+    try {
+      await axios.post(
+        backendUrl + "/api/patient/iot",
+        {
+          testType: "other",
+          sensorData: { test: "reaction_time", mode, reactionTimeMs: resultMs },
+          resultScore: score,
+          notes: `Reaction Time (${mode}): ${resultMs}ms`,
+        },
+        { headers }
+      );
+      toast.success("Reaction time result saved!");
+      setLastReaction({ value: `${resultMs}ms`, score });
+      // Refresh recent results
+      const { data } = await axios.get(backendUrl + "/api/patient/iot/recent", { headers });
+      if (data.success) {
+        const results = Array.isArray(data.data) ? data.data : data.data?.readings || [];
+        setRecentResults(results);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to save result");
+    }
+  };
+
+  const saveTremorResult = async ({ data, amplitude, score }) => {
+    if (!token) { toast.error("Please log in to save results"); return; }
+    try {
+      await axios.post(
+        backendUrl + "/api/patient/iot",
+        {
+          testType: "other",
+          sensorData: {
+            test: "tremor_analysis",
+            amplitude,
+            pointCount: data.length,
+            sampleData: data.slice(0, 20), // send first 20 points as sample
+          },
+          resultScore: score,
+          notes: `Tremor Analysis: amplitude ${amplitude}u, ${data.length} data points`,
+        },
+        { headers }
+      );
+      toast.success("Tremor result saved!");
+      setLastTremor({ value: `${amplitude}u`, score });
+      const { data: rd } = await axios.get(backendUrl + "/api/patient/iot/recent", { headers });
+      if (rd.success) {
+        const results = Array.isArray(rd.data) ? rd.data : rd.data?.readings || [];
+        setRecentResults(results);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to save result");
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setToken(false);
+  };
+
+  const fmtDate = (d) =>
+    d
+      ? new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+      : "";
+
+  const testLabel = (item) => {
+    const t = item.sensorData?.test;
+    if (t === "reaction_time") return "Reaction Time Test";
+    if (t === "tremor_analysis") return "Tremor Analysis Test";
+    return item.testType || "Test";
+  };
+
+  const testSummary = (item) => {
+    const t = item.sensorData?.test;
+    if (t === "reaction_time") return `${item.sensorData.reactionTimeMs}ms average`;
+    if (t === "tremor_analysis") return `${item.sensorData.amplitude}u amplitude`;
+    return item.notes || "—";
+  };
+
+  const scoreLabel = (score) => {
+    if (score == null) return "—";
+    if (score >= 80) return "Normal";
+    if (score >= 50) return "Moderate";
+    return "Needs Review";
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-6xl mx-auto py-6 px-4">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold">IoT — Reaction & Tremor Tests</h1>
-          <div className="hidden md:block text-sm text-gray-600">Keep device steady for tremor test. Use headphones for best sound test accuracy.</div>
-        </div>
+    <div className="iot-page">
+      <header className="iot-header">
+        <Link to="/patient-portal" className="iot-logo">
+          PATIENT PORTAL
+        </Link>
+        <nav>
+          <ul className="iot-nav-top">
+            <li><Link to="/patient-portal">Dashboard</Link></li>
+            <li><Link to="/patient-portal/profile">Profile</Link></li>
+            <li><a href="#">Settings</a></li>
+            <li>
+              <button type="button" className="iot-link-button" onClick={handleLogout}>
+                Logout
+              </button>
+            </li>
+          </ul>
+        </nav>
+      </header>
 
-        {/* Mobile tips */}
-        <div className="md:hidden mb-4">
-          <div className="bg-white p-3 rounded shadow text-sm">
-            <div className="font-medium mb-1">Mobile tips</div>
-            <div>Use portrait orientation, allow Motion permissions, tap the <strong>Start</strong> button, and place device on a flat surface for tremor recording.</div>
+      <div className="iot-container">
+        <PatientSidebar />
+
+        <main className="iot-main-content">
+          <Link to="/patient-portal" className="iot-back-link">
+            <ArrowLeftIcon style={{ width: 16, height: 16 }} /> Back to Dashboard
+          </Link>
+
+          <h1 className="iot-page-title">IoT Device Tests</h1>
+          <p className="iot-page-subtitle">
+            Perform real-time health monitoring tests using your connected devices
+          </p>
+
+          <h2 className="iot-section-title">Available Tests</h2>
+          <div className="iot-tests-grid">
+            <ReactionCard onSaveResult={saveReactionResult} lastSaved={lastReaction} />
+            <TremorCard onSaveResult={saveTremorResult} lastSaved={lastTremor} />
           </div>
-        </div>
 
-        <div className="flex flex-col md:flex-row gap-6">
-          <aside className="w-full md:w-64">
-            <div className="bg-white rounded-lg shadow p-4">
-              <h4 className="font-semibold mb-3">Tests</h4>
-              <nav className="flex flex-col gap-2">
-                <button onClick={() => setActiveTest('visual')} className={`w-full text-left p-3 rounded ${activeTest==='visual' ? 'bg-primary text-white' : 'hover:bg-gray-100'}`}>Visual Reaction</button>
-                <button onClick={() => setActiveTest('sound')} className={`w-full text-left p-3 rounded ${activeTest==='sound' ? 'bg-primary text-white' : 'hover:bg-gray-100'}`}>Sound Reaction</button>
-                <button onClick={() => setActiveTest('tremor')} className={`w-full text-left p-3 rounded ${activeTest==='tremor' ? 'bg-primary text-white' : 'hover:bg-gray-100'}`}>Tremor Analysis</button>
-              </nav>
+          <h2 className="iot-section-title">How to Perform Tests</h2>
+          <div className="iot-instructions-container">
+            <div className="iot-instruction-box">
+              <h3>Reaction Time Test Instructions</h3>
+              <ol className="iot-instruction-list">
+                <li>Select Visual or Sound mode above the test card</li>
+                <li>Press Start and wait — for visual, tap the green screen; for sound, tap when you hear the beep</li>
+                <li>Your score is calculated automatically (higher = faster)</li>
+                <li>Press Save Result to store it in your health record</li>
+              </ol>
             </div>
-            <div className="mt-4 bg-white rounded-lg shadow p-4">
-              <h4 className="font-semibold mb-2">Results</h4>
-              <div className="text-sm text-gray-700">Visual: {visualResult!==null ? `${visualResult} ms` : '—'}</div>
-              <div className="text-sm text-gray-700">Sound: {soundResult!==null ? `${soundResult} ms` : '—'}</div>
-              <div className="text-sm text-gray-700">Tremor points: {tremorResult.length}</div>
+            <div className="iot-instruction-box">
+              <h3>Tremor Analysis Test Instructions</h3>
+              <ol className="iot-instruction-list">
+                <li>Place your device flat on the palm of your hand</li>
+                <li>Keep your arm extended and as steady as possible</li>
+                <li>Press Start — the device records 5 seconds of motion data</li>
+                <li>Press Save Result to store the analysis in your health record</li>
+              </ol>
             </div>
-          </aside>
+          </div>
 
-          <main className="flex-1">
-            {activeTest === 'visual' && <VisualTest onResult={(r)=>setVisualResult(r)} />}
-            {activeTest === 'sound' && <SoundTest onResult={(r)=>setSoundResult(r)} />}
-            {activeTest === 'tremor' && <TremorTest onResult={(d)=>setTremorResult(d)} />}
-          </main>
-        </div>
+          <h2 className="iot-section-title">Recent Test Results</h2>
+          {loadingResults ? (
+            <div className="iot-empty-state">Loading results...</div>
+          ) : recentResults.length === 0 ? (
+            <div className="iot-empty-state">No test results yet. Run a test above to get started.</div>
+          ) : (
+            <div className="iot-results-list">
+              {recentResults.map((item, i) => (
+                <div key={item.id || i} className="iot-result-card">
+                  <div className="iot-result-info">
+                    <div className="iot-result-main">
+                      <div className="iot-result-label">{testLabel(item)}</div>
+                      <div className="iot-result-value">
+                        {fmtDate(item.createdAt)} · {testSummary(item)}
+                      </div>
+                    </div>
+                    <div className="iot-result-status">
+                      <CheckCircleIcon style={{ width: 15, height: 15, display: "inline", verticalAlign: "middle" }} /> {scoreLabel(item.resultScore)}
+                    </div>
+                  </div>
+                  <div className="iot-result-actions">
+                    <button className="iot-btn iot-btn-secondary iot-btn-sm">
+                      Score: {item.resultScore ?? "—"}/100
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </main>
       </div>
     </div>
   );

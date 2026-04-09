@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
 import Chat from "./pages/Chat";
 import Doctors from "./pages/Doctors";
@@ -17,13 +17,23 @@ import { ToastContainer } from "react-toastify";
 import NotFound from "./pages/NotFound";
 import IoTPage from "./pages/IoT";
 import PatientPortal from "./pages/PatientPortal";
+import PatientPortalAiAssistant from "./pages/PatientPortalAiAssistant";
 import BookAppointment from "./pages/BookAppointment";
+import MedicalHistory from "./pages/MedicalHistory";
+import HealthQueries from "./pages/HealthQueries";
+import DiscussionDetail from "./pages/DiscussionDetail";
+import EditProfile from "./pages/EditProfile";
 
 const App = () => {
+  const location = useLocation();
+  const isPatientPortalRoute =
+    location.pathname.startsWith("/patient-portal") ||
+    location.pathname === "/iot";
+
   return (
-    <div className="mx-4 sm:mx-[10%]">
+    <div className={isPatientPortalRoute ? "min-h-screen" : "mx-4 sm:mx-[10%]"}>
       <ToastContainer />
-      <Navbar />
+      {!isPatientPortalRoute && <Navbar />}
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<Home />} />
@@ -39,15 +49,33 @@ const App = () => {
         <Route path="/my-appointments" element={<Appointments />} />
         <Route path="/appointment/:docId" element={<Appointment />} />
         <Route path="/iot" element={<IoTPage />} />
+        <Route path="/patient-portal/profile" element={<EditProfile />} />
         <Route path="/patient-portal" element={<PatientPortal />} />
+        <Route
+          path="/patient-portal/ai-assistant"
+          element={<PatientPortalAiAssistant />}
+        />
         <Route
           path="/patient-portal/book-appointment"
           element={<BookAppointment />}
         />
+        <Route
+          path="/patient-portal/medical-history"
+          element={<MedicalHistory />}
+        />
+        <Route
+          path="/patient-portal/health-queries"
+          element={<HealthQueries />}
+        />
+        <Route
+          path="/patient-portal/health-queries/:id"
+          element={<DiscussionDetail />}
+        />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
-      <Footer />
+      {!isPatientPortalRoute && <Footer />}
+
     </div>
   );
 };
