@@ -1,10 +1,10 @@
 import validator from "validator";
 import bcrypt from "bcrypt";
 import { v2 as cloudinary } from "cloudinary";
-import doctorModel from "../models/doctorModel.js";
+import { supabase } from "../config/supabase.js";
+import repo from "../repository/auth.repository.js";
+import { generateAccessToken } from "../util/token.util.js";
 import jwt from "jsonwebtoken";
-import appointmentModel from "../models/appointmentModel.js";
-import userModel from "../models/userModel.js";
 
 // API for adding doctor
 const addDoctor = async (req, res) => {
@@ -60,33 +60,36 @@ const addDoctor = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // upload image to cloudinary
-    const imageUpload = await cloudinary.uploader.upload(imageFile.path, {
-      resource_type: "image",
-    });
+    const imageUpload = await cloudinary.uploader.upload(imageFile.path, { resource_type: 'image' });
     const imageUrl = imageUpload.secure_url;
 
-    // create doctor object
-    const doctorData = {
-      name,
+    // create Supabase auth user for doctor
+    const { data: createdUser, error: createErr } = await supabase.auth.admin.createUser({
       email,
-      password: hashedPassword,
-      speciality,
-      degree,
-      experience,
-      about,
-      fees,
-      address: JSON.parse(address), // parse address to JSON
-      image: imageUrl, // store the image URL
-      date: Date.now(), // store the current date
+      password,
+      user_metadata: { name, role: 'doctor' },
+      email_confirm: true,
+    });
+    if (createErr) return res.status(500).json({ success: false, message: createErr.message });
+
+    // insert doctor profile in Supabase
+    const doctorProfile = {
+      user_id: createdUser?.id || createdUser?.user?.id,
+      specialty: speciality,
+      qualifications: degree,
+      experience: experience,
+      bio: about,
+      consultation_fee: fees,
+      address: JSON.parse(address),
+      image: imageUrl,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
-    const newDoctor = new doctorModel(doctorData);
-    await newDoctor.save();
+    const { error: profErr } = await supabase.from('doctor_profiles').insert(doctorProfile);
+    if (profErr) return res.status(500).json({ success: false, message: profErr.message });
 
-    res.status(201).json({
-      success: true,
-      message: "Doctor added successfully",
-    });
+    return res.status(201).json({ success: true, message: 'Doctor added successfully' });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -133,36 +136,22 @@ const loginAdmin = async (req, res) => {
 // API for getting all doctors
 const getAllDoctors = async (req, res) => {
   try {
-    const doctors = await doctorModel
-      .find({})
-      .select("-password")
-      .sort({ date: -1 });
-    res.status(200).json({
-      success: true,
-      doctors,
-    });
+    const { data, error } = await supabase.from('doctor_profiles').select('*, users(name,email,avatar_url)').order('created_at', { ascending: false });
+    if (error) return res.status(500).json({ success: false, message: error.message });
+    return res.status(200).json({ success: true, doctors: data });
   } catch (error) {
-    res.status(401).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // API to get all appointments list
 const appointmentsAdmin = async (req, res) => {
   try {
-    const appointments = await appointmentModel.find({});
-
-    res.status(200).json({
-      success: true,
-      appointments,
-    });
+    const { data, error } = await supabase.from('appointments').select('*');
+    if (error) return res.status(500).json({ success: false, message: error.message });
+    return res.status(200).json({ success: true, appointments: data });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -170,69 +159,34 @@ const appointmentsAdmin = async (req, res) => {
 const appointmentCancelAdmin = async (req, res) => {
   try {
     const { appointmentId } = req.body;
-
-    const appointmentData = await appointmentModel.findById(appointmentId);
-    if (!appointmentData) {
-      return res.status(404).json({
-        success: false,
-        message: "Appointment not found.",
-      });
-    }
-
-    // cancel appointment
-    await appointmentModel.findByIdAndUpdate(appointmentId, {
-      cancelled: true,
-    });
-
-    //releasing doctor slot
-    const { docId, slotDate, slotTime } = appointmentData;
-    const doctorData = await doctorModel.findById(docId).select("-password");
-    if (doctorData) {
-      let slots_booked = doctorData.slots_booked;
-      if (slots_booked[slotDate]) {
-        slots_booked[slotDate] = slots_booked[slotDate].filter(
-          (time) => time !== slotTime
-        );
-
-        await doctorModel.findByIdAndUpdate(docId, { slots_booked });
-      }
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Appointment cancelled.",
-    });
+    const { data, error } = await supabase.from('appointments').select('*').eq('id', appointmentId).maybeSingle();
+    if (error) return res.status(500).json({ success: false, message: error.message });
+    if (!data) return res.status(404).json({ success: false, message: 'Appointment not found.' });
+    const { error: upErr } = await supabase.from('appointments').update({ status: 'cancelled' }).eq('id', appointmentId);
+    if (upErr) return res.status(500).json({ success: false, message: upErr.message });
+    return res.status(200).json({ success: true, message: 'Appointment cancelled.' });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
 // API to get dashboard data for admin dashboard
 const adminDashboard = async (req, res) => {
   try {
-    const doctors = await doctorModel.find({});
-    const users = await userModel.find({});
-    const appointments = await appointmentModel.find({});
-
+    const [{ data: doctors }, { data: users }, { data: appointments }] = await Promise.all([
+      supabase.from('doctor_profiles').select('id'),
+      supabase.from('users').select('id'),
+      supabase.from('appointments').select('id'),
+    ]);
     const dashData = {
-      doctors: doctors.length,
-      patients: users.length,
-      appointments: appointments.length,
-      latestAppointments: appointments.reverse().slice(0, 5),
+      doctors: doctors?.length || 0,
+      patients: users?.length || 0,
+      appointments: appointments?.length || 0,
+      latestAppointments: [],
     };
-
-    res.status(200).json({
-      success: true,
-      dashData,
-    });
+    return res.status(200).json({ success: true, dashData });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 

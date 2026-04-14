@@ -1,18 +1,45 @@
 import { verifyAccessToken } from '../util/token.util.js';
 import { sendError } from '../util/response.util.js';
+import { supabase } from '../config/supabase.js';
 
-export function authenticate(req, res, next) {
+// Accepts either the app's JWT or a Supabase access token (Bearer). If Supabase token
+// is provided, validates with Supabase and ensures a corresponding local user exists.
+export async function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return sendError(res, 'Authorization token missing or invalid', 401);
   }
 
   const token = authHeader.split(' ')[1];
+
+  // First try existing app access token verification
   try {
     const payload = verifyAccessToken(token);
     req.user = payload;
-    next();
+    return next();
   } catch (err) {
+    // ignore and try Supabase
+  }
+
+  // If supabase client is not configured, reject
+  if (!supabase) {
+    return sendError(res, 'Invalid or expired token', 401);
+  }
+
+  try {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data?.user) {
+      return sendError(res, 'Invalid or expired token', 401);
+    }
+
+    const sUser = data.user;
+
+    // Map Supabase user to request user object. No local DB creation.
+    const suppliedRole = sUser.user_metadata?.role || 'patient';
+    req.user = { sub: sUser.id, email: sUser.email, role: suppliedRole };
+    return next();
+  } catch (err) {
+    console.error('Supabase token validation error', err);
     return sendError(res, 'Invalid or expired token', 401);
   }
 }

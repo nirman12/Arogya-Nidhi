@@ -1,431 +1,274 @@
-import prisma from '../config/prisma.js';
+import { supabase } from '../config/supabase.js';
 
 // ─── Patient lookup ───────────────────────────────────────────────────────────
 
 async function findPatientByUserId(userId) {
-  return prisma.patient.findUnique({
-    where: { userId },
-    include: {
-      user: {
-        select: { id: true, name: true, email: true, avatarUrl: true },
-      },
-    },
-  });
+  const { data, error } = await supabase
+    .from('patients')
+    .select('*, user:users(id,name,email,avatar_url:avatarUrl)')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 // ─── Dashboard overview ───────────────────────────────────────────────────────
 
 async function getUpcomingAppointmentsCount(patientId) {
-  return prisma.appointment.count({
-    where: {
-      patientId,
-      scheduledAt: { gte: new Date() },
-      status: { in: ['pending', 'confirmed'] },
-    },
-  });
+  const now = new Date().toISOString();
+  const { count, error } = await supabase
+    .from('appointments')
+    .select('*', { count: 'exact' })
+    .eq('patient_id', patientId)
+    .gte('scheduled_at', now)
+    .in('status', ['pending', 'confirmed']);
+  if (error) throw error;
+  return count || 0;
 }
 
 async function getPendingTestsCount(patientId) {
   // IoT readings submitted in last 7 days without a result score = "pending"
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  return prisma.iotReading.count({
-    where: {
-      patientId,
-      resultScore: null,
-      recordedAt: { gte: sevenDaysAgo },
-    },
-  });
+  const { count, error } = await supabase
+    .from('iot_readings')
+    .select('*', { count: 'exact' })
+    .eq('patient_id', patientId)
+    .is('result_score', null)
+    .gte('recorded_at', sevenDaysAgo.toISOString());
+  if (error) throw error;
+  return count || 0;
 }
 
 async function getLatestPrescriptions(patientId, take = 3) {
-  return prisma.consultationSummary.findMany({
-    where: {
-      prescription: { not: null },
-      appointment: { patientId },
-    },
-    orderBy: { createdAt: 'desc' },
-    take,
-    select: {
-      id: true,
-      prescription: true,
-      diagnosis: true,
-      createdAt: true,
-      appointment: {
-        select: {
-          id: true,
-          scheduledAt: true,
-          doctor: {
-            select: {
-              id: true,
-              specialty: true,
-              user: { select: { name: true, avatarUrl: true } },
-            },
-          },
-        },
-      },
-    },
-  });
+  const { data, error } = await supabase
+    .from('consultation_summaries')
+    .select(`id,prescription,diagnosis,created_at:createdAt, appointment:appointments(id,scheduled_at:scheduledAt, doctor:doctor_profiles(id,specialty, user:users(name,avatar_url:avatarUrl)))`)
+    .not('prescription', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(take);
+  if (error) throw error;
+  return data;
 }
 
 // Health score: computed from profile completeness + recent vitals
 async function getHealthScoreData(patientId) {
-  const patient = await prisma.patient.findUnique({
-    where: { id: patientId },
-    select: {
-      height: true,
-      weight: true,
-      bloodGroup: true,
-      gender: true,
-      dateOfBirth: true,
-      allergies: true,
-      chronicConditions: true,
-      currentMedications: true,
-      medicalHistory: true,
-      emergencyContacts: { select: { id: true }, take: 1 },
-      addressInfo: { select: { id: true } },
-      iotReadings: {
-        orderBy: { recordedAt: 'desc' },
-        take: 5,
-        select: { resultScore: true, testType: true, recordedAt: true },
-      },
-    },
-  });
-  return patient;
+  const { data, error } = await supabase
+    .from('patients')
+    .select(`height,weight,blood_group:bondGroup,blood_group: "bloodGroup", gender, date_of_birth:dateOfBirth, allergies, chronic_conditions:chronicConditions, current_medications:currentMedications, medical_history:medicalHistory, emergency_contacts:emergency_contacts(id), address_info:patient_addresses(id)`) 
+    .eq('id', patientId)
+    .maybeSingle();
+  if (error) throw error;
+  // fetch recent iot readings separately
+  const { data: iot, error: iotErr } = await supabase
+    .from('iot_readings')
+    .select('result_score:resultScore,test_type: testType,recorded_at:recordedAt')
+    .eq('patient_id', patientId)
+    .order('recorded_at', { ascending: false })
+    .limit(5);
+  if (iotErr) throw iotErr;
+  return { ...data, iotReadings: iot };
 }
 
 // ─── Appointments ─────────────────────────────────────────────────────────────
 
 async function getUpcomingAppointments(patientId, { page = 1, limit = 10 } = {}) {
-  const where = {
-    patientId,
-    scheduledAt: { gte: new Date() },
-    status: { in: ['pending', 'confirmed'] },
-  };
-  const [total, appointments] = await Promise.all([
-    prisma.appointment.count({ where }),
-    prisma.appointment.findMany({
-      where,
-      orderBy: { scheduledAt: 'asc' },
-      skip: (page - 1) * limit,
-      take: limit,
-      include: {
-        doctor: {
-          select: {
-            id: true,
-            specialty: true,
-            consultationFee: true,
-            user: { select: { name: true, avatarUrl: true } },
-          },
-        },
-        consultationSummary: {
-          select: { diagnosis: true, prescription: true, followUpDate: true },
-        },
-        payment: { select: { status: true, amount: true, currency: true } },
-      },
-    }),
-  ]);
-  return { total, page, limit, appointments };
+  const now = new Date().toISOString();
+  const offset = (page - 1) * limit;
+  const base = supabase
+    .from('appointments')
+    .select(`*, doctor:doctor_profiles(id,specialty,consultation_fee:consultationFee, user:users(name,avatar_url:avatarUrl)), consultation_summary:consultation_summaries(diagnosis,prescription,follow_up_date:followUpDate), payment:payments(status,amount,currency)`, { count: 'exact' })
+    .eq('patient_id', patientId)
+    .gte('scheduled_at', now)
+    .in('status', ['pending', 'confirmed'])
+    .order('scheduled_at', { ascending: true })
+    .range(offset, offset + limit - 1);
+  const { data, count, error } = await base;
+  if (error) throw error;
+  return { total: count || 0, page, limit, appointments: data };
 }
 
 async function getAllAppointments(patientId, { page = 1, limit = 10, status } = {}) {
-  const where = { patientId };
-  if (status) where.status = status;
-
-  const [total, appointments] = await Promise.all([
-    prisma.appointment.count({ where }),
-    prisma.appointment.findMany({
-      where,
-      orderBy: { scheduledAt: 'desc' },
-      skip: (page - 1) * limit,
-      take: limit,
-      include: {
-        doctor: {
-          select: {
-            id: true,
-            specialty: true,
-            consultationFee: true,
-            isVerified: true,
-            user: { select: { name: true, avatarUrl: true, email: true, phone: true } },
-          },
-        },
-        consultationSummary: true,
-        payment: { select: { status: true, amount: true, currency: true, paidAt: true } },
-      },
-    }),
-  ]);
-  return { total, page, limit, appointments };
+  const offset = (page - 1) * limit;
+  let query = supabase
+    .from('appointments')
+    .select(`*, doctor:doctor_profiles(id,specialty,consultation_fee:consultationFee,is_verified:isVerified, user:users(name,avatar_url:avatarUrl,email,phone)), consultation_summary:consultation_summaries(*), payment:payments(status,amount,currency,paid_at:paidAt)`, { count: 'exact' })
+    .eq('patient_id', patientId)
+    .order('scheduled_at', { ascending: false });
+  if (status) query = query.eq('status', status);
+  const { data, count, error } = await query.range(offset, offset + limit - 1);
+  if (error) throw error;
+  return { total: count || 0, page, limit, appointments: data };
 }
 
 async function findAppointmentById(id, patientId) {
-  return prisma.appointment.findFirst({
-    where: { id, patientId },
-    include: {
-      doctor: {
-        select: {
-          id: true,
-          specialty: true,
-          subSpecialty: true,
-          consultationFee: true,
-          experienceYears: true,
-          bio: true,
-          isVerified: true,
-          user: { select: { name: true, avatarUrl: true, email: true, phone: true } },
-        },
-      },
-      consultationSummary: true,
-      payment: true,
-      anonymizedCase: { select: { id: true, specialtyTag: true, isApproved: true } },
-    },
-  });
+  const { data, error } = await supabase
+    .from('appointments')
+    .select(`*, doctor:doctor_profiles(id,specialty,sub_specialty:subSpecialty,consultation_fee:consultationFee,experience_years:experienceYears,bio,is_verified:isVerified, user:users(name,avatar_url:avatarUrl,email,phone)), consultation_summary:consultation_summaries(*), payment:payments(*), anonymized_case:anonymized_cases(id,specialty_tag:specialtyTag,is_approved:isApproved)`) 
+    .eq('id', id)
+    .eq('patient_id', patientId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 async function bookAppointment(data) {
-  return prisma.appointment.create({
-    data,
-    include: {
-      doctor: {
-        select: {
-          id: true,
-          specialty: true,
-          user: { select: { name: true, avatarUrl: true } },
-        },
-      },
-    },
-  });
+  const { data: created, error } = await supabase
+    .from('appointments')
+    .insert(data)
+    .select('*, doctor:doctor_profiles(id,specialty, user:users(name,avatar_url:avatarUrl))')
+    .maybeSingle();
+  if (error) throw error;
+  return created;
 }
 
 async function cancelAppointment(id) {
-  return prisma.appointment.update({
-    where: { id },
-    data: { status: 'cancelled' },
-  });
+  const { data: updated, error } = await supabase.from('appointments').update({ status: 'cancelled' }).eq('id', id).maybeSingle();
+  if (error) throw error;
+  return updated;
 }
 
 async function updateAppointment(id, data) {
-  return prisma.appointment.update({ where: { id }, data });
+  const { data: updated, error } = await supabase.from('appointments').update(data).eq('id', id).maybeSingle();
+  if (error) throw error;
+  return updated;
 }
 
 // ─── Medical history ──────────────────────────────────────────────────────────
 
 async function getMedicalHistory(patientId, { page = 1, limit = 10 } = {}) {
-  const where = {
-    patientId,
-    status: 'completed',
-    consultationSummary: { isNot: null },
-  };
-  const [total, records] = await Promise.all([
-    prisma.appointment.count({ where }),
-    prisma.appointment.findMany({
-      where,
-      orderBy: { scheduledAt: 'desc' },
-      skip: (page - 1) * limit,
-      take: limit,
-      include: {
-        doctor: {
-          select: {
-            specialty: true,
-            user: { select: { name: true, avatarUrl: true } },
-          },
-        },
-        consultationSummary: {
-          select: {
-            aiSummary: true,
-            doctorNotes: true,
-            diagnosis: true,
-            prescription: true,
-            followUpDate: true,
-            createdAt: true,
-          },
-        },
-      },
-    }),
-  ]);
-  return { total, page, limit, records };
+  const offset = (page - 1) * limit;
+  const { data, count, error } = await supabase
+    .from('appointments')
+    .select(`*, doctor:doctor_profiles(specialty, user:users(name,avatar_url:avatarUrl)), consultation_summary:consultation_summaries(ai_summary:aiSummary,doctor_notes:doctorNotes,diagnosis,prescription,follow_up_date:followUpDate,created_at:createdAt)`, { count: 'exact' })
+    .eq('patient_id', patientId)
+    .eq('status', 'completed')
+    .not('consultation_summary', 'is', null)
+    .order('scheduled_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+  if (error) throw error;
+  return { total: count || 0, page, limit, records: data };
 }
 
 async function getRecentMedicalHistory(patientId, take = 3) {
-  return prisma.appointment.findMany({
-    where: {
-      patientId,
-      status: 'completed',
-      consultationSummary: { isNot: null },
-    },
-    orderBy: { scheduledAt: 'desc' },
-    take,
-    include: {
-      doctor: {
-        select: {
-          specialty: true,
-          user: { select: { name: true, avatarUrl: true } },
-        },
-      },
-      consultationSummary: {
-        select: {
-          diagnosis: true,
-          prescription: true,
-          followUpDate: true,
-          createdAt: true,
-        },
-      },
-    },
-  });
+  const { data, error } = await supabase
+    .from('appointments')
+    .select(`*, doctor:doctor_profiles(specialty, user:users(name,avatar_url:avatarUrl)), consultation_summary:consultation_summaries(diagnosis,prescription,follow_up_date:followUpDate,created_at:createdAt)`) 
+    .eq('patient_id', patientId)
+    .eq('status', 'completed')
+    .not('consultation_summary', 'is', null)
+    .order('scheduled_at', { ascending: false })
+    .limit(take);
+  if (error) throw error;
+  return data;
 }
 
 // ─── IoT readings ─────────────────────────────────────────────────────────────
 
 async function getIotReadings(patientId, { page = 1, limit = 10, testType } = {}) {
-  const where = { patientId };
-  if (testType) where.testType = testType;
-
-  const [total, readings] = await Promise.all([
-    prisma.iotReading.count({ where }),
-    prisma.iotReading.findMany({
-      where,
-      orderBy: { recordedAt: 'desc' },
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-  ]);
-  return { total, page, limit, readings };
+  const offset = (page - 1) * limit;
+  let query = supabase.from('iot_readings').select('*', { count: 'exact' }).eq('patient_id', patientId).order('recorded_at', { ascending: false });
+  if (testType) query = query.eq('test_type', testType);
+  const { data, count, error } = await query.range(offset, offset + limit - 1);
+  if (error) throw error;
+  return { total: count || 0, page, limit, readings: data };
 }
 
 async function getRecentIotReadings(patientId, take = 3) {
-  return prisma.iotReading.findMany({
-    where: { patientId },
-    orderBy: { recordedAt: 'desc' },
-    take,
-  });
+  const { data, error } = await supabase.from('iot_readings').select('*').eq('patient_id', patientId).order('recorded_at', { ascending: false }).limit(take);
+  if (error) throw error;
+  return data;
 }
 
 async function findIotReadingById(id, patientId) {
-  return prisma.iotReading.findFirst({ where: { id, patientId } });
+  const { data, error } = await supabase.from('iot_readings').select('*').eq('id', id).eq('patient_id', patientId).maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 async function createIotReading(data) {
-  return prisma.iotReading.create({ data });
+  const { data: created, error } = await supabase.from('iot_readings').insert(data).select().maybeSingle();
+  if (error) throw error;
+  return created;
 }
 
 // ─── Patient queries ──────────────────────────────────────────────────────────
 
 async function getPatientQueries(patientId, { page = 1, limit = 10, isResolved } = {}) {
-  const where = { patientId };
-  if (isResolved !== undefined) where.isResolved = isResolved;
-
-  const [total, queries] = await Promise.all([
-    prisma.patientQuery.count({ where }),
-    prisma.patientQuery.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * limit,
-      take: limit,
-      include: {
-        responses: {
-          select: {
-            id: true,
-            responseText: true,
-            isAccepted: true,
-            createdAt: true,
-            doctor: {
-              select: {
-                specialty: true,
-                user: { select: { name: true, avatarUrl: true } },
-              },
-            },
-          },
-          orderBy: { createdAt: 'asc' },
-        },
-        triageDecision: true,
-        _count: { select: { responses: true } },
-      },
-    }),
-  ]);
-  return { total, page, limit, queries };
+  const offset = (page - 1) * limit;
+  let query = supabase
+    .from('patient_queries')
+    .select(`*, responses:query_responses(id,response_text:responseText,is_accepted:isAccepted,created_at:createdAt, doctor:doctor_profiles(specialty, user:users(name,avatar_url:avatarUrl) )), triage_decision:triage_decisions(* )`, { count: 'exact' })
+    .eq('patient_id', patientId)
+    .order('created_at', { ascending: false });
+  if (isResolved !== undefined) query = query.eq('is_resolved', isResolved);
+  const { data, count, error } = await query.range(offset, offset + limit - 1);
+  if (error) throw error;
+  return { total: count || 0, page, limit, queries: data };
 }
 
 async function findQueryById(id, patientId) {
-  return prisma.patientQuery.findFirst({
-    where: { id, patientId },
-    include: {
-      responses: {
-        include: {
-          doctor: {
-            select: {
-              id: true,
-              specialty: true,
-              isVerified: true,
-              user: { select: { name: true, avatarUrl: true } },
-            },
-          },
-        },
-        orderBy: { createdAt: 'asc' },
-      },
-      triageDecision: true,
-    },
-  });
+  const { data, error } = await supabase
+    .from('patient_queries')
+    .select(`*, responses:query_responses(id,response_text:responseText,is_accepted:isAccepted,created_at:createdAt, doctor:doctor_profiles(id,specialty,is_verified:isVerified, user:users(name,avatar_url:avatarUrl) )), triage_decision:triage_decisions(*)`)
+    .eq('id', id)
+    .eq('patient_id', patientId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 async function createQuery(data) {
-  return prisma.patientQuery.create({ data });
+  const { data: created, error } = await supabase.from('patient_queries').insert(data).select().maybeSingle();
+  if (error) throw error;
+  return created;
 }
 
 async function updateQuery(id, data) {
-  return prisma.patientQuery.update({ where: { id }, data });
+  const { data: updated, error } = await supabase.from('patient_queries').update(data).eq('id', id).maybeSingle();
+  if (error) throw error;
+  return updated;
 }
 
 async function deleteQuery(id) {
-  return prisma.patientQuery.delete({ where: { id } });
+  const { data, error } = await supabase.from('patient_queries').delete().eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 async function incrementQueryView(id) {
-  return prisma.patientQuery.update({
-    where: { id },
-    data: { viewCount: { increment: 1 } },
-  });
+  // Read current view_count then increment
+  const { data: existing, error: getErr } = await supabase.from('patient_queries').select('view_count').eq('id', id).maybeSingle();
+  if (getErr) throw getErr;
+  const current = (existing && existing.view_count) || 0;
+  const { data: updated, error } = await supabase.from('patient_queries').update({ view_count: current + 1 }).eq('id', id).maybeSingle();
+  if (error) throw error;
+  return updated;
 }
 
 // ─── Doctors (for booking) ────────────────────────────────────────────────────
 
 async function getAvailableDoctors({ page = 1, limit = 10, specialty } = {}) {
-  const where = { isAvailable: true, isVerified: true };
-  if (specialty) where.specialty = { contains: specialty, mode: 'insensitive' };
-
-  const [total, doctors] = await Promise.all([
-    prisma.doctorProfile.count({ where }),
-    prisma.doctorProfile.findMany({
-      where,
-      skip: (page - 1) * limit,
-      take: limit,
-      select: {
-        id: true,
-        specialty: true,
-        subSpecialty: true,
-        experienceYears: true,
-        consultationFee: true,
-        bio: true,
-        isVerified: true,
-        user: { select: { name: true, avatarUrl: true, email: true } },
-      },
-    }),
-  ]);
-  return { total, page, limit, doctors };
+  const offset = (page - 1) * limit;
+  let query = supabase
+    .from('doctor_profiles')
+    .select('id,specialty,sub_specialty:subSpecialty,experience_years:experienceYears,consultation_fee:consultationFee,bio,is_verified:isVerified, user:users(name,avatar_url:avatarUrl,email) ', { count: 'exact' })
+    .eq('is_available', true)
+    .eq('is_verified', true)
+    .order('id', { ascending: true });
+  if (specialty) query = query.ilike('specialty', `%${specialty}%`);
+  const { data, count, error } = await query.range(offset, offset + limit - 1);
+  if (error) throw error;
+  return { total: count || 0, page, limit, doctors: data };
 }
 
 async function findDoctorById(id) {
-  return prisma.doctorProfile.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      specialty: true,
-      subSpecialty: true,
-      experienceYears: true,
-      consultationFee: true,
-      bio: true,
-      qualifications: true,
-      isVerified: true,
-      isAvailable: true,
-      user: { select: { name: true, avatarUrl: true, email: true } },
-    },
-  });
+  const { data, error } = await supabase
+    .from('doctor_profiles')
+    .select('id,specialty,sub_specialty:subSpecialty,experience_years:experienceYears,consultation_fee:consultationFee,bio,qualifications,is_verified:isVerified,is_available:isAvailable, user:users(name,avatar_url:avatarUrl,email)')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 export default {

@@ -1,10 +1,9 @@
 import validator from "validator";
 import bcrypt from "bcrypt";
-import userModel from "../models/userModel.js";
-import doctorModel from "../models/doctorModel.js";
-import jwt from "jsonwebtoken";
 import { v2 as cloudinary } from "cloudinary";
-import appointmentModel from "../models/appointmentModel.js";
+import { supabase } from "../config/supabase.js";
+import repo from "../repository/auth.repository.js";
+import { generateAccessToken } from "../util/token.util.js";
 
 const MAX_USERS = 100;
 
@@ -14,69 +13,40 @@ const registerUser = async (req, res) => {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Please fill in all required fields.",
-      });
+      return res.status(400).json({ success: false, message: "Please fill in all required fields." });
     }
 
     if (!validator.isEmail(email)) {
-      return res.status(400).json({
-        success: false,
-        message: "Please enter a valid email address.",
-      });
+      return res.status(400).json({ success: false, message: "Please enter a valid email address." });
     }
 
     if (password.length < 8) {
-      return res.status(400).json({
-        success: false,
-        message: "Password must be at least 8 characters long.",
-      });
+      return res.status(400).json({ success: false, message: "Password must be at least 8 characters long." });
     }
 
-    // check total user count
-    const userCount = await userModel.countDocuments();
-    if (userCount >= MAX_USERS) {
-      return res.status(403).json({
-        success: false,
-        message: `User limit of ${MAX_USERS} reached. No more registrations allowed.`,
-      });
-    }
-
-    // check if email already exists
-    const existingUser = await userModel.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "This email address is already in use. Please use a different one.",
-      });
-    }
-
-    // hashing user password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const userData = {
-      name,
+    // create Supabase auth user
+    const { data: createdUser, error: createErr } = await supabase.auth.admin.createUser({
       email,
-      password: hashedPassword,
-    };
-
-    const newUser = new userModel(userData);
-    const user = await newUser.save();
-
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
-
-    res.status(201).json({
-      success: true,
-      token,
+      password,
+      user_metadata: { name, role: 'patient' },
+      email_confirm: true,
     });
+    if (createErr) return res.status(500).json({ success: false, message: createErr.message });
+
+    // persist into local users table via repo
+    await repo.upsertUser({
+      id: createdUser?.id || createdUser?.user?.id,
+      email,
+      name,
+      role: 'patient',
+      is_active: true,
+    });
+
+    // issue backend JWT
+    const token = generateAccessToken({ id: createdUser?.id || createdUser?.user?.id });
+    return res.status(201).json({ success: true, token });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -84,35 +54,13 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await userModel.findOne({ email });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found with this email.",
-      });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Wrong password.",
-      });
-    }
-
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
-
-    res.status(200).json({
-      success: true,
-      token,
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return res.status(401).json({ success: false, message: error.message });
+    const sUser = data.user;
+    const token = generateAccessToken({ id: sUser.id });
+    return res.status(200).json({ success: true, token });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -120,17 +68,10 @@ const loginUser = async (req, res) => {
 const getUserProfile = async (req, res) => {
   try {
     const { userId } = req.user;
-    const userData = await userModel.findById(userId).select("-password");
-
-    res.status(200).json({
-      success: true,
-      userData,
-    });
+    const userData = await repo.findUserById(userId);
+    res.status(200).json({ success: true, userData });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -142,42 +83,23 @@ const updateUserProfile = async (req, res) => {
     const imgFile = req.file;
 
     if (!name || !phone || !address || !dob || !gender) {
-      return res.status(404).json({
-        success: false,
-        message: "User data is missing.",
-      });
+      return res.status(404).json({ success: false, message: "User data is missing." });
     }
 
-    const userData = {
-      name,
-      phone,
-      address: JSON.parse(address),
-      dob,
-      gender,
-    };
+    const addressObj = JSON.parse(address);
 
-    await userModel.findByIdAndUpdate(userId, userData);
+    const updates = { name, phone, address: addressObj, dob, gender };
 
     if (imgFile) {
-      //upload img to cloudinary
-      const imgUpload = await cloudinary.uploader.upload(imgFile.path, {
-        resource_type: "image",
-      });
-
-      const imgURL = imgUpload.secure_url;
-
-      await userModel.findByIdAndUpdate(userId, { image: imgURL });
+      const imgUpload = await cloudinary.uploader.upload(imgFile.path, { resource_type: 'image' });
+      updates.avatar_url = imgUpload.secure_url;
     }
 
-    res.status(200).json({
-      success: true,
-      message: "User profile updated.",
-    });
+    const updated = await repo.upsertUser({ id: userId, ...updates });
+
+    res.status(200).json({ success: true, message: 'User profile updated.', user: updated });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -187,62 +109,34 @@ const bookAppointment = async (req, res) => {
     const { userId } = req.user;
     const { docId, slotDate, slotTime } = req.body;
 
-    const docData = await doctorModel.findById(docId).select("-password");
+    // Check existing appointment for this doctor at the same slot
+    const { data: existing, error: existErr } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('doctor_id', docId)
+      .eq('slot_date', slotDate)
+      .eq('slot_time', slotTime)
+      .maybeSingle();
+    if (existErr) return res.status(500).json({ success: false, message: existErr.message });
+    if (existing) return res.status(400).json({ success: false, message: 'This slot is already booked.' });
 
-    if (!docData.available) {
-      return res.status(404).json({
-        success: false,
-        message: "Doctor not available. Please choose another doctor.",
-      });
-    }
-
-    let slots_booked = docData.slots_booked;
-
-    // check slot availability
-    if (slots_booked[slotDate]) {
-      if (slots_booked[slotDate].includes(slotTime)) {
-        return res.status(400).json({
-          success: false,
-          message: "This slot is already booked.",
-        });
-      } else {
-        slots_booked[slotDate].push(slotTime);
-      }
-    } else {
-      slots_booked[slotDate] = [];
-      slots_booked[slotDate].push(slotTime);
-    }
-
-    const userData = await userModel.findById(userId).select("-password");
-
-    delete docData.slots_booked;
+    const userData = await repo.findUserById(userId);
 
     const appointmentData = {
-      userId,
-      docId,
-      userData,
-      docData,
-      amount: docData.fees,
-      slotTime,
-      slotDate,
-      date: Date.now(),
+      patient_id: userId,
+      doctor_id: docId,
+      slot_date: slotDate,
+      slot_time: slotTime,
+      amount: req.body.amount || 0,
+      created_at: new Date().toISOString(),
     };
 
-    const newAppointment = new appointmentModel(appointmentData);
-    await newAppointment.save();
+    const { data: created, error: createErr } = await supabase.from('appointments').insert(appointmentData).select().maybeSingle();
+    if (createErr) return res.status(500).json({ success: false, message: createErr.message });
 
-    // save new slots data in docData
-    await doctorModel.findByIdAndUpdate(docId, { slots_booked });
-
-    res.status(200).json({
-      success: true,
-      message: "Appointment booked successfully.",
-    });
+    return res.status(200).json({ success: true, message: 'Appointment booked successfully.', appointment: created });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -250,17 +144,11 @@ const bookAppointment = async (req, res) => {
 const listAppointment = async (req, res) => {
   try {
     const { userId } = req.user;
-    const appointments = await appointmentModel.find({ userId });
-
-    res.status(200).json({
-      success: true,
-      appointments,
-    });
+    const { data, error } = await supabase.from('appointments').select('*').eq('patient_id', userId);
+    if (error) return res.status(500).json({ success: false, message: error.message });
+    return res.status(200).json({ success: true, appointments: data });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -269,51 +157,15 @@ const cancelAppointment = async (req, res) => {
   try {
     const { userId } = req.user;
     const { appointmentId } = req.body;
-
-    const appointmentData = await appointmentModel.findById(appointmentId);
-    if (!appointmentData) {
-      return res.status(404).json({
-        success: false,
-        message: "Appointment not found.",
-      });
-    }
-
-    // verify appointment user
-    if (appointmentData.userId.toString() !== userId) {
-      return res.status(403).json({
-        success: false,
-        message: "You are not authorized to cancel this appointment.",
-      });
-    }
-
-    // cancel appointment
-    await appointmentModel.findByIdAndUpdate(appointmentId, {
-      cancelled: true,
-    });
-
-    //releasing doctor slot
-    const { docId, slotDate, slotTime } = appointmentData;
-    const doctorData = await doctorModel.findById(docId).select("-password");
-    if (doctorData) {
-      let slots_booked = doctorData.slots_booked;
-      if (slots_booked[slotDate]) {
-        slots_booked[slotDate] = slots_booked[slotDate].filter(
-          (time) => time !== slotTime
-        );
-
-        await doctorModel.findByIdAndUpdate(docId, { slots_booked });
-      }
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Appointment cancelled.",
-    });
+    const { data, error } = await supabase.from('appointments').select('*').eq('id', appointmentId).maybeSingle();
+    if (error) return res.status(500).json({ success: false, message: error.message });
+    if (!data) return res.status(404).json({ success: false, message: 'Appointment not found.' });
+    if (data.patient_id !== userId) return res.status(403).json({ success: false, message: 'You are not authorized to cancel this appointment.' });
+    const { error: upErr } = await supabase.from('appointments').update({ status: 'cancelled' }).eq('id', appointmentId);
+    if (upErr) return res.status(500).json({ success: false, message: upErr.message });
+    return res.status(200).json({ success: true, message: 'Appointment cancelled.' });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -322,51 +174,17 @@ const makePayment = async (req, res) => {
   try {
     const { userId } = req.user;
     const { appointmentId } = req.body;
-
-    const appointmentData = await appointmentModel.findById(appointmentId);
-
-    if (!appointmentData) {
-      return res.status(404).json({
-        success: false,
-        message: "Appointment not found.",
-      });
-    }
-
-    if (appointmentData.cancelled) {
-      return res.status(400).json({
-        success: false,
-        message: "Appointment cancelled.",
-      });
-    }
-
-    if (appointmentData.payment) {
-      return res.status(400).json({
-        success: false,
-        message: "Payment already completed.",
-      });
-    }
-
-    // verify appointment user
-    if (appointmentData.userId.toString() !== userId) {
-      return res.status(403).json({
-        success: false,
-        message: "You are not authorized to make payment for this appointment.",
-      });
-    }
-
-    // Mark appointment as paid
-    appointmentData.payment = true;
-    await appointmentData.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Payment successful.",
-    });
+    const { data, error } = await supabase.from('appointments').select('*').eq('id', appointmentId).maybeSingle();
+    if (error) return res.status(500).json({ success: false, message: error.message });
+    if (!data) return res.status(404).json({ success: false, message: 'Appointment not found.' });
+    if (data.status === 'cancelled') return res.status(400).json({ success: false, message: 'Appointment cancelled.' });
+    if (data.payment === true) return res.status(400).json({ success: false, message: 'Payment already completed.' });
+    if (data.patient_id !== userId) return res.status(403).json({ success: false, message: 'You are not authorized to make payment for this appointment.' });
+    const { error: upErr } = await supabase.from('appointments').update({ payment: true }).eq('id', appointmentId);
+    if (upErr) return res.status(500).json({ success: false, message: upErr.message });
+    return res.status(200).json({ success: true, message: 'Payment successful.' });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 

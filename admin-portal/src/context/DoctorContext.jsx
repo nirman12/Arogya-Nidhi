@@ -17,7 +17,7 @@ export const DoctorContextProvider = ({ children }) => {
     try {
       const { data } = await axios.get(
         backendUrl + "/api/doctor/appointments",
-        { headers: { dToken } }
+        { headers: { Authorization: `Bearer ${dToken}` } }
       );
 
       if (data.success) {
@@ -35,7 +35,7 @@ export const DoctorContextProvider = ({ children }) => {
       const { data } = await axios.post(
         backendUrl + "/api/doctor/complete-appointment",
         { appointmentId },
-        { headers: { dToken } }
+        { headers: { Authorization: `Bearer ${dToken}` } }
       );
 
       if (data.success) {
@@ -55,7 +55,7 @@ export const DoctorContextProvider = ({ children }) => {
       const { data } = await axios.post(
         backendUrl + "/api/doctor/cancel-appointment",
         { appointmentId },
-        { headers: { dToken } }
+        { headers: { Authorization: `Bearer ${dToken}` } }
       );
 
       if (data.success) {
@@ -73,7 +73,7 @@ export const DoctorContextProvider = ({ children }) => {
   const getDashData = async () => {
     try {
       const { data } = await axios.get(backendUrl + "/api/doctor/dashboard", {
-        headers: { dToken },
+        headers: { Authorization: `Bearer ${dToken}` },
       });
 
       if (data.success) {
@@ -89,7 +89,7 @@ export const DoctorContextProvider = ({ children }) => {
   const getProfileData = async () => {
     try {
       const { data } = await axios.get(backendUrl + "/api/doctor/profile", {
-        headers: { dToken },
+        headers: { Authorization: `Bearer ${dToken}` },
       });
 
       if (data.success) {

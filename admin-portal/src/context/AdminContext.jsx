@@ -16,7 +16,7 @@ export const AdminContextProvider = ({ children }) => {
     try {
       const { data } = await axios.get(backendUrl + "/api/admin/all-doctors", {
         headers: {
-          aToken,
+          Authorization: `Bearer ${aToken}`,
         },
       });
       if (data.success) {
@@ -35,7 +35,7 @@ export const AdminContextProvider = ({ children }) => {
       const { data } = await axios.post(
         backendUrl + "/api/admin/change-availability",
         { docId },
-        { headers: { aToken } }
+        { headers: { Authorization: `Bearer ${aToken}` } }
       );
       if (data.success) {
         toast.success(data.message);
@@ -51,7 +51,7 @@ export const AdminContextProvider = ({ children }) => {
   const getAllAppointments = async () => {
     try {
       const { data } = await axios.get(backendUrl + "/api/admin/appointments", {
-        headers: { aToken },
+        headers: { Authorization: `Bearer ${aToken}` },
       });
 
       if (data.success) {
@@ -68,7 +68,7 @@ export const AdminContextProvider = ({ children }) => {
       const { data } = await axios.post(
         backendUrl + "/api/admin/cancel-appointment",
         { appointmentId },
-        { headers: { aToken } }
+        { headers: { Authorization: `Bearer ${aToken}` } }
       );
 
       if (data.success) {
@@ -86,7 +86,7 @@ export const AdminContextProvider = ({ children }) => {
   const getDashData = async () => {
     try {
       const { data } = await axios.get(backendUrl + "/api/admin/dashboard", {
-        headers: { aToken },
+        headers: { Authorization: `Bearer ${aToken}` },
       });
 
       if (data.success) {

@@ -13,7 +13,7 @@ const TopDoctors = () => {
         Simply browse through our extensive list of trusted doctors.
       </p>
       <p className="text-sm text-gray-500 italic">शीर्ष चिकित्सकहरू — बुक गर्न सजिलो</p>
-      <div className="w-full grid grid-cols-[repeat(auto-fill,_minmax(200px,_1fr))] gap-4 pt-5 gap-y-6 px-3 sm:px-0">
+      <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 pt-5 px-3 sm:px-0">
         {doctors.slice(0, 10).map((doctor, index) => (
           <DoctorCard key={index} doctor={doctor} />
         ))}
@@ -25,10 +25,11 @@ const TopDoctors = () => {
             scrollTo(0, 0);
           }, 50);
         }}
-        className="bg-blue-50 text-gray-600 px-12 py-3 rounded-full mt-10 cursor-pointer border border-blue-50 hover:border-blue-200"
+        className="bg-primary text-white px-6 py-2 rounded-full mt-10 cursor-pointer border border-primary hover:opacity-95"
+        aria-label="View all doctors"
       >
-        More
-        <span className="ml-2 text-sm text-gray-500">(थप)</span>
+        View All Doctors
+        <span className="ml-2 text-sm text-white/80">(थप)</span>
       </button>
     </div>
   );

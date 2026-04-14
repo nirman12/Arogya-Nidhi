@@ -23,6 +23,8 @@ import MedicalHistory from "./pages/MedicalHistory";
 import HealthQueries from "./pages/HealthQueries";
 import DiscussionDetail from "./pages/DiscussionDetail";
 import EditProfile from "./pages/EditProfile";
+import DoctorPortal from "./pages/DoctorPortal";
+import AdminPortal from "./pages/AdminPortal";
 
 const App = () => {
   const location = useLocation();
@@ -71,6 +73,9 @@ const App = () => {
           path="/patient-portal/health-queries/:id"
           element={<DiscussionDetail />}
         />
+
+        <Route path="/doctor-portal" element={<DoctorPortal />} />
+        <Route path="/admin-portal" element={<AdminPortal />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

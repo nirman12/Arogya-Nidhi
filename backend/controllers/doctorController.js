@@ -1,235 +1,147 @@
-import doctorModel from "../models/doctorModel.js";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import appointmentModel from "../models/appointmentModel.js";
+import { supabase } from "../config/supabase.js";
+import { generateAccessToken } from "../util/token.util.js";
+import repo from "../repository/auth.repository.js";
 
 const changeAvailability = async (req, res) => {
   try {
-    const { docId } = req.body;
-    const docData = await doctorModel.findById(docId);
-    await doctorModel.findByIdAndUpdate(docId, {
-      available: !docData.available,
-    });
-    res.status(200).json({
-      success: true,
-      message: "Doctor availability status changed successfully",
-    });
+    const docId = req.user?.docId || req.body.docId;
+    const updated = await repo.updateDoctorProfile(docId, { is_available: req.body.is_available });
+    return res.status(200).json({ success: true, message: 'Doctor availability status changed successfully', profile: updated });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
 const doctorList = async (req, res) => {
   try {
-    const doctors = await doctorModel.find({}).select(["-password", "-email"]);
-    res.status(200).json({
-      success: true,
-      doctors,
-    });
+    const { data, error } = await supabase.from('doctor_profiles').select('*, users(name,email,avatar_url)').order('created_at', { ascending: false });
+    if (error) return res.status(500).json({ success: false, message: error.message });
+    return res.status(200).json({ success: true, doctors: data });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// API for doctor login
+// API for doctor login (via Supabase) - returns backend JWT
 const loginDoctor = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
-      res.status(400).json({
-        success: false,
-        message: "Required fields are empty.",
-      });
-    }
+    if (!email || !password) return res.status(400).json({ success: false, message: 'Email and password required' });
 
-    const doctor = await doctorModel.findOne({ email });
-
-    if (!doctor) {
-      res.status(404).json({
-        success: false,
-        message: "Invalid email",
-      });
-    }
-
-    const isMatch = await bcrypt.compare(password, doctor.password);
-
-    if (!isMatch) {
-      res.status(401).json({
-        success: false,
-        message: "Password is incorrect",
-      });
-    }
-
-    const token = jwt.sign(
-      { id: doctor._id },
-      process.env.JWT_SECRET
-      // {expiresIn: "1h",}
-    );
-
-    res.status(200).json({
-      success: true,
-      token,
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return res.status(401).json({ success: false, message: error.message });
+    const sUser = data.user;
+    const token = generateAccessToken({ id: sUser.id });
+    return res.status(200).json({ success: true, token });
   } catch (error) {
-    res.status(401).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // API to get doctor's own appointments only
 const appointmentsDoctor = async (req, res) => {
   try {
-    const { docId } = req.user;
-    const appointments = await appointmentModel.find({ docId });
-
-    res.status(200).json({
-      success: true,
-      appointments,
-    });
+    const docId = req.user?.docId;
+    const { data, error } = await supabase.from('appointments').select('*').eq('doctor_id', docId);
+    if (error) return res.status(500).json({ success: false, message: error.message });
+    return res.status(200).json({ success: true, appointments: data });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // API to make appointment completed for doctor portal
 const appointmentComplete = async (req, res) => {
   try {
-    const { docId } = req.user;
+    const docId = req.user?.docId;
     const { appointmentId } = req.body;
-
-    const appointmentData = await appointmentModel.findById(appointmentId);
-
-    if (appointmentData && appointmentData.docId === docId) {
-      await appointmentModel.findByIdAndUpdate(appointmentId, {
-        isCompleted: true,
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: "Appointment Completed.",
-      });
-    }
+    const { data, error } = await supabase.from('appointments').select('*').eq('id', appointmentId).maybeSingle();
+    if (error) return res.status(500).json({ success: false, message: error.message });
+    if (!data) return res.status(404).json({ success: false, message: 'Appointment not found' });
+    if (data.doctor_id !== docId) return res.status(403).json({ success: false, message: 'Forbidden' });
+    const { error: upErr } = await supabase.from('appointments').update({ status: 'completed' }).eq('id', appointmentId);
+    if (upErr) return res.status(500).json({ success: false, message: upErr.message });
+    return res.status(200).json({ success: true, message: 'Appointment Completed.' });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // API to make appointment cancel for doctor portal
 const appointmentCancel = async (req, res) => {
   try {
-    const { docId } = req.user;
+    const docId = req.user?.docId;
     const { appointmentId } = req.body;
-
-    const appointmentData = await appointmentModel.findById(appointmentId);
-
-    if (appointmentData && appointmentData.docId === docId) {
-      await appointmentModel.findByIdAndUpdate(appointmentId, {
-        cancelled: true,
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: "Appointment Cancelled.",
-      });
-    }
+    const { data, error } = await supabase.from('appointments').select('*').eq('id', appointmentId).maybeSingle();
+    if (error) return res.status(500).json({ success: false, message: error.message });
+    if (!data) return res.status(404).json({ success: false, message: 'Appointment not found' });
+    if (data.doctor_id !== docId) return res.status(403).json({ success: false, message: 'Forbidden' });
+    const { error: upErr } = await supabase.from('appointments').update({ status: 'cancelled' }).eq('id', appointmentId);
+    if (upErr) return res.status(500).json({ success: false, message: upErr.message });
+    return res.status(200).json({ success: true, message: 'Appointment Cancelled.' });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // API to get dashboard data for doctor portal
 const doctorDashboard = async (req, res) => {
   try {
-    const { docId } = req.user;
-
-    const appointments = await appointmentModel.find({});
+    console.debug('doctorDashboard request', { headers: req.headers, user: req.user });
+    const docId = req.user?.docId;
+    const { data: appointments, error } = await supabase.from('appointments').select('*').eq('doctor_id', docId);
+    if (error) return res.status(500).json({ success: false, message: error.message });
 
     let earning = 0;
-    appointments.map((item) => {
-      if (item.isCompleted || item.payment) {
-        earning += item.amount;
+    (appointments || []).forEach((item) => {
+      if (item.status === 'completed' || item.payment === true) {
+        earning += item.amount || 0;
       }
     });
 
-    let patients = [];
-    appointments.map((item) => {
-      if (!patients.includes(item.userId)) {
-        patients.push(item.userId);
-      }
-    });
+    const patients = Array.from(new Set((appointments || []).map(a => a.patient_id)));
 
     const dashData = {
       earning,
-      appointments: appointments.length,
+      appointments: (appointments || []).length,
       patients: patients.length,
-      latestAppointments: appointments.reverse().slice(0, 5),
+      latestAppointments: (appointments || []).slice(-5).reverse(),
     };
 
-    res.status(200).json({
-      success: true,
-      dashData,
-    });
+    return res.status(200).json({ success: true, dashData });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    console.error('doctorDashboard error', error);
+    return res.status(500).json({ success: false, message: error?.message || 'Failed to load dashboard data' });
   }
 };
 
-// API to get doctor profile for doctor portal
 const doctorProfile = async (req, res) => {
   try {
-    const { docId } = req.user;
-
-    const profileData = await doctorModel.findById(docId).select("-password");
-
-    res.status(200).json({
-      success: true,
-      profileData,
-    });
+    const docId = req.user?.docId;
+    const profile = await repo.findDoctorProfileByUserId(docId);
+    if (!profile) return res.status(404).json({ success: false, message: 'Doctor profile not found' });
+    return res.status(200).json({ success: true, profile });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // API to update doctor profile for doctor portal
 const updateDoctorProfile = async (req, res) => {
   try {
-    const { docId } = req.user;
-    const { fees, address, available } = req.body;
-
-    await doctorModel.findByIdAndUpdate(docId, { fees, address, available });
-
-    res.status(200).json({
-      success: true,
-      message: "Doctor Profile Updated.",
-    });
+    const docId = req.user?.docId;
+    const { fees, address, available, qualifications, specialty, license_no } = req.body;
+    const updates = {};
+    if (fees !== undefined) updates.consultation_fee = fees;
+    if (address !== undefined) updates.address = address;
+    if (available !== undefined) updates.is_available = available;
+    if (qualifications !== undefined) updates.qualifications = qualifications;
+    if (specialty !== undefined) updates.specialty = specialty;
+    if (license_no !== undefined) updates.license_no = license_no;
+    const updated = await repo.updateDoctorProfile(docId, updates);
+    return res.status(200).json({ success: true, message: 'Doctor Profile Updated.', profile: updated });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 

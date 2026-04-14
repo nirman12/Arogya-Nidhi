@@ -6,8 +6,10 @@ import { supabase } from "../lib/supabaseClient";
 export const AppContext = createContext();
 
 const AppContextProvider = (props) => {
-  const currencySymbol = "$";
-  const backendUrl = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/+$/, "");
+  // Use Nepali Rupee sign
+  const currencySymbol = "रु";
+  // Default to local backend when VITE_BACKEND_URL is not provided (prevents calls to dev server)
+  const backendUrl = ((import.meta.env.VITE_BACKEND_URL && import.meta.env.VITE_BACKEND_URL.trim()) || "http://localhost:3001").replace(/\/+$/, "");
 
   const [doctors, setDoctors] = useState([]);
   const [token, setToken] = useState(localStorage.getItem("token") || false);
@@ -18,33 +20,42 @@ const AppContextProvider = (props) => {
   // =========================
   const getDoctorsData = useCallback(async () => {
     try {
-      // 🔹 Supabase (Primary)
+      // 🔹 Supabase (Primary) - include linked `users` row when available
       if (supabase) {
+        // select doctor_profiles plus the related users record (name, email, avatar)
         const { data, error } = await supabase
           .from("doctor_profiles")
-          .select("*")
+          .select("*, users(name, email, avatar_url)")
           .order("created_at", { ascending: false });
 
         if (error) throw error;
 
-        const mapped = (data || []).map((r) => ({
-          _id: r.id,
-          id: r.id,
-          user_id: r.user_id,
-          license_no: r.license_no,
-          name: r.name || r.license_no || `Dr ${r.id?.slice(0, 8)}`,
-          speciality: r.specialty || r.sub_specialty || "General",
-          specialty: r.specialty,
-          sub_speciality: r.sub_specialty,
-          consultation_fee: r.consultation_fee,
-          qualifications: r.qualifications,
-          is_verified: r.is_verified,
-          available: !!r.is_available,
-          is_available: !!r.is_available,
-          created_at: r.created_at,
-          updated_at: r.updated_at,
-          image: r.image || "/images/doctor-placeholder.png",
-        }));
+        const mapped = (data || []).map((r) => {
+          // Supabase returns related row under the relation name (usually 'users')
+          const userRow = r.users || r.user || null;
+          const displayName = (userRow && (userRow.name || userRow.email)) || r.name || r.license_no || `Dr ${r.id?.slice(0, 8)}`;
+          const image = (userRow && (userRow.avatar_url || userRow.avatar)) || r.image || "/images/doctor-placeholder.png";
+
+          return {
+            _id: r.id,
+            id: r.id,
+            user_id: r.user_id,
+            license_no: r.license_no,
+            name: displayName,
+            speciality: r.specialty || r.sub_specialty || "General",
+            specialty: r.specialty,
+            sub_speciality: r.sub_specialty,
+            consultation_fee: r.consultation_fee,
+            qualifications: r.qualifications,
+            is_verified: r.is_verified,
+            available: !!r.is_available,
+            is_available: !!r.is_available,
+            created_at: r.created_at,
+            updated_at: r.updated_at,
+            image,
+            raw: r,
+          };
+        });
 
         setDoctors(mapped);
         return;
@@ -66,12 +77,39 @@ const AppContextProvider = (props) => {
   // =========================
   const loadUserProfileData = useCallback(async () => {
     try {
-      const { data } = await axios.get(backendUrl + "/api/patient/profile", {
+      // Prefer Supabase client session/user when available (client-side)
+      if (supabase) {
+        try {
+          const { data: sData, error: sError } = await supabase.auth.getUser();
+          if (!sError && sData?.user) {
+            const sUser = sData.user;
+            const metadata = sUser.user_metadata || {};
+            const payload = {
+              id: sUser.id,
+              email: sUser.email,
+              user: sUser,
+              role: metadata.role || metadata?.role || 'patient',
+              name: metadata.name || sUser.email?.split('@')?.[0] || '',
+              image: metadata.avatar_url || metadata.avatarUrl || sUser?.user_metadata?.avatar_url || null,
+            };
+            setUserData(payload);
+            return;
+          }
+        } catch (supErr) {
+          // fallthrough to backend
+        }
+      }
+
+      // Fallback: call backend /api/auth/me
+      const { data } = await axios.get(backendUrl + "/api/auth/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (data.success) {
-        setUserData(data.data);
+        const payload = data.data?.user || {};
+        const avatar = payload?.avatarUrl || payload?.avatar_url || payload?.avatar || payload?.image || null;
+        payload.image = avatar || payload.image || (payload.user ? payload.user.avatarUrl : null);
+        setUserData(payload);
       }
     } catch (error) {
       toast.error(
@@ -98,6 +136,18 @@ const AppContextProvider = (props) => {
   // =========================
   // CONTEXT VALUE
   // =========================
+  const logout = async () => {
+    try {
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+    } catch (err) {
+      console.warn("Supabase signOut failed", err);
+    }
+    localStorage.removeItem("token");
+    setToken(false);
+    setUserData(false);
+  };
   const value = useMemo(
     () => ({
       doctors,
@@ -105,6 +155,7 @@ const AppContextProvider = (props) => {
       backendUrl,
       token,
       setToken,
+      logout,
       userData,
       setUserData,
       loadUserProfileData,

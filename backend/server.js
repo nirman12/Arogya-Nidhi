@@ -1,13 +1,19 @@
-import dotenv from "dotenv";
+import "dotenv/config";
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+// MongoDB removed — Supabase is used instead
+// import connectDB from "./config/mongodb.js";
 import authRoutes from "./routes/authRoute.js"
 import patientRoutes from "./routes/patient.route.js"
 import dashboardRoutes from "./routes/dashboard.routes.js"
 import aiRoutes from "./routes/aiRoute.js"
+import adminRoutes from "./routes/adminRoute.js"
+import doctorRoutes from "./routes/doctorRoute.js"
 
 const app = express();
+
+// MongoDB is not used in this project; Supabase client handles DB connections
 
 app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:5174'], credentials: true }));
 app.use(express.json());
@@ -17,8 +23,33 @@ app.use('/api/auth', authRoutes);
 app.use('/api/patient', patientRoutes);
 app.use('/api/patient', dashboardRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/doctor', doctorRoutes);
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+	console.log(`Server running on port ${PORT}`);
+	try {
+		const routes = [];
+		if (app._router && Array.isArray(app._router.stack)) {
+			app._router.stack.forEach((layer) => {
+				if (layer.route) {
+					const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
+					routes.push(`${methods} ${layer.route.path}`);
+				} else if (layer.name === 'router' && layer.handle && Array.isArray(layer.handle.stack)) {
+					layer.handle.stack.forEach((l) => {
+						if (l.route) {
+							const methods = Object.keys(l.route.methods).join(',').toUpperCase();
+							routes.push(`${methods} ${layer.regexp} -> ${l.route.path}`);
+						}
+					});
+				}
+			});
+		}
+		console.log('Registered routes:\n', routes.join('\n') || '(none)');
+	} catch (err) {
+		console.warn('Failed to list routes', err);
+	}
+});
 
 export default app;

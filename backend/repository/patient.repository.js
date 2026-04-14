@@ -1,107 +1,122 @@
-import prisma from '../config/prisma.js';
+import { supabase } from '../config/supabase.js';
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 
 async function findPatientByUserId(userId) {
-  return prisma.patient.findUnique({
-    where: { userId },
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          phone: true,
-          avatarUrl: true,
-          role: true,
-          isActive: true,
-          createdAt: true,
-        },
-      },
-      emergencyContacts: true,
-      addressInfo: true,
-    },
-  });
+  const { data, error } = await supabase
+    .from('patients')
+    .select(`*, user:users(id,email,name,phone,avatar_url:avatarUrl,role,is_active:isActive,created_at)`)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 async function findPatientById(id) {
-  return prisma.patient.findUnique({
-    where: { id },
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          phone: true,
-          avatarUrl: true,
-        },
-      },
-    },
-  });
+  const { data, error } = await supabase
+    .from('patients')
+    .select('*, user:users(id,email,name,phone,avatar_url:avatarUrl)')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 // Update user-level fields (name, email, phone, avatarUrl)
 async function updateUserProfile(userId, data) {
-  return prisma.user.update({
-    where: { id: userId },
-    data,
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      phone: true,
-      avatarUrl: true,
-      updatedAt: true,
-    },
-  });
+  const { data: updated, error } = await supabase
+    .from('users')
+    .update(data)
+    .eq('id', userId)
+    .select('id,email,name,phone,avatar_url:avatarUrl,updated_at:updatedAt')
+    .maybeSingle();
+  if (error) throw error;
+  return updated;
 }
 
 // Update patient-level fields (dob, bloodGroup, gender, allergies, medicalHistory, height, weight, etc.)
 async function updatePatientProfile(userId, data) {
-  return prisma.patient.update({
-    where: { userId },
-    data,
-  });
+  const { data: updated, error } = await supabase
+    .from('patients')
+    .update(data)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return updated;
 }
 
 // ─── Emergency Contact ────────────────────────────────────────────────────────
 
 async function findEmergencyContactsByPatient(patientId) {
-  return prisma.emergencyContact.findMany({
-    where: { patientId },
-    orderBy: { createdAt: 'asc' },
-  });
+  const { data, error } = await supabase
+    .from('emergency_contacts')
+    .select('*')
+    .eq('patient_id', patientId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data;
 }
 
 async function findEmergencyContactById(id) {
-  return prisma.emergencyContact.findUnique({ where: { id } });
+  const { data, error } = await supabase
+    .from('emergency_contacts')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 async function createEmergencyContact(data) {
-  return prisma.emergencyContact.create({ data });
+  const { data: created, error } = await supabase.from('emergency_contacts').insert(data).select().maybeSingle();
+  if (error) throw error;
+  return created;
 }
 
 async function updateEmergencyContact(id, data) {
-  return prisma.emergencyContact.update({ where: { id }, data });
+  const { data: updated, error } = await supabase
+    .from('emergency_contacts')
+    .update(data)
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return updated;
 }
 
 async function deleteEmergencyContact(id) {
-  return prisma.emergencyContact.delete({ where: { id } });
+  const { data, error } = await supabase.from('emergency_contacts').delete().eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 // ─── Patient Address ──────────────────────────────────────────────────────────
 
 async function findAddressByPatient(patientId) {
-  return prisma.patientAddress.findUnique({ where: { patientId } });
+  const { data, error } = await supabase
+    .from('patient_addresses')
+    .select('*')
+    .eq('patient_id', patientId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 async function upsertAddress(patientId, data) {
-  return prisma.patientAddress.upsert({
-    where: { patientId },
-    create: { patientId, ...data },
-    update: data,
-  });
+  // Supabase: try update first, then insert if not exists
+  const { data: updated, error: updateError } = await supabase
+    .from('patient_addresses')
+    .update(data)
+    .eq('patient_id', patientId)
+    .maybeSingle();
+  if (updateError && !updated) {
+    // ignore and try insert
+  }
+  if (updated) return updated;
+
+  const insertPayload = { patient_id: patientId, ...data };
+  const { data: created, error: insertError } = await supabase.from('patient_addresses').insert(insertPayload).select().maybeSingle();
+  if (insertError) throw insertError;
+  return created;
 }
 
 // ─── Medical Reports ──────────────────────────────────────────────────────────
@@ -109,36 +124,36 @@ async function upsertAddress(patientId, data) {
 const VALID_CATEGORIES = ['blood_test', 'x_ray', 'mri', 'ct_scan', 'prescription', 'other'];
 
 async function findReportsByPatient(patientId, { category, page = 1, limit = 10 } = {}) {
-  const where = { patientId };
-  if (category) where.category = category;
-
-  const [total, reports] = await Promise.all([
-    prisma.medicalReport.count({ where }),
-    prisma.medicalReport.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-  ]);
-
-  return { total, page, limit, reports };
+  let query = supabase.from('medical_reports').select('*', { count: 'exact' }).eq('patient_id', patientId);
+  if (category) query = query.eq('category', category);
+  const offset = (page - 1) * limit;
+  const { data, count, error } = await query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+  if (error) throw error;
+  return { total: count || 0, page, limit, reports: data };
 }
 
 async function findReportById(id) {
-  return prisma.medicalReport.findUnique({ where: { id } });
+  const { data, error } = await supabase.from('medical_reports').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 async function createMedicalReport(data) {
-  return prisma.medicalReport.create({ data });
+  const { data: created, error } = await supabase.from('medical_reports').insert(data).select().maybeSingle();
+  if (error) throw error;
+  return created;
 }
 
 async function updateMedicalReport(id, data) {
-  return prisma.medicalReport.update({ where: { id }, data });
+  const { data: updated, error } = await supabase.from('medical_reports').update(data).eq('id', id).maybeSingle();
+  if (error) throw error;
+  return updated;
 }
 
 async function deleteMedicalReport(id) {
-  return prisma.medicalReport.delete({ where: { id } });
+  const { data, error } = await supabase.from('medical_reports').delete().eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 export default {
