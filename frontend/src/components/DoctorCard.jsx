@@ -1,35 +1,82 @@
 import React from "react";
+import { useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { AppContext } from "../context/AppContext";
 
 const DoctorCard = ({ doctor }) => {
   const navigate = useNavigate();
+  const { currencySymbol } = useContext(AppContext);
+
+  const handleBook = (e) => {
+    e?.stopPropagation();
+    navigate(`/appointment/${doctor._id}`);
+    try { scrollTo(0,0); } catch(_){}
+  };
+
+  const stars = () => {
+    const n = Math.round(doctor.rating || 0);
+    return Array.from({ length: n }).map((_, i) => (
+      <span key={i} className="text-yellow-500">★</span>
+    ));
+  };
 
   return (
-    <div
-      onClick={() => {
-        navigate(`/appointment/${doctor._id}`);
-        scrollTo(0, 0);
-      }}
-      className={`border border-blue-200 rounded-xl overflow-hidden cursor-pointer hover:translate-y-[-10px] transition-all duration-500 ${
-        doctor.available ? "" : "opacity-50"
-      }`}
+    <article
+      onClick={handleBook}
+      className={`min-h-[260px] h-full flex flex-col border border-gray-200 rounded-lg bg-white cursor-pointer hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-200 overflow-hidden ${doctor.available ? "" : "opacity-60"}`}
     >
-      <img className="bg-blue-50" src={doctor.image} alt={doctor.name} />
-      <div className="p-4">
-        <div className="flex items-center gap-2 text-sm text-center">
-          <p
-            className={`w-2 h-2 rounded-full ${
-              doctor.available ? "bg-green-500" : "bg-gray-400"
-            }`}
-          ></p>
-          <p className={doctor.available ? "text-green-500" : "text-gray-400"}>
-            {doctor.available ? "Available" : "Not Available"}
-          </p>
+      <div className="flex items-start md:items-center gap-5 p-6">
+        <img
+          className="w-28 h-28 rounded-full object-cover ring-2 ring-primary/20 flex-shrink-0"
+          src={doctor.image || '/images/doctor-placeholder.png'}
+          alt={doctor.name}
+        />
+
+        <div className="flex-1 min-w-0">
+          <h3 className="text-gray-900 text-xl font-semibold truncate" title={doctor.name}>{doctor.name}</h3>
+          <div className="flex items-center gap-2">
+            <p className="text-base text-gray-600 truncate" title={doctor.specialty || doctor.sub_specialty || doctor.speciality}>{doctor.specialty || doctor.sub_speciality || doctor.speciality}</p>
+            {doctor.is_verified ? <span className="ml-2 px-2 py-0.5 text-sm bg-green-50 text-green-700 rounded">Verified</span> : null}
+          </div>
+          {doctor.experience && <p className="text-sm text-gray-500 mt-1">{doctor.experience}{!String(doctor.experience).toLowerCase().includes('year') && ' years'}</p>}
+
+          {doctor.qualifications && <p className="text-sm text-gray-700 mt-2 truncate" title={doctor.qualifications}>{doctor.qualifications}</p>}
+          {doctor.license_no && <p className="text-xs text-gray-400 mt-1">License: {doctor.license_no}</p>}
+
+          <div className="flex items-center gap-2 mt-2">
+            <div className="text-sm" aria-hidden>
+              {stars()}
+            </div>
+            <div className="text-sm text-gray-500">{(doctor.rating || 0).toFixed(1)}</div>
+          </div>
+
+          {doctor.location && <p className="text-sm text-gray-400 mt-2 truncate">{doctor.location}</p>}
         </div>
-        <p className="text-gray-900 text-lg font-medium">{doctor.name}</p>
-        <p className="text-gray-600 text-sm">{doctor.speciality}</p>
       </div>
-    </div>
+
+      <div className="px-6 pb-6 mt-auto">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <span aria-hidden className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${doctor.available ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>
+              <span className={`w-2.5 h-2.5 rounded-full mr-2 ${doctor.available ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+              {doctor.available ? 'Available' : 'Not Available'}
+            </span>
+            <div className="text-base text-gray-700 font-semibold truncate">{currencySymbol} {doctor.fee ?? doctor.consultation_fee ?? '—'}</div>
+          </div>
+
+          <div className="flex-none mt-3 sm:mt-0">
+            <button
+              onClick={handleBook}
+              aria-label={`Book appointment with ${doctor.name}`}
+              className="bg-primary text-white px-5 py-2 rounded-full text-sm w-full sm:w-auto shadow-md hover:shadow-lg transition-shadow"
+            >
+              <span className="inline sm:hidden">Book</span>
+              <span className="hidden sm:inline">Book Appointment</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>
   );
 };
 

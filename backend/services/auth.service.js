@@ -1,4 +1,5 @@
 import repo from '../repository/auth.repository.js';
+import { supabase } from '../config/supabase.js';
 import { hashPassword, comparePassword } from '../util/password.util.js';
 import {
   generateAccessToken,
@@ -29,14 +30,34 @@ async function register(body, meta = {}) {
   // Create role-specific profile
   if (role === 'patient') {
     const { dateOfBirth, bloodGroup, gender, address } = profileData;
-    await repo.createPatient({ userId: user.id, dateOfBirth, bloodGroup, gender, address });
+    if (typeof repo.createPatient !== 'function') throw { status: 500, message: 'createPatient repository method not implemented' };
+    await repo.createPatient({ user_id: user.id, date_of_birth: dateOfBirth, blood_group: bloodGroup, gender, address });
   } else if (role === 'doctor') {
     const { nmcLicenseNo, specialty, subSpecialty, qualifications, experienceYears, consultationFee, bio } = profileData;
     if (!nmcLicenseNo) throw { status: 400, message: 'nmcLicenseNo is required for doctors' };
-    await repo.createDoctorProfile({ userId: user.id, nmcLicenseNo, specialty, subSpecialty, qualifications, experienceYears, consultationFee, bio });
+    if (typeof repo.createDoctorProfile !== 'function') throw { status: 500, message: 'createDoctorProfile repository method not implemented' };
+    await repo.createDoctorProfile({ user_id: user.id, license_no: nmcLicenseNo, specialty, sub_specialty: subSpecialty, qualifications, experience: experienceYears, consultation_fee: consultationFee, bio });
   } else if (role === 'student') {
     const { institution, yearOfStudy, faculty } = profileData;
-    await repo.createStudentProfile({ userId: user.id, institution, yearOfStudy, faculty });
+    if (typeof repo.createStudentProfile !== 'function') throw { status: 500, message: 'createStudentProfile repository method not implemented' };
+    await repo.createStudentProfile({ user_id: user.id, institution, year_of_study: yearOfStudy, faculty });
+  }
+
+  // If backend has Supabase service role configured, also create the Supabase user server-side
+  try {
+    if (supabase) {
+      const { data: sData, error: sError } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        user_metadata: { name, role },
+        email_confirm: true,
+      });
+      if (sError) {
+        console.warn('Supabase admin.createUser warning:', sError);
+      }
+    }
+  } catch (err) {
+    console.warn('Supabase createUser exception:', err?.message || err);
   }
 
   const tokens = await _issueTokens(user, meta);

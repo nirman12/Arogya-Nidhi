@@ -2,47 +2,54 @@ import { useState } from "react";
 import { assets } from "../../assets/assets";
 import { useContext } from "react";
 import { AdminContext } from "../../context/AdminContext";
-import axios from "axios";
 import { toast } from "react-toastify";
 import { DoctorContext } from "../../context/DoctorContext";
+import { supabase } from "../../lib/supabaseClient";
 
 const Login = () => {
   const [state, setState] = useState("Admin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const { setAToken, backendUrl } = useContext(AdminContext);
+  const { setAToken } = useContext(AdminContext);
   const { setDToken } = useContext(DoctorContext);
 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
 
     try {
+      if (!supabase) {
+        toast.error("Supabase is not configured for admin portal");
+        return;
+      }
+
+      const { data: sData, error: sError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (sError) {
+        toast.error(sError.message || "Login failed");
+        return;
+      }
+
+      const accessToken = sData?.session?.access_token;
+      if (!accessToken) {
+        toast.error("Login failed: no access token received");
+        return;
+      }
+
       if (state === "Admin") {
-        const { data } = await axios.post(backendUrl + "/api/admin/login", {
-          email,
-          password,
-        });
-
-        if (data.success) {
-          localStorage.setItem("aToken", data.token);
-          setAToken(data.token);
-          toast.success("Admin logged in successfully");
-        }
+        localStorage.setItem("aToken", accessToken);
+        setAToken(accessToken);
+        toast.success("Admin logged in successfully");
       } else {
-        const { data } = await axios.post(backendUrl + "/api/doctor/login", {
-          email,
-          password,
-        });
-
-        if (data.success) {
-          localStorage.setItem("dToken", data.token);
-          setDToken(data.token);
-          toast.success("Doctor logged in successfully");
-        }
+        localStorage.setItem("dToken", accessToken);
+        setDToken(accessToken);
+        toast.success("Doctor logged in successfully");
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Invalid credentials");
+      toast.error(error.message || "Invalid credentials");
     }
   };
 

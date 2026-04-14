@@ -17,13 +17,12 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { token, setToken, userData } = useContext(AppContext);
+  const { token, setToken, userData, logout } = useContext(AppContext);
   const [showMenu, setShowMenu] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(false);
 
-  const logoutFunc = () => {
-    setToken(false);
-    localStorage.removeItem("token");
+  const logoutFunc = async () => {
+    await logout();
     navigate("/");
   };
 
@@ -49,7 +48,9 @@ const Navbar = () => {
           >
             <img
               className="w-8 rounded-full"
-              src={userData.image || assets.upload_area}
+              src={
+                userData.image || userData?.user?.avatarUrl || userData?.user?.avatar_url || assets.upload_area
+              }
               alt="user profile pic"
             />
             <img className="w-2.5" src={assets.dropdown_icon} alt="" />
@@ -58,34 +59,38 @@ const Navbar = () => {
                 openDropdown ? "block" : "hidden"
               } absolute top-0 right-0 pt-14 text-base font-medium text-gray-600 z-20`}
             >
-              <div className="min-w-48 bg-stone-100 rounded flex flex-col gap-4 p-4">
-                {userData?.user?.role === 'patient' && (
-                  <p
-                    onClick={() => navigate("/patient-portal")}
-                    className="hover:text-black cursor-pointer"
-                  >
-                    Patient Dashboard
-                  </p>
-                )}
-                <p
-                  onClick={() => navigate("/profile")}
-                  className="hover:text-black cursor-pointer"
-                >
-                  My Profile
-                </p>
-                <p
-                  onClick={() => navigate("/my-appointments")}
-                  className="hover:text-black cursor-pointer"
-                >
-                  My Appointments
-                </p>
-                <p
-                  onClick={logoutFunc}
-                  className="hover:text-black cursor-pointer"
-                >
-                  Logout
-                </p>
-              </div>
+                  <div className="min-w-48 bg-stone-100 rounded flex flex-col gap-4 p-4">
+                    {(() => {
+                      const role = userData?.role || userData?.user?.role;
+                      const goToDashboard = () => {
+                        if (role === 'doctor') navigate('/doctor-portal');
+                        else if (role === 'admin') navigate('/admin-portal');
+                        else if (role === 'student') navigate('/student-portal');
+                        else navigate('/patient-portal');
+                      };
+                      return (
+                        <p onClick={goToDashboard} className="hover:text-black cursor-pointer">Dashboard</p>
+                      );
+                    })()}
+                    <p
+                      onClick={() => navigate("/profile")}
+                      className="hover:text-black cursor-pointer"
+                    >
+                      My Profile
+                    </p>
+                    <p
+                      onClick={() => navigate("/my-appointments")}
+                      className="hover:text-black cursor-pointer"
+                    >
+                      My Appointments
+                    </p>
+                    <p
+                      onClick={logoutFunc}
+                      className="hover:text-black cursor-pointer"
+                    >
+                      Logout
+                    </p>
+                  </div>
             </div>
           </div>
         ) : (
