@@ -21,6 +21,12 @@ app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:5174'], crede
 app.use(express.json());
 app.use(cookieParser());
 
+// simple request logger for debugging
+app.use((req, res, next) => {
+	console.log('[request]', req.method, req.originalUrl);
+	next();
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/patient', patientRoutes);
 app.use('/api/patient', dashboardRoutes);
