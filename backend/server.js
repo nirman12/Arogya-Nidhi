@@ -9,7 +9,6 @@ import authRoutes from "./routes/authRoute.js"
 import patientRoutes from "./routes/patient.route.js"
 import dashboardRoutes from "./routes/dashboard.routes.js"
 import aiRoutes from "./routes/aiRoute.js"
-import voiceAssistantRoutes from "./routes/voiceAssistant.route.js"
 import twilioVoiceRoutes from "./routes/twilioVoice.route.js"
 import adminRoutes from "./routes/adminRoute.js"
 import doctorRoutes from "./routes/doctorRoute.js"
@@ -30,7 +29,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/patient', patientRoutes);
 app.use('/api/patient', dashboardRoutes);
 app.use('/api/ai', aiRoutes);
-app.use('/api/ai/voice', voiceAssistantRoutes);
 app.use('/api/twilio/voice', twilioVoiceRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/doctor', doctorRoutes);
