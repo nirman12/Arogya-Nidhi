@@ -110,6 +110,21 @@ async function getOverview(userId) {
   };
 }
 
+async function getPublicQueries(query) {
+  return repo.getPublicQueries({
+    page:  parseInt(query.page)  || 1,
+    limit: Math.min(parseInt(query.limit) || 10, 100),
+    isResolved: query.isResolved === 'true' ? true : (query.isResolved === 'false' ? false : undefined),
+  });
+}
+
+async function getPublicQueryById(id) {
+  const q = await repo.findQueryByIdForDoctor(id);
+  if (!q) throw _notFound('Query');
+  await repo.incrementQueryView(id);
+  return q;
+}
+
 // ─── Quick actions data ───────────────────────────────────────────────────────
 
 async function getQuickActionsData(userId) {
@@ -455,6 +470,8 @@ export default {
   updateQuery,
   closeQuery,
   deleteQuery,
+  getPublicQueries,
+  getPublicQueryById,
   // doctors
   getAvailableDoctors,
   getDoctorById,
