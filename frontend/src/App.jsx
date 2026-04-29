@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Profile from "./pages/Profile";
+import PublicProfile from "./pages/PublicProfile";
 import Appointments from "./pages/Appointments";
 import Appointment from "./pages/Appointment";
 import Navbar from "./components/Navbar";
@@ -36,6 +37,7 @@ import DoctorQueries from "./pages/DoctorQueries";
 import DoctorQueryDetail from "./pages/DoctorQueryDetail";
 import StudentPortal from "./pages/StudentPortal";
 import AdminPortal from "./pages/AdminPortal";
+import Payment from "./pages/Payment";
 
 const App = () => {
   const location = useLocation();
@@ -61,6 +63,7 @@ const App = () => {
         <Route path="/students" element={<Students />} />
         <Route path="/students/quiz" element={<Quiz />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/public-profile/:barcode" element={<PublicProfile />} />
         <Route path="/my-appointments" element={<Appointments />} />
         <Route path="/appointment/:docId" element={<Appointment />} />
         <Route path="/iot" element={<IoTPage />} />
@@ -86,6 +89,7 @@ const App = () => {
           path="/patient-portal/health-queries/:id"
           element={<DiscussionDetail />}
         />
+        <Route path="/payment/:appointmentId" element={<Payment />} />
 
         <Route path="/doctor-portal" element={<DoctorDashboard />} />
         <Route path="/doctor-portal/appointments" element={<DoctorAppointments />} />
