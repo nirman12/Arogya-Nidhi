@@ -7,6 +7,7 @@ import cors from "cors";
 // import connectDB from "./config/mongodb.js";
 import authRoutes from "./routes/authRoute.js"
 import patientRoutes from "./routes/patient.route.js"
+import profileRoutes from "./routes/profile.route.js"
 import dashboardRoutes from "./routes/dashboard.routes.js"
 import aiRoutes from "./routes/aiRoute.js"
 import twilioVoiceRoutes from "./routes/twilioVoice.route.js"
@@ -32,6 +33,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/profile', profileRoutes);
 app.use('/api/patient', patientRoutes);
 app.use('/api/patient', dashboardRoutes);
 app.use('/api/ai', aiRoutes);
@@ -64,7 +66,6 @@ server.listen(PORT, () => {
 				}
 			});
 		}
-		console.log('Registered routes:\n', routes.join('\n') || '(none)');
 	} catch (err) {
 		console.warn('Failed to list routes', err);
 	}

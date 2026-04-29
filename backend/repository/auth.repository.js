@@ -14,6 +14,18 @@ async function findUserById(id) {
   return data;
 }
 
+async function findUserByBarcode(barcode) {
+  // Select only columns that exist in the canonical `public.users` schema.
+  // Profile-specific fields (gender, date_of_birth, address) are stored in patients/patient_addresses.
+  const { data, error } = await supabase
+    .from('users')
+    .select('id,email,name,phone,avatar_url:avatarUrl,barcode,role,is_active:isActive,created_at,updated_at')
+    .eq('barcode', barcode)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 async function findUserByPhone(phone) {
   const { data, error } = await supabase.from('users').select('*').eq('phone', phone).maybeSingle();
   if (error) throw error;
@@ -31,6 +43,17 @@ async function upsertUser(data) {
   const { data: created, error } = await supabase.from('users').upsert(data, { onConflict: 'email' }).select().maybeSingle();
   if (error) throw error;
   return created;
+}
+
+async function updateUserById(id, updates) {
+  const { data, error } = await supabase
+    .from('users')
+    .update(updates)
+    .eq('id', id)
+    .select('*')
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 // ─── Profiles ─────────────────────────────────────────────────────────────────
@@ -99,9 +122,11 @@ async function revokeAllUserRefreshTokens(userId) {
 export default {
   findUserByEmail,
   findUserById,
+  findUserByBarcode,
   findUserByPhone,
   createUser,
   upsertUser,
+  updateUserById,
   createPatient,
   createDoctorProfile,
   createStudentProfile,

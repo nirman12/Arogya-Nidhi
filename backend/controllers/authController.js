@@ -2,6 +2,7 @@ import authService from "../services/auth.service.js";
 import { sendSuccess, sendError } from "../util/response.util.js";
 import { supabase } from "../config/supabase.js";
 import repo from "../repository/auth.repository.js";
+import { generateBarcodeValue } from "../util/barcode.util.js";
 
 function getMeta(req) {
   return {
@@ -232,6 +233,21 @@ export async function me(req, res) {
     }
 
     if (!user) return sendError(res, 'User not found', 404);
+
+    if (!user.barcode) {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const candidate = generateBarcodeValue();
+        try {
+          user = await repo.updateUserById(id, { barcode: candidate });
+          break;
+        } catch (err) {
+          const message = String(err?.message || '').toLowerCase();
+          if (!message.includes('duplicate') && !message.includes('unique')) {
+            throw err;
+          }
+        }
+      }
+    }
 
     return sendSuccess(res, { user }, 'User profile');
   } catch (err) {
