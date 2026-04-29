@@ -1,5 +1,5 @@
 import fetch from "node-fetch";
-import { supabase } from '../config/supabase.js';
+import supabase from '../config/supabase.js';
 import { randomUUID } from 'crypto';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;

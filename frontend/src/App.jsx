@@ -37,6 +37,7 @@ import DoctorQueries from "./pages/DoctorQueries";
 import DoctorQueryDetail from "./pages/DoctorQueryDetail";
 import StudentPortal from "./pages/StudentPortal";
 import AdminPortal from "./pages/AdminPortal";
+import Payment from "./pages/Payment";
 
 const App = () => {
   const location = useLocation();
@@ -88,6 +89,7 @@ const App = () => {
           path="/patient-portal/health-queries/:id"
           element={<DiscussionDetail />}
         />
+        <Route path="/payment/:appointmentId" element={<Payment />} />
 
         <Route path="/doctor-portal" element={<DoctorDashboard />} />
         <Route path="/doctor-portal/appointments" element={<DoctorAppointments />} />

@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase.js';
+import supabase from '../config/supabase.js';
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
@@ -19,7 +19,7 @@ async function findUserByBarcode(barcode) {
   // Profile-specific fields (gender, date_of_birth, address) are stored in patients/patient_addresses.
   const { data, error } = await supabase
     .from('users')
-    .select('id,email,name,phone,avatar_url:avatarUrl,barcode,role,is_active:isActive,created_at,updated_at')
+    .select('id,email,name,phone,avatar_url,barcode,role,is_active,created_at,updated_at')
     .eq('barcode', barcode)
     .maybeSingle();
   if (error) throw error;

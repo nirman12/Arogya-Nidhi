@@ -16,6 +16,7 @@ import doctorRoutes from "./routes/doctorRoute.js"
 import { attachTwilioConversationRelayServer } from "./services/twilioConversationRelay.service.js";
 import publicRoutes from "./routes/public.routes.js"
 import studentsRoutes from "./routes/studentsRoute.js"
+import appointmentRoutes from "./routes/appointment.route.js"
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/doctor', doctorRoutes);
 app.use('/api', publicRoutes);
 app.use('/api/students', studentsRoutes);
+app.use('/api/appointments', appointmentRoutes);
 
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
