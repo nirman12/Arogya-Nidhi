@@ -70,6 +70,9 @@
 .ba-container {
   display: flex;
   min-height: calc(100vh - 65px);
+  margin-left: 240px;
+  width: calc(100% - 240px);
+  box-sizing: border-box;
 }
 
 
@@ -288,6 +291,10 @@
 .ba-specialist-card {
   background: var(--ba-surface);
   border: 1px solid var(--ba-border);
+  
+  .ba-container {
+    margin-left: 0;
+    width: 100%;
   border-radius: 0.5rem;
   padding: 1.25rem;
   text-align: center;
@@ -383,6 +390,13 @@
   color: var(--ba-primary);
   font-size: 1.125rem;
   font-weight: 700;
+}
+
+.ba-doctor-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .ba-doctor-info {
@@ -624,6 +638,11 @@
 }
 
 @media (max-width: 768px) {
+  .ba-container {
+    margin-left: 0;
+    width: 100%;
+  }
+
   .ba-specialist-grid {
     grid-template-columns: 1fr;
   }
