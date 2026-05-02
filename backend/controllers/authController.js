@@ -2,7 +2,7 @@ import authService from "../services/auth.service.js";
 import { sendSuccess, sendError } from "../util/response.util.js";
 import supabase from "../config/supabase.js";
 import repo from "../repository/auth.repository.js";
-import { generateBarcodeValue } from "../util/barcode.util.js";
+import crypto from "crypto";
 
 function getMeta(req) {
   return {
@@ -37,7 +37,7 @@ export async function register(req, res) {
       if (createErr.message.includes("already registered") || createErr.status === 422) {
         const { data: listData, error: listErr } = await supabase.auth.admin.listUsers();
         const existingUser = listData?.users?.find(u => u.email.toLowerCase() === email.toLowerCase());
-        
+
         if (listErr || !existingUser) {
           return sendError(res, "User exists in Auth but could not be retrieved", 500);
         }
@@ -79,40 +79,85 @@ export async function register(req, res) {
     try {
       const now = new Date().toISOString();
       if (resolvedRole === 'doctor') {
-        const { data: created, error: profErr } = await supabase.from('doctor_profiles').insert({
+        // Check if profile already exists
+        const { data: existing } = await supabase.from('doctor_profiles').select('id').eq('user_id', supaUser.id).maybeSingle();
+
+        const doctorData = {
           user_id: supaUser.id,
-          license_no: profile.nmcLicenseNo || profile.licenseNo || "PENDING",
+          nmc_license_no: profile.nmcLicenseNo || profile.licenseNo || "PENDING",
           specialty: profile.specialty || "General Medicine",
           consultation_fee: Number(profile.consultationFee) || 0,
+          experience_years: Number(profile.experienceYears) || 0,
           qualifications: profile.qualifications || null,
           is_verified: false,
           is_available: true,
-          created_at: now,
           updated_at: now,
-        }).select().maybeSingle();
-        if (profErr) console.warn("Doctor profile error:", profErr.message);
-        roleProfile = created;
+        };
+
+        if (existing) {
+          const { data: updated, error: upErr } = await supabase.from('doctor_profiles').update(doctorData).eq('id', existing.id).select().maybeSingle();
+          if (upErr) console.warn("Doctor profile update error:", upErr.message);
+          roleProfile = updated;
+        } else {
+          doctorData.id = crypto.randomUUID();
+          doctorData.created_at = now;
+          const { data: created, error: crErr } = await supabase.from('doctor_profiles').insert(doctorData).select().maybeSingle();
+          if (crErr) console.warn("Doctor profile insert error:", crErr.message);
+          roleProfile = created;
+        }
+
+        // Create a pending verification record if profile exists (new or updated)
+        if (roleProfile) {
+          const { data: existingV } = await supabase.from('doctor_verifications').select('id').eq('doctor_id', roleProfile.id).maybeSingle();
+          const vData = {
+            doctor_id: roleProfile.id,
+            status: 'pending',
+          };
+          if (existingV) {
+            await supabase.from('doctor_verifications').update(vData).eq('id', existingV.id);
+          } else {
+            vData.id = crypto.randomUUID();
+            vData.created_at = now;
+            await supabase.from('doctor_verifications').insert(vData);
+          }
+        }
       } else if (resolvedRole === 'student') {
-        const { data: created, error: profErr } = await supabase.from('student_profiles').insert({
+        const { data: existing } = await supabase.from('student_profiles').select('id').eq('user_id', supaUser.id).maybeSingle();
+        const studentData = {
           user_id: supaUser.id,
           institution: profile.institution || null,
           faculty: profile.faculty || null,
-          created_at: now,
           updated_at: now,
-        }).select().maybeSingle();
-        if (profErr) console.warn("Student profile error:", profErr.message);
-        roleProfile = created;
+        };
+        if (existing) {
+          const { data: updated } = await supabase.from('student_profiles').update(studentData).eq('id', existing.id).select().maybeSingle();
+          roleProfile = updated;
+        } else {
+          studentData.id = crypto.randomUUID();
+          studentData.created_at = now;
+          const { data: created } = await supabase.from('student_profiles').insert(studentData).select().maybeSingle();
+          roleProfile = created;
+        }
       } else if (resolvedRole === 'patient') {
-        const { data: created, error: profErr } = await supabase.from('patients').insert({
+        const { data: existing } = await supabase.from('patients').select('id').eq('user_id', supaUser.id).maybeSingle();
+        const patientData = {
           user_id: supaUser.id,
           date_of_birth: profile.dateOfBirth || null,
           blood_group: profile.bloodGroup || null,
           gender: profile.gender || null,
-          created_at: now,
+          medical_history: profile.medicalHistory || null,
+          allergies: profile.allergies || null,
           updated_at: now,
-        }).select().maybeSingle();
-        if (profErr) console.warn("Patient profile error:", profErr.message);
-        roleProfile = created;
+        };
+        if (existing) {
+          const { data: updated } = await supabase.from('patients').update(patientData).eq('id', existing.id).select().maybeSingle();
+          roleProfile = updated;
+        } else {
+          patientData.id = crypto.randomUUID();
+          patientData.created_at = now;
+          const { data: created } = await supabase.from('patients').insert(patientData).select().maybeSingle();
+          roleProfile = created;
+        }
       }
     } catch (profErr) {
       console.warn("Profile creation warning:", profErr.message);
@@ -120,11 +165,11 @@ export async function register(req, res) {
 
     // 4. Return success with a session token
     const { data: authData } = await supabase.auth.signInWithPassword({ email, password });
-    
-    return sendSuccess(res, { 
-      session: authData?.session, 
+
+    return sendSuccess(res, {
+      session: authData?.session,
       user: supaUser,
-      profile: roleProfile 
+      profile: roleProfile
     }, "Registration successful", 201);
   } catch (err) {
     console.error("Registration Exception:", err);
@@ -152,7 +197,7 @@ export async function login(req, res) {
 
       // Find the current user status to avoid overriding it
       const existingUser = await repo.findUserById(supaUser.id);
-      
+
       await repo.upsertUser({
         id: supaUser?.id,
         email: supaUser?.email,
@@ -223,7 +268,7 @@ export async function me(req, res) {
       // ignore
     }
     if (!user && req.user?.email) {
-      try { user = await repo.findUserByEmail(req.user.email); } catch (_) {}
+      try { user = await repo.findUserByEmail(req.user.email); } catch (_) { }
     }
 
     if (!user) return sendError(res, 'User not found', 404);
@@ -279,8 +324,8 @@ export async function updateDoctorProfile(req, res) {
     if (body.specialty !== undefined) updates.specialty = body.specialty;
     if (body.sub_specialty !== undefined) updates.sub_specialty = body.sub_specialty;
     if (body.subSpecialty !== undefined) updates.sub_specialty = body.subSpecialty;
-    if (body.license_no !== undefined) updates.license_no = body.license_no;
-    if (body.nmc_license_no !== undefined) updates.license_no = body.nmc_license_no;
+    if (body.license_no !== undefined) updates.nmc_license_no = body.license_no;
+    if (body.nmc_license_no !== undefined) updates.nmc_license_no = body.nmc_license_no;
 
     if (Object.keys(updates).length === 0) return sendError(res, 'No updatable fields provided', 400);
 

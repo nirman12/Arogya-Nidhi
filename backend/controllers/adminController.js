@@ -4,6 +4,7 @@ import supabase from "../config/supabase.js";
 import repo from "../repository/auth.repository.js";
 import { generateAccessToken } from "../util/token.util.js";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
 // API for adding doctor
 const addDoctor = async (req, res) => {
@@ -70,7 +71,7 @@ const addDoctor = async (req, res) => {
     if (createErr) return res.status(500).json({ success: false, message: createErr.message });
 
     // insert user into 'users' table
-    const userId = createdUser?.id || createdUser?.user?.id;
+    const userId = createdUser?.user?.id || createdUser?.id;
     const userData = {
       id: userId,
       name,
@@ -85,6 +86,7 @@ const addDoctor = async (req, res) => {
 
     // insert doctor profile in Supabase
     const doctorProfileData = {
+      id: crypto.randomUUID(),
       user_id: userId,
       specialty: speciality || "General Medicine",
       qualifications: degree || null,
@@ -149,21 +151,27 @@ const loginAdmin = async (req, res) => {
 // API for getting all doctors
 const getAllDoctors = async (req, res) => {
   try {
-    // Explicitly joining the 'users' table
+    // Explicitly joining the 'users' and 'doctor_verifications' tables
     const { data, error } = await supabase
       .from('doctor_profiles')
-      .select('*, users!doctor_profiles_user_id_fkey(name, email, avatar_url)')
+      .select('*, users!doctor_profiles_user_id_fkey(name, email, avatar_url), doctor_verifications(status)')
       .order('created_at', { ascending: false });
 
     if (error) {
       return res.status(500).json({ success: false, message: error.message });
     }
 
-    const formattedDoctors = data.map(doc => ({
-      ...doc,
-      users: doc.users || doc.user || {},
-      license_no: doc.nmc_license_no // Map to a common name for frontend
-    }));
+    const formattedDoctors = data.map(doc => {
+      const verifications = doc.doctor_verifications || doc.doctor_verification;
+      const verification = Array.isArray(verifications) ? verifications[0] : verifications;
+      
+      return {
+        ...doc,
+        users: doc.users || doc.user || {},
+        license_no: doc.nmc_license_no,
+        verification_status: (verification?.status || (doc.is_verified ? 'verified' : 'pending')).toLowerCase()
+      };
+    });
 
     return res.status(200).json({ success: true, doctors: formattedDoctors });
   } catch (error) {
@@ -272,6 +280,16 @@ const addUser = async (req, res) => {
        return res.status(500).json({ success: false, message: insertErr.message });
     }
 
+    // If role is patient, create empty patient profile
+    if (role === 'patient') {
+      await supabase.from('patients').insert({
+        id: crypto.randomUUID(),
+        user_id: newUser.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+    }
+
     return res.status(201).json({ success: true, message: 'User added successfully' });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -306,16 +324,40 @@ const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Try deleting from users table first (will fail if foreign keys exist and cascade is not set)
+    // Manual cascading deletes
+    await supabase.from('refresh_tokens').delete().eq('user_id', id);
+    await supabase.from('notifications').delete().eq('user_id', id);
+    await supabase.from('ai_interaction_logs').delete().eq('user_id', id);
+
+    // Profile specific deletes
+    const { data: user } = await supabase.from('users').select('role').eq('id', id).maybeSingle();
+    if (user) {
+      if (user.role === 'doctor') {
+        const { data: profile } = await supabase.from('doctor_profiles').select('id').eq('user_id', id).maybeSingle();
+        if (profile) {
+          await supabase.from('doctor_verifications').delete().eq('doctor_id', profile.id);
+          // Note: Appointments and query_responses might have other constraints, but let's try to delete profile
+          await supabase.from('doctor_profiles').delete().eq('id', profile.id);
+        }
+      } else if (user.role === 'patient') {
+        await supabase.from('patients').delete().eq('user_id', id);
+      } else if (user.role === 'student') {
+        await supabase.from('student_profiles').delete().eq('user_id', id);
+      }
+    }
+
+    // Finally delete from users table
     const { error: dbErr } = await supabase.from('users').delete().eq('id', id);
+    
     if (dbErr) {
-       // Fallback to soft delete
+       // Fallback to soft delete if still restricted
        await supabase.from('users').update({ is_active: false }).eq('id', id);
        return res.status(200).json({ success: true, message: 'User deactivated (could not be fully deleted due to linked records).' });
     }
 
-    // Delete from Supabase Auth
-    await supabase.auth.admin.deleteUser(id);
+    // delete auth user
+    const { error: authErr } = await supabase.auth.admin.deleteUser(id);
+    if (authErr) console.warn("Auth delete failed:", authErr.message);
 
     return res.status(200).json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
@@ -341,6 +383,27 @@ const verifyDoctor = async (req, res) => {
     // Also update the user's is_active status
     const { error: upUserErr } = await supabase.from('users').update({ is_active: isVerified }).eq('id', profile.user_id);
     if (upUserErr) return res.status(500).json({ success: false, message: upUserErr.message });
+
+    // Update or create the doctor_verifications record
+    try {
+      const { data: existingV } = await supabase.from('doctor_verifications').select('id').eq('doctor_id', doctorId).maybeSingle();
+      const vData = {
+        doctor_id: doctorId,
+        status: isVerified ? 'verified' : 'rejected',
+        verified_at: isVerified ? new Date().toISOString() : null,
+        reviewed_by: 'admin'
+      };
+
+      if (existingV) {
+        await supabase.from('doctor_verifications').update(vData).eq('id', existingV.id);
+      } else {
+        vData.id = crypto.randomUUID();
+        vData.created_at = new Date().toISOString();
+        await supabase.from('doctor_verifications').insert(vData);
+      }
+    } catch (vErr) {
+      console.warn("Failed to update doctor_verifications record:", vErr.message);
+    }
 
     return res.status(200).json({ success: true, message: `Doctor ${status} successfully` });
   } catch (error) {

@@ -17,8 +17,12 @@ const DoctorVerification = () => {
   }, [aToken]);
   const filters = ["PENDING", "VERIFIED", "REJECTED", "ALL"];
 
+  const getDoctorStatus = (doctor) => {
+    return (doctor.verification_status || (doctor.is_verified ? 'verified' : 'pending')).toUpperCase();
+  };
+
   const filteredDoctors = doctors?.filter((doc) => {
-    const status = doc.is_verified ? "VERIFIED" : "PENDING";
+    const status = getDoctorStatus(doc);
     if (activeFilter === "ALL") return true;
     return status === activeFilter;
   }) || [];
@@ -67,8 +71,8 @@ const DoctorVerification = () => {
           <div className="ap-card">
             <p className="ap-list-meta">No doctors found with the selected status</p>
           </div>
-        ) : activeFilter === "VERIFIED" ? (
-          /* Table View for Verified Doctors */
+        ) : (activeFilter === "VERIFIED" || activeFilter === "REJECTED") ? (
+          /* Table View for Verified/Rejected Doctors */
           <div className="ap-card overflow-hidden">
             <table className="ap-table">
               <thead>
@@ -77,47 +81,56 @@ const DoctorVerification = () => {
                   <th>Specialty</th>
                   <th>License No</th>
                   <th>Fee</th>
-                  <th>Joined Date</th>
                   <th>Status</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredDoctors.map((doctor) => (
-                  <tr key={doctor.id}>
-                    <td>
-                      <div className="flex items-center gap-2">
-                        <img 
-                          src={doctor.users?.avatar_url || "https://via.placeholder.com/40"} 
-                          alt="" 
-                          className="w-8 h-8 rounded-full bg-gray-100"
-                        />
-                        <span>{doctor.users?.name}</span>
-                      </div>
-                    </td>
-                    <td>{doctor.specialty}</td>
-                    <td>{doctor.license_no}</td>
-                    <td>NPR {doctor.consultation_fee}</td>
-                    <td>{new Date(doctor.created_at).toLocaleDateString()}</td>
-                    <td>
-                      <span className="ap-badge ap-badge-verified">Verified</span>
-                    </td>
-                  </tr>
-                ))}
+                {filteredDoctors.map((doctor) => {
+                  const docStatus = getDoctorStatus(doctor);
+                  return (
+                    <tr key={doctor.id}>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <img 
+                            src={doctor.users?.avatar_url || "https://via.placeholder.com/40"} 
+                            alt="" 
+                            className="w-8 h-8 rounded-full bg-gray-100"
+                          />
+                          <span>{doctor.users?.name}</span>
+                        </div>
+                      </td>
+                      <td>{doctor.specialty}</td>
+                      <td>{doctor.license_no}</td>
+                      <td>NPR {doctor.consultation_fee}</td>
+                      <td>
+                        <span className={`ap-badge ap-badge-${docStatus.toLowerCase()}`}>
+                          {docStatus}
+                        </span>
+                      </td>
+                      <td>
+                        <button className="ap-btn ap-btn-outline ap-btn-sm" onClick={() => setActiveFilter("ALL")}>View Details</button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         ) : (
-          /* Card View for Pending/Rejected */
+          /* Card View for Pending/All */
           <div className="ap-grid ap-grid-2">
-            {filteredDoctors.map((doctor) => (
-              <div key={doctor.id} className="ap-card">
-                <div className="ap-card-header">
+            {filteredDoctors.map((doctor) => {
+              const docStatus = getDoctorStatus(doctor).toLowerCase();
+              return (
+                <div key={doctor.id} className="ap-card">
+                  <div className="ap-card-header">
                   <div>
                     <h3 className="ap-card-title">{doctor.users?.name}</h3>
                     <p className="ap-card-subtitle">{doctor.specialty}</p>
                   </div>
-                  <span className={`ap-badge ap-badge-${doctor.is_verified ? 'verified' : 'pending'}`}>
-                    {doctor.is_verified ? 'VERIFIED' : 'PENDING'}
+                  <span className={`ap-badge ap-badge-${docStatus}`}>
+                    {docStatus.toUpperCase()}
                   </span>
                 </div>
                 
@@ -151,8 +164,8 @@ const DoctorVerification = () => {
                   <p className="ap-list-meta">{doctor.bio || 'No notes provided'}</p>
                 </div>
 
-                {/* Action Buttons */}
-                {!doctor.is_verified && (
+                {/* Action Buttons - only show for pending */}
+                {!doctor.is_verified && docStatus === 'pending' && (
                   <div className="ap-button-group" style={{ marginTop: '1rem' }}>
                     <button 
                       onClick={() => handleRequestInfo(doctor.id)}
@@ -180,8 +193,9 @@ const DoctorVerification = () => {
                     </button>
                   </div>
                 )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
