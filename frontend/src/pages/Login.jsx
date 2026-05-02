@@ -18,12 +18,16 @@ const Login = () => {
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [bloodGroup, setBloodGroup] = useState("");
   const [gender, setGender] = useState("");
+  const [medicalHistory, setMedicalHistory] = useState("");
+  const [allergies, setAllergies] = useState("");
   const [institution, setInstitution] = useState("");
   const [faculty, setFaculty] = useState("");
   const [nmcLicenseNo, setNmcLicenseNo] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [subSpecialty, setSubSpecialty] = useState("");
   const [qualifications, setQualifications] = useState("");
+  const [experience, setExperience] = useState("");
+  const [consultationFee, setConsultationFee] = useState("");
   const [loading, setLoading] = useState(false);
 
   const onSubmitHandler = async (e) => {
@@ -44,6 +48,8 @@ const Login = () => {
           payload.dateOfBirth = dateOfBirth;
           payload.bloodGroup = bloodGroup;
           payload.gender = gender;
+          payload.medicalHistory = medicalHistory;
+          payload.allergies = allergies;
         } else if (role === 'student') {
           payload.institution = institution;
           payload.faculty = faculty;
@@ -52,6 +58,8 @@ const Login = () => {
           payload.specialty = specialty;
           payload.subSpecialty = subSpecialty;
           payload.qualifications = qualifications;
+          payload.experienceYears = experience ? parseInt(experience) : 0;
+          payload.consultationFee = consultationFee ? parseFloat(consultationFee) : 0;
         }
 
         try {
@@ -182,7 +190,17 @@ const Login = () => {
             <p>Date of Birth</p>
             <input className="border border-zinc-300 rounded w-full p-2 mt-1" type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
             <p className="mt-2">Blood Group</p>
-            <input className="border border-zinc-300 rounded w-full p-2 mt-1" value={bloodGroup} onChange={e => setBloodGroup(e.target.value)} />
+            <select className="border border-zinc-300 rounded w-full p-2 mt-1" value={bloodGroup} onChange={e => setBloodGroup(e.target.value)}>
+              <option value="">Select Blood Group</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+              <option value="O+">O+</option>
+              <option value="O-">O-</option>
+            </select>
             <p className="mt-2">Gender</p>
             <select className="border border-zinc-300 rounded w-full p-2 mt-1" value={gender} onChange={e => setGender(e.target.value)}>
               <option value="">Select</option>
@@ -190,6 +208,20 @@ const Login = () => {
               <option value="female">Female</option>
               <option value="other">Other</option>
             </select>
+            <p className="mt-2">Medical History (Optional)</p>
+            <textarea 
+              className="border border-zinc-300 rounded w-full p-2 mt-1" 
+              placeholder="E.g. Diabetes, Hypertension"
+              value={medicalHistory} 
+              onChange={e => setMedicalHistory(e.target.value)} 
+            />
+            <p className="mt-2">Allergies (Optional)</p>
+            <textarea 
+              className="border border-zinc-300 rounded w-full p-2 mt-1" 
+              placeholder="E.g. Penicillin, Peanuts"
+              value={allergies} 
+              onChange={e => setAllergies(e.target.value)} 
+            />
           </div>
         )}
         {state === "Sign Up" && role === 'student' && (
@@ -210,6 +242,16 @@ const Login = () => {
             <input className="border border-zinc-300 rounded w-full p-2 mt-1" value={subSpecialty} onChange={e => setSubSpecialty(e.target.value)} />
             <p className="mt-2">Qualifications</p>
             <textarea className="border border-zinc-300 rounded w-full p-2 mt-1" value={qualifications} onChange={e => setQualifications(e.target.value)} />
+            <div className="flex gap-2">
+              <div className="w-1/2">
+                <p className="mt-2">Experience (Yrs)</p>
+                <input type="number" className="border border-zinc-300 rounded w-full p-2 mt-1" value={experience} onChange={e => setExperience(e.target.value)} />
+              </div>
+              <div className="w-1/2">
+                <p className="mt-2">Fee (NPR)</p>
+                <input type="number" className="border border-zinc-300 rounded w-full p-2 mt-1" value={consultationFee} onChange={e => setConsultationFee(e.target.value)} />
+              </div>
+            </div>
           </div>
         )}
         <div className="w-full">
