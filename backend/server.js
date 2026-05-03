@@ -10,6 +10,7 @@ import dashboardRoutes from "./routes/dashboard.routes.js"
 import aiRoutes from "./routes/aiRoute.js"
 import adminRoutes from "./routes/adminRoute.js"
 import doctorRoutes from "./routes/doctorRoute.js"
+import studentRoutes from "./routes/studentsRoute.js"
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use('/api/patient', dashboardRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/doctor', doctorRoutes);
+app.use('/api/students', studentRoutes);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

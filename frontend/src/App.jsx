@@ -68,11 +68,27 @@ const App = () => {
         />
         <Route
           path="/patient-portal/health-queries"
-          element={<HealthQueries />}
+          element={<HealthQueries mode="patient" />}
         />
         <Route
           path="/patient-portal/health-queries/:id"
-          element={<DiscussionDetail />}
+          element={<DiscussionDetail mode="patient" />}
+        />
+        <Route
+          path="/doctor-portal/health-queries"
+          element={<HealthQueries mode="doctor" />}
+        />
+        <Route
+          path="/doctor-portal/health-queries/:id"
+          element={<DiscussionDetail mode="doctor" />}
+        />
+        <Route
+          path="/student-portal/health-queries"
+          element={<HealthQueries mode="student" />}
+        />
+        <Route
+          path="/student-portal/health-queries/:id"
+          element={<DiscussionDetail mode="student" />}
         />
 
         <Route path="/doctor-portal" element={<DoctorPortal />} />

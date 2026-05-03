@@ -5,7 +5,7 @@ import { supabase } from '../config/supabase.js';
 async function findPatientByUserId(userId) {
   const { data, error } = await supabase
     .from('patients')
-    .select(`*, user:users(id,email,name,phone,avatar_url:avatarUrl,role,is_active:isActive,created_at)`)
+    .select(`*, user:users(id,email,name,phone,avatarUrl:avatar_url,role,is_active:isActive,created_at)`)
     .eq('user_id', userId)
     .maybeSingle();
   if (error) throw error;
@@ -15,7 +15,7 @@ async function findPatientByUserId(userId) {
 async function findPatientById(id) {
   const { data, error } = await supabase
     .from('patients')
-    .select('*, user:users(id,email,name,phone,avatar_url:avatarUrl)')
+    .select('*, user:users(id,email,name,phone,avatarUrl:avatar_url)')
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
@@ -28,7 +28,7 @@ async function updateUserProfile(userId, data) {
     .from('users')
     .update(data)
     .eq('id', userId)
-    .select('id,email,name,phone,avatar_url:avatarUrl,updated_at:updatedAt')
+    .select('id,email,name,phone,avatarUrl:avatar_url,updated_at:updatedAt')
     .maybeSingle();
   if (error) throw error;
   return updated;

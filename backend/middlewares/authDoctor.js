@@ -12,7 +12,7 @@ const authDoctor = async (req, res, next) => {
     // First try backend JWT (signed with JWT_SECRET)
     try {
       const token_decode = jwt.verify(dtoken, process.env.JWT_SECRET);
-      req.user = { docId: token_decode.id };
+      req.user = { docId: token_decode.id, userId: token_decode.id, id: token_decode.id, sub: token_decode.id };
       try { console.debug('authDoctor: validated backend JWT', { id: token_decode.id }); } catch(_) {}
       return next();
     } catch (jwtErr) {
@@ -32,7 +32,7 @@ const authDoctor = async (req, res, next) => {
       const sUser = data.user;
       try { console.debug('authDoctor: validated Supabase token', { id: sUser.id, metadata: sUser.user_metadata }); } catch(_) {}
       // For Supabase-backed doctor profiles, map supabase user id to docId
-      req.user = { docId: sUser.id, role: sUser.user_metadata?.role || 'patient' };
+      req.user = { docId: sUser.id, userId: sUser.id, id: sUser.id, sub: sUser.id, role: sUser.user_metadata?.role || 'patient' };
       return next();
     } catch (supErr) {
       console.error('Supabase token validation error', supErr);

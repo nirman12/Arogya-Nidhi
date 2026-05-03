@@ -8,6 +8,7 @@ import MRI from "../components/students/MRI";
 import Pneumonia from "../components/students/Pneumonia";
 import DiseaseGlossary from "../components/students/DiseaseGlossary";
 import StudentDashboard from "../components/students/StudentDashboard";
+import { Link } from "react-router-dom";
 
 const NAV = [
   { id: "dashboard", label: "Dashboard", desc: "Overview & activity" },
@@ -103,7 +104,10 @@ const Students = () => {
                   <h2 className="text-xl font-semibold">{NAV.find((n) => n.id === active)?.label}</h2>
                   <p className="text-sm text-gray-400">{NAV.find((n) => n.id === active)?.desc}</p>
                 </div>
-                <div className="text-sm text-gray-400">Quick • Minimal • Focused</div>
+                <div className="flex items-center gap-3 text-sm text-gray-400">
+                  <Link to="/student-portal/health-queries" className="text-indigo-600 font-medium hover:underline">Health Queries</Link>
+                  <span>Quick • Minimal • Focused</span>
+                </div>
               </div>
 
               <div className="mt-2">{renderActive()}</div>

@@ -1,4 +1,5 @@
 import repo from '../repository/dashboard.repository.js';
+import authRepo from '../repository/auth.repository.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -14,6 +15,12 @@ function _forbidden() {
 
 function _notFound(entity = 'Resource') {
   return { status: 404, message: `${entity} not found` };
+}
+
+async function _requireDoctor(userId) {
+  const doctor = await authRepo.findDoctorProfileByUserId(userId);
+  if (!doctor) throw { status: 404, message: 'Doctor profile not found' };
+  return doctor;
 }
 
 // ─── Health Score ─────────────────────────────────────────────────────────────
@@ -305,10 +312,10 @@ async function createQuery(userId, body) {
   if (!title) throw { status: 400, message: 'title is required' };
 
   return repo.createQuery({
-    patientId:   patient.id,
+    patient_id:   patient.id,
     title,
-    symptomText: symptomText || null,
-    isAnonymous: isAnonymous === true || isAnonymous === 'true',
+    symptom_text: symptomText || null,
+    is_anonymous: isAnonymous === true || isAnonymous === 'true',
   });
 }
 
@@ -342,6 +349,42 @@ async function deleteQuery(userId, queryId) {
   if (!q) throw _notFound('Query');
   if (q.isResolved) throw { status: 400, message: 'Cannot delete a resolved query' };
   return repo.deleteQuery(queryId);
+}
+
+async function getCommunityQueries(query) {
+  let isResolved;
+  if (query.isResolved === 'true') isResolved = true;
+  if (query.isResolved === 'false') isResolved = false;
+
+  return repo.getCommunityQueries({
+    page: parseInt(query.page) || 1,
+    limit: Math.min(parseInt(query.limit) || 10, 50),
+    isResolved,
+  });
+}
+
+async function getCommunityQueryDetails(queryId) {
+  const q = await repo.findCommunityQueryById(queryId);
+  if (!q) throw _notFound('Query');
+  await repo.incrementQueryView(queryId);
+  return q;
+}
+
+async function addQueryResponse(userId, queryId, body) {
+  const doctor = await _requireDoctor(userId);
+  const { responseText, isAccepted } = body;
+
+  if (!responseText) throw { status: 400, message: 'responseText is required' };
+
+  const query = await repo.findCommunityQueryById(queryId);
+  if (!query) throw _notFound('Query');
+
+  return repo.createQueryResponse({
+    queryId,
+    doctorId: doctor.id,
+    responseText,
+    isAccepted: isAccepted === true || isAccepted === 'true',
+  });
 }
 
 // ─── Doctors ──────────────────────────────────────────────────────────────────
@@ -386,6 +429,9 @@ export default {
   updateQuery,
   closeQuery,
   deleteQuery,
+  getCommunityQueries,
+  getCommunityQueryDetails,
+  addQueryResponse,
   // doctors
   getAvailableDoctors,
   getDoctorById,

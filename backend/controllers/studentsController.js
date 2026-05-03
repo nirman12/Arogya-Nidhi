@@ -1,4 +1,5 @@
 import fetch from "node-fetch";
+import service from "../services/dashboard.service.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
@@ -102,5 +103,23 @@ export const getMetadata = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const getHealthQueries = async (req, res) => {
+  try {
+    const data = await service.getCommunityQueries(req.query);
+    return res.status(200).json({ success: true, data, message: 'Queries fetched' });
+  } catch (error) {
+    return res.status(error.status || 500).json({ success: false, message: error.message });
+  }
+};
+
+export const getHealthQueryDetails = async (req, res) => {
+  try {
+    const data = await service.getCommunityQueryDetails(req.params.id);
+    return res.status(200).json({ success: true, data, message: 'Query details fetched' });
+  } catch (error) {
+    return res.status(error.status || 500).json({ success: false, message: error.message });
   }
 };
