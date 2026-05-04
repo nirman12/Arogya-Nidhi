@@ -1,4 +1,15 @@
 import { useState } from "react";
+import {
+  HomeIcon,
+  AcademicCapIcon,
+  CubeIcon,
+  BeakerIcon,
+  BookOpenIcon,
+  DocumentTextIcon,
+  PhotoIcon,
+  HeartIcon,
+  LanguageIcon,
+} from "@heroicons/react/24/outline";
 import MCQSection from "../components/students/MCQSection";
 import OrganViewer from "../components/students/OrganViewer";
 import DiagnosticLab from "../components/students/DiagnosticLab";
@@ -8,72 +19,85 @@ import MRI from "../components/students/MRI";
 import Pneumonia from "../components/students/Pneumonia";
 import DiseaseGlossary from "../components/students/DiseaseGlossary";
 import StudentDashboard from "../components/students/StudentDashboard";
+<<<<<<< HEAD
 import { Link } from "react-router-dom";
+=======
+import "./PatientPortal.css";
+import "../components/PatientSidebar.css";
+import "./StudentPortal.css";
+>>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
 
 const NAV = [
-  { id: "dashboard", label: "Dashboard", desc: "Overview & activity" },
-  { id: "mcq", label: "MCQs", desc: "Practice questions" },
-  { id: "viewer", label: "3D Viewer", desc: "Explore organs" },
-  { id: "diag", label: "Diagnostic", desc: "AI patient" },
-  { id: "medicine", label: "Medicine", desc: "Drug info" },
-  { id: "fda", label: "FDA Drug Labelling", desc: "Indications, Contraindications, Warnings, Pharmacology" },
-  { id: "mri", label: "MRI", desc: "Model viewer" },
-  { id: "pneumonia", label: "Pneumonia", desc: "Chest AI" },
-  { id: "glossary", label: "EN-NE Disease Glossary", desc: "English ↔ Nepali translations" },
+  { id: "dashboard", label: "Dashboard",          Icon: HomeIcon },
+  { id: "mcq",       label: "MCQs",               Icon: AcademicCapIcon },
+  { id: "viewer",    label: "3D Organ Viewer",     Icon: CubeIcon },
+  { id: "diag",      label: "Diagnostic Lab",      Icon: BeakerIcon },
+  { id: "medicine",  label: "Medicine Info",       Icon: BookOpenIcon },
+  { id: "fda",       label: "FDA Drug Labelling",  Icon: DocumentTextIcon },
+  { id: "mri",       label: "MRI Viewer",          Icon: PhotoIcon },
+  { id: "pneumonia", label: "Pneumonia",           Icon: HeartIcon },
+  { id: "glossary",  label: "EN–NE Glossary",      Icon: LanguageIcon },
 ];
+
+const NAV_DESC = {
+  dashboard: "Overview & activity",
+  mcq:       "Practice questions",
+  viewer:    "Explore organs",
+  diag:      "AI patient simulator",
+  medicine:  "Drug information",
+  fda:       "Indications, warnings & more",
+  mri:       "MRI image prediction",
+  pneumonia: "Chest X-ray AI",
+  glossary:  "English ↔ Nepali terms",
+};
 
 const Students = () => {
   const [active, setActive] = useState("mcq");
 
+  const activeNav = NAV.find((n) => n.id === active) || NAV[0];
+
   const renderActive = () => {
     switch (active) {
-      case "dashboard":
-        return <StudentDashboard />;
-      case "mcq":
-        return <MCQSection />;
-      case "viewer":
-        return <OrganViewer />;
-      case "diag":
-        return <DiagnosticLab />;
-      case "medicine":
-        return <MedicineInfo />;
-      case "fda":
-        return <FdaLabel apiKey={import.meta.env.VITE_OPENFDA_KEY} />;
-      case "mri":
-        return <MRI />;
-      case "pneumonia":
-        return <Pneumonia />;
-      case "glossary":
-        return <DiseaseGlossary />;
-      default:
-        return null;
+      case "dashboard": return <StudentDashboard />;
+      case "mcq":       return <MCQSection />;
+      case "viewer":    return <OrganViewer />;
+      case "diag":      return <DiagnosticLab />;
+      case "medicine":  return <MedicineInfo />;
+      case "fda":       return <FdaLabel apiKey={import.meta.env.VITE_OPENFDA_KEY} />;
+      case "mri":       return <MRI />;
+      case "pneumonia": return <Pneumonia />;
+      case "glossary":  return <DiseaseGlossary />;
+      default:          return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-8 px-4 md:px-10">
-      <div className="max-w-6xl mx-auto">
-        <header className="mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-semibold">Students Lab</h1>
-              <p className="mt-1 text-sm text-gray-500 max-w-2xl">A minimal, focused workspace — practice questions, interactive models, and diagnostic tools.</p>
-            </div>
-
-            <div className="hidden md:flex items-center gap-3">
-              {NAV.slice(0, 3).map((n) => (
+    <div className="pp-page">
+      <div className="pp-container">
+        <aside className="ps-sidebar">
+          <div className="ps-menu-title">Tools</div>
+          <ul className="ps-menu-list">
+            {NAV.map(({ id, label, Icon }) => (
+              <li key={id} className="ps-menu-item">
                 <button
-                  key={n.id}
-                  onClick={() => setActive(n.id)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors duration-150 border ${active === n.id ? 'bg-primary text-white border-primary' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                  className={`ps-menu-link${active === id ? " active" : ""}`}
+                  onClick={() => setActive(id)}
                 >
-                  {n.label}
+                  <Icon className="ps-menu-icon" />
+                  {label}
                 </button>
-              ))}
-            </div>
-          </div>
-        </header>
+              </li>
+            ))}
+          </ul>
+        </aside>
 
+        <main className="pp-main-content">
+          <div className="sp-content-header">
+            <h2 className="sp-content-title">{activeNav.label}</h2>
+            <p className="sp-content-desc">{NAV_DESC[active]}</p>
+          </div>
+
+<<<<<<< HEAD
         <main className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <nav className="md:col-span-1">
             <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -113,6 +137,9 @@ const Students = () => {
               <div className="mt-2">{renderActive()}</div>
             </div>
           </section>
+=======
+          {renderActive()}
+>>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
         </main>
       </div>
     </div>

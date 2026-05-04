@@ -1,0 +1,297 @@
+import { useContext, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { AppContext } from "../context/AppContext";
+import axios from "axios";
+import DoctorSidebar from "../components/DoctorSidebar";
+import { UserCircleIcon } from "@heroicons/react/24/outline";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
+import "./PatientPortal.css";
+
+const DUMMY_STATS = { todayAppointments: 4, pendingRequests: 2, totalConsultations: 47, earning: 8200 };
+
+const EARNINGS_DATA = [
+  { month: "Nov", earnings: 4200 },
+  { month: "Dec", earnings: 6800 },
+  { month: "Jan", earnings: 9500 },
+  { month: "Feb", earnings: 7300 },
+  { month: "Mar", earnings: 11000 },
+  { month: "Apr", earnings: 8200 },
+];
+
+const EarningsTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div
+      style={{
+        background: "#fff",
+        border: "1px solid var(--pp-border)",
+        borderRadius: 6,
+        padding: "8px 12px",
+        boxShadow: "var(--pp-shadow)",
+        fontSize: "0.8125rem",
+      }}
+    >
+      <div style={{ fontWeight: 700, marginBottom: 2 }}>{label}</div>
+      <div style={{ color: "var(--pp-primary)" }}>
+        रु {payload[0].value.toLocaleString()}
+      </div>
+    </div>
+  );
+};
+
+const DUMMY_APPOINTMENTS = [
+  { id: "da1", user: { name: "Anita Thapa" }, slotDate: "May 1, 2026", slotTime: "10:00 AM" },
+  { id: "da2", user: { name: "Bikash Shrestha" }, slotDate: "May 1, 2026", slotTime: "11:30 AM" },
+  { id: "da3", user: { name: "Priya Gautam" }, slotDate: "May 1, 2026", slotTime: "2:00 PM" },
+  { id: "da4", user: { name: "Rajan Adhikari" }, slotDate: "May 1, 2026", slotTime: "3:30 PM" },
+];
+
+const DUMMY_PENDING = [
+  { id: "dp1", patient_name: "Sunita Poudel", slotDate: "May 2, 2026", request_type: "Consultation" },
+  { id: "dp2", patient_name: "Deepak Karki", slotDate: "May 3, 2026", request_type: "Follow-up" },
+];
+
+const DUMMY_CONSULTATIONS = [
+  { id: "dc1", user: { name: "Rajan Adhikari" }, slotDate: "Apr 30, 2026", notes: "Blood pressure controlled. Continue Amlodipine 5mg." },
+  { id: "dc2", user: { name: "Sunita Poudel" }, slotDate: "Apr 29, 2026", notes: "Post-surgery recovery progressing well. Suture removal in 5 days." },
+  { id: "dc3", user: { name: "Bikash Shrestha" }, slotDate: "Apr 28, 2026", notes: "HbA1c improved to 7.4%. Continue Metformin 1000mg." },
+];
+
+const EARNINGS_BARS = [42, 68, 95, 73, 110, 82];
+const EARNINGS_LABELS = ["Nov", "Dec", "Jan", "Feb", "Mar", "Apr"];
+
+const DoctorDashboard = () => {
+  const { token, userData, logout, backendUrl } = useContext(AppContext);
+  const navigate = useNavigate();
+  const [dash, setDash] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const doctorName = userData?.name || userData?.user?.name || "Doctor";
+
+  useEffect(() => {
+    if (!token) return navigate("/login");
+    const role = userData?.role || userData?.user?.role;
+    if (role !== "doctor") return navigate("/login");
+  }, [token, userData, navigate]);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const headers = token ? { dtoken: token, Authorization: `Bearer ${token}` } : {};
+        const { data } = await axios.get(backendUrl + "/api/doctor/dashboard", { headers });
+        if (data.success) setDash(data.dashData);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [backendUrl, token]);
+
+  const todays =
+    (dash?.latestAppointments || []).length > 0
+      ? (dash.latestAppointments || []).slice(0, 5)
+      : DUMMY_APPOINTMENTS;
+  const pending =
+    (dash?.pendingRequests || []).length > 0 ? dash.pendingRequests : DUMMY_PENDING;
+  const consultations =
+    (dash?.latestAppointments || []).length > 0 ? dash.latestAppointments : DUMMY_CONSULTATIONS;
+
+  const todayCount = dash?.todayAppointments || dash?.appointments || DUMMY_STATS.todayAppointments;
+  const totalConsult = dash?.appointments || DUMMY_STATS.totalConsultations;
+  const earning = dash?.earning || DUMMY_STATS.earning;
+
+  const fmtDate = (d) =>
+    d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+
+  return (
+    <div className="pp-page">
+      <div className="pp-container">
+        <DoctorSidebar />
+
+        <main className="pp-main-content" id="doctor-dashboard">
+          <p className="pp-welcome">Welcome back, {doctorName}</p>
+
+          <section className="pp-section">
+            <h2 className="pp-section-title">Overview</h2>
+            {loading ? (
+              <div className="pp-stats-grid">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="pp-stat-card">
+                    <div className="pp-stat-label">Loading...</div>
+                    <div className="pp-stat-value">—</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="pp-stats-grid">
+                <div className="pp-stat-card">
+                  <div className="pp-stat-label">Today's Appointments</div>
+                  <div className="pp-stat-value">{todayCount}</div>
+                </div>
+                <div className="pp-stat-card">
+                  <div className="pp-stat-label">Pending Requests</div>
+                  <div className="pp-stat-value">{pending.length}</div>
+                </div>
+                <div className="pp-stat-card">
+                  <div className="pp-stat-label">Total Consultations</div>
+                  <div className="pp-stat-value">{totalConsult}</div>
+                </div>
+                <div className="pp-stat-card">
+                  <div className="pp-stat-label">Month Earnings</div>
+                  <div className="pp-stat-value">रु {Number(earning).toLocaleString()}</div>
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section className="pp-section">
+            <h2 className="pp-section-title">Today's Appointments</h2>
+            {loading ? (
+              <div className="pp-appointment-list">
+                <div className="pp-appointment-item">
+                  <div className="pp-appointment-info">
+                    <div className="pp-appointment-title">Loading appointments...</div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="pp-appointment-list">
+                {todays.map((a) => (
+                  <div key={a._id || a.id} className="pp-appointment-item">
+                    <div className="pp-appointment-icon">
+                      <UserCircleIcon style={{ width: 22, height: 22 }} />
+                    </div>
+                    <div className="pp-appointment-info">
+                      <div className="pp-appointment-title">
+                        {a.user?.name || a.patient_name || a.user?.email || "Unknown"}
+                      </div>
+                      <div className="pp-appointment-meta">
+                        {a.slotDate || a.date} {a.slotTime || a.time}
+                      </div>
+                    </div>
+                    <div className="pp-appointment-actions">
+                      <button className="pp-btn pp-btn-outline pp-btn-sm">View</button>
+                      <button className="pp-btn pp-btn-primary pp-btn-sm">Start</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="pp-section">
+            <h2 className="pp-section-title">Pending Requests</h2>
+            <div className="pp-table-container">
+              <table className="pp-table">
+                <thead>
+                  <tr>
+                    <th>Patient Name</th>
+                    <th>Date &amp; Time</th>
+                    <th>Type</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={4}>Loading...</td>
+                    </tr>
+                  ) : (
+                    pending.map((p) => (
+                      <tr key={p.id || p._id}>
+                        <td>{p.patient_name || p.user?.name || "—"}</td>
+                        <td>{p.date || p.slotDate || "—"}</td>
+                        <td>{p.type || p.request_type || "—"}</td>
+                        <td>
+                          <div className="pp-appointment-actions">
+                            <button className="pp-btn pp-btn-outline pp-btn-sm">View</button>
+                            <button className="pp-btn pp-btn-primary pp-btn-sm">Accept</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className="pp-section">
+            <div className="pp-bottom-grid">
+              <div className="pp-panel" style={{ display: "flex", flexDirection: "column" }}>
+                <h3 className="pp-panel-title">Monthly Earnings</h3>
+                <div style={{ flex: 1, minHeight: 0 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={EARNINGS_DATA} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fontSize: 11, fill: "#94a3b8" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "#94a3b8" }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => `रु ${(v / 1000).toFixed(0)}k`}
+                      width={52}
+                    />
+                    <Tooltip content={<EarningsTooltip />} cursor={{ fill: "#eff6ff" }} />
+                    <Bar dataKey="earnings" radius={[4, 4, 0, 0]}>
+                      {EARNINGS_DATA.map((entry, index) => (
+                        <Cell
+                          key={index}
+                          fill={index === EARNINGS_DATA.length - 1 ? "#1e40af" : "#bfdbfe"}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="pp-panel">
+                <h3 className="pp-panel-title">Recent Consultations</h3>
+                {loading ? (
+                  <div className="pp-history-item">
+                    <div className="pp-history-header">
+                      <span className="pp-history-title">Loading...</span>
+                    </div>
+                  </div>
+                ) : (
+                  consultations.slice(0, 3).map((c) => (
+                    <div key={c._id || c.id} className="pp-history-item">
+                      <div className="pp-history-header">
+                        <span className="pp-history-title">{c.user?.name || c.patient_name || "Unknown"}</span>
+                        <span className="pp-history-date">{fmtDate(c.slotDate || c.date)}</span>
+                      </div>
+                      <div className="pp-history-desc">{c.notes || c.summary || "—"}</div>
+                    </div>
+                  ))
+                )}
+                <button type="button" className="pp-btn pp-btn-secondary pp-btn-full">
+                  View All Consultations
+                </button>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default DoctorDashboard;

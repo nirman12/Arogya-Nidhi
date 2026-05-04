@@ -5,7 +5,6 @@ import {
   ChatBubbleLeftRightIcon,
   ClipboardDocumentListIcon,
   SparklesIcon,
-  SignalIcon,
   BanknotesIcon,
   DocumentTextIcon,
   ChatBubbleOvalLeftEllipsisIcon,
@@ -19,7 +18,6 @@ const NAV_ITEMS = [
   { label: "Patient History", to: "/doctor-portal/patient-history", Icon: ClipboardDocumentListIcon },
   { label: "Health Queries", to: "/doctor-portal/health-queries", Icon: ChatBubbleOvalLeftEllipsisIcon },
   { label: "AI Summaries", to: "/doctor-portal/ai-summaries", Icon: SparklesIcon },
-  { label: "IOT Data", to: "/doctor-portal/iot", Icon: SignalIcon },
   { label: "Earnings", to: "/doctor-portal/earnings", Icon: BanknotesIcon },
   { label: "Reports", to: "/doctor-portal/reports", Icon: DocumentTextIcon },
 ];

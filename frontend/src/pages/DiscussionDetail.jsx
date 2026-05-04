@@ -1,11 +1,21 @@
+<<<<<<< HEAD
 import { useContext, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import DoctorSidebar from "../components/DoctorSidebar";
+=======
+import { useContext, useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+>>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
 import PatientSidebar from "../components/PatientSidebar";
 import { ArrowLeftIcon, ArrowUpIcon, ChatBubbleLeftIcon, CheckBadgeIcon, EyeIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import { AppContext } from "../context/AppContext";
+<<<<<<< HEAD
 import { patientPortalApi } from "../utils/patientPortalApi";
 import { toast } from "react-toastify";
+=======
+import { usePosts } from "../context/PostsContext";
+import { patientPortalApi } from "../utils/patientPortalApi";
+>>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
 import "./DiscussionDetail.css";
 
 const ROLE_META = {
@@ -88,12 +98,59 @@ const normalizeThread = (query) => {
 
 const DiscussionDetail = ({ mode = "patient" }) => {
   const { id } = useParams();
+<<<<<<< HEAD
   const navigate = useNavigate();
   const { token, backendUrl, setToken, setUserData } = useContext(AppContext);
 
   const role = ROLE_META[mode] ? mode : "patient";
   const meta = ROLE_META[role];
   const Sidebar = meta.sidebar;
+=======
+  const { backendUrl, token } = useContext(AppContext);
+  const { posts, votePost, voteComment, voteReply, addComment, addReply } = usePosts();
+
+  const [apiPost, setApiPost] = useState(null);
+
+  useEffect(() => {
+    if (!token) return;
+    patientPortalApi.getQueryById(backendUrl, token, id)
+      .then((q) => setApiPost(q))
+      .catch((err) => console.error('Failed to load query', err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, id]);
+
+  const mapApiToPost = (q) => {
+    if (!q) return null;
+    const author = q.patient?.user || { name: 'Anonymous', avatarUrl: null };
+    return {
+      id: q.id,
+      authorInitials: (author.name || '').split(' ').map(s => s[0]).slice(0,2).join('') || 'P',
+      authorName: q.isAnonymous ? 'Anonymous' : (author.name || 'Patient'),
+      authorRole: 'patient',
+      title: q.title,
+      body: q.symptomText || '',
+      category: 'Health',
+      comments: (q.responses || []).length,
+      views: q.view_count || 0,
+      votes: 0,
+      userVote: null,
+      postedAt: q.created_at,
+      comments_data: (q.responses || []).map((r) => ({
+        id: r.id,
+        authorInitials: (r.doctor?.user?.name || 'Dr').split(' ').map(s=>s[0]).slice(0,2).join(''),
+        authorName: r.doctor?.user?.name || 'Doctor',
+        authorRole: 'doctor',
+        body: r.responseText || '',
+        votes: r.isAccepted ? 1 : 0,
+        userVote: null,
+        postedAt: r.createdAt,
+        replies: [],
+      })),
+    };
+  };
+
+  const post = token && apiPost ? mapApiToPost(apiPost) : posts.find((p) => p.id === Number(id));
+>>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
 
   const [thread, setThread] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -121,6 +178,7 @@ const DiscussionDetail = ({ mode = "patient" }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backendUrl, id, role, token]);
 
+<<<<<<< HEAD
   const handleLogout = () => {
     localStorage.removeItem("token");
     setToken(false);
@@ -145,12 +203,19 @@ const DiscussionDetail = ({ mode = "patient" }) => {
     } finally {
       setPosting(false);
     }
+=======
+  const handleAddComment = () => {
+    if (!commentText.trim()) return;
+    addComment(post.id, commentText.trim());
+    setCommentText("");
+>>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
   };
 
   const responseCount = useMemo(() => thread?.responses?.length || 0, [thread]);
 
   return (
     <div className="dd-page">
+<<<<<<< HEAD
       <header className="dd-header">
         <Link to={meta.backLink} className="dd-logo">{meta.title}</Link>
         <nav>
@@ -162,6 +227,8 @@ const DiscussionDetail = ({ mode = "patient" }) => {
         </nav>
       </header>
 
+=======
+>>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
       <div className="dd-container">
         {Sidebar ? <Sidebar /> : null}
 

@@ -1,6 +1,6 @@
 import { verifyAccessToken } from '../util/token.util.js';
 import { sendError } from '../util/response.util.js';
-import { supabase } from '../config/supabase.js';
+import supabase from '../config/supabase.js';
 import repo from '../repository/auth.repository.js';
 
 // Accepts either the app's JWT or a Supabase access token (Bearer). If Supabase token
@@ -21,7 +21,7 @@ export async function authenticate(req, res, next) {
     // If the app JWT doesn't include a role, try to resolve from local users table
     if (!req.user.role) {
       try {
-        const id = req.user.userId;
+        const id = payload?.userId || payload?.id || payload?.sub || null;
         if (id) {
           const user = await repo.findUserById(id);
           if (user && user.role) {

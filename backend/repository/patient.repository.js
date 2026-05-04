@@ -1,21 +1,33 @@
-import { supabase } from '../config/supabase.js';
+import supabase from '../config/supabase.js';
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 
 async function findPatientByUserId(userId) {
   const { data, error } = await supabase
     .from('patients')
-    .select(`*, user:users(id,email,name,phone,avatarUrl:avatar_url,role,is_active:isActive,created_at)`)
+    .select(`*, user:users(id,email,name,phone,avatar_url,role,is_active,barcode,created_at)`)
     .eq('user_id', userId)
     .maybeSingle();
   if (error) throw error;
   return data;
 }
 
+async function findPatientByPhone(phone) {
+  const { data: user, error: userError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('phone', phone)
+    .maybeSingle();
+  if (userError) throw userError;
+  if (!user?.id) return null;
+
+  return findPatientByUserId(user.id);
+}
+
 async function findPatientById(id) {
   const { data, error } = await supabase
     .from('patients')
-    .select('*, user:users(id,email,name,phone,avatarUrl:avatar_url)')
+    .select('*, user:users(id,email,name,phone,avatar_url,barcode)')
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
@@ -28,7 +40,7 @@ async function updateUserProfile(userId, data) {
     .from('users')
     .update(data)
     .eq('id', userId)
-    .select('id,email,name,phone,avatarUrl:avatar_url,updated_at:updatedAt')
+    .select('id,email,name,phone,avatar_url,barcode,updated_at')
     .maybeSingle();
   if (error) throw error;
   return updated;
@@ -43,6 +55,13 @@ async function updatePatientProfile(userId, data) {
     .maybeSingle();
   if (error) throw error;
   return updated;
+}
+
+// Create patient profile
+async function createPatient(data) {
+  const { data: created, error } = await supabase.from('patients').insert(data).select().maybeSingle();
+  if (error) throw error;
+  return created;
 }
 
 // ─── Emergency Contact ────────────────────────────────────────────────────────
@@ -159,9 +178,11 @@ async function deleteMedicalReport(id) {
 export default {
   // profile
   findPatientByUserId,
+  findPatientByPhone,
   findPatientById,
   updateUserProfile,
   updatePatientProfile,
+  createPatient,
   // emergency contacts
   findEmergencyContactsByPatient,
   findEmergencyContactById,

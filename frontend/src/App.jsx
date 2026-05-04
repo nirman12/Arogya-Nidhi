@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Profile from "./pages/Profile";
+import PublicProfile from "./pages/PublicProfile";
 import Appointments from "./pages/Appointments";
 import Appointment from "./pages/Appointment";
 import Navbar from "./components/Navbar";
@@ -22,16 +23,36 @@ import BookAppointment from "./pages/BookAppointment";
 import MedicalHistory from "./pages/MedicalHistory";
 import HealthQueries from "./pages/HealthQueries";
 import DiscussionDetail from "./pages/DiscussionDetail";
+import PublicChat from "./pages/PublicChat";
+import PublicChatDetail from "./pages/PublicChatDetail";
 import EditProfile from "./pages/EditProfile";
-import DoctorPortal from "./pages/DoctorPortal";
+import DoctorDashboard from "./pages/DoctorDashboard";
+import DoctorAppointments from "./pages/DoctorAppointments";
+import DoctorConsultations from "./pages/DoctorConsultations";
+import DoctorEarnings from "./pages/DoctorEarnings";
+import DoctorReports from "./pages/DoctorReports";
+import DoctorPatientHistory from "./pages/DoctorPatientHistory";
+import DoctorAISummaries from "./pages/DoctorAISummaries";
+import DoctorQueries from "./pages/DoctorQueries";
+import DoctorQueryDetail from "./pages/DoctorQueryDetail";
+import DoctorProfile from "./pages/DoctorProfile";
 import StudentPortal from "./pages/StudentPortal";
 import AdminPortal from "./pages/AdminPortal";
+import Payment from "./pages/Payment";
+import PatientPrescriptions from "./pages/PatientPrescriptions";
+
+
 
 const App = () => {
   const location = useLocation();
   const isPatientPortalRoute =
     location.pathname.startsWith("/patient-portal") ||
+    location.pathname.startsWith("/doctor-portal") ||
+    location.pathname.startsWith("/student-portal") ||
+    location.pathname.startsWith("/admin-portal") ||
     location.pathname === "/iot";
+
+
 
   return (
     <div className={isPatientPortalRoute ? "min-h-screen" : "mx-4 sm:mx-[10%]"}>
@@ -43,12 +64,18 @@ const App = () => {
         <Route path="/doctors" element={<Doctors />} />
         <Route path="/doctors/:slug" element={<Doctors />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/public-queries" element={<PublicChat />} />
+        <Route path="/public-queries/:id" element={<PublicChatDetail />} />
+        <Route
+          path="/patient-portal/prescriptions"
+          element={<PatientPrescriptions />}/>
         <Route path="/login" element={<Login />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/students" element={<Students />} />
         <Route path="/students/quiz" element={<Quiz />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/public-profile/:barcode" element={<PublicProfile />} />
         <Route path="/my-appointments" element={<Appointments />} />
         <Route path="/appointment/:docId" element={<Appointment />} />
         <Route path="/iot" element={<IoTPage />} />
@@ -90,8 +117,18 @@ const App = () => {
           path="/student-portal/health-queries/:id"
           element={<DiscussionDetail mode="student" />}
         />
+        <Route path="/payment/:appointmentId" element={<Payment />} />
 
-        <Route path="/doctor-portal" element={<DoctorPortal />} />
+        <Route path="/doctor-portal" element={<DoctorDashboard />} />
+        <Route path="/doctor-portal/appointments" element={<DoctorAppointments />} />
+        <Route path="/doctor-portal/consultations" element={<DoctorConsultations />} />
+        <Route path="/doctor-portal/patient-history" element={<DoctorPatientHistory />} />
+        <Route path="/doctor-portal/ai-summaries" element={<DoctorAISummaries />} />
+        <Route path="/doctor-portal/earnings" element={<DoctorEarnings />} />
+        <Route path="/doctor-portal/reports" element={<DoctorReports />} />
+        <Route path="/doctor-portal/queries" element={<DoctorQueries />} />
+        <Route path="/doctor-portal/queries/:id" element={<DoctorQueryDetail />} />
+        <Route path="/doctor-portal/profile" element={<DoctorProfile />} />
         <Route path="/student-portal" element={<StudentPortal />} />
         <Route path="/admin-portal" element={<AdminPortal />} />
 

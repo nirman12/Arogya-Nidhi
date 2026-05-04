@@ -1,9 +1,15 @@
 import repo from '../repository/dashboard.repository.js';
 import authRepo from '../repository/auth.repository.js';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const DEFAULT_BOOKING_TIME_SLOTS = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00'];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function _requirePatient(userId) {
+  if (!userId || userId === 'undefined' || userId === 'null') {
+    throw { status: 401, message: 'User id not found in token' };
+  }
   const patient = await repo.findPatientByUserId(userId);
   if (!patient) throw { status: 404, message: 'Patient profile not found' };
   return patient;
@@ -111,6 +117,21 @@ async function getOverview(userId) {
   };
 }
 
+async function getPublicQueries(query) {
+  return repo.getPublicQueries({
+    page:  parseInt(query.page)  || 1,
+    limit: Math.min(parseInt(query.limit) || 10, 100),
+    isResolved: query.isResolved === 'true' ? true : (query.isResolved === 'false' ? false : undefined),
+  });
+}
+
+async function getPublicQueryById(id) {
+  const q = await repo.findQueryByIdForDoctor(id);
+  if (!q) throw _notFound('Query');
+  await repo.incrementQueryView(id);
+  return q;
+}
+
 // ─── Quick actions data ───────────────────────────────────────────────────────
 
 async function getQuickActionsData(userId) {
@@ -158,11 +179,17 @@ async function getAppointmentDetails(userId, appointmentId) {
 async function bookAppointment(userId, body) {
   const patient = await _requirePatient(userId);
   const { doctorId, scheduledAt, durationMinutes, patientNotes } = body;
+  const normalizedDoctorId = typeof doctorId === 'string' ? doctorId.trim() : doctorId;
 
-  if (!doctorId)    throw { status: 400, message: 'doctorId is required' };
+  if (!normalizedDoctorId || normalizedDoctorId === 'undefined' || normalizedDoctorId === 'null') {
+    throw { status: 400, message: 'doctorId is required' };
+  }
+  if (!UUID_RE.test(String(normalizedDoctorId))) {
+    throw { status: 400, message: 'doctorId must be a valid UUID' };
+  }
   if (!scheduledAt) throw { status: 400, message: 'scheduledAt is required' };
 
-  const doctor = await repo.findDoctorById(doctorId);
+  const doctor = await repo.findDoctorById(normalizedDoctorId);
   if (!doctor)             throw _notFound('Doctor');
   if (!doctor.isAvailable) throw { status: 400, message: 'Doctor is not available' };
   if (!doctor.isVerified)  throw { status: 400, message: 'Doctor is not verified' };
@@ -172,9 +199,14 @@ async function bookAppointment(userId, body) {
     throw { status: 400, message: 'scheduledAt must be a future date and time' };
   }
 
+  const conflicting = await repo.findAppointmentByDoctorAndScheduledAt(normalizedDoctorId, scheduledDate.toISOString());
+  if (conflicting) {
+    throw { status: 400, message: 'Slot already booked. Please choose another time.' };
+  }
+
   return repo.bookAppointment({
     patientId:       patient.id,
-    doctorId,
+    doctorId:       normalizedDoctorId,
     scheduledAt:     scheduledDate,
     durationMinutes: durationMinutes || 30,
     patientNotes:    patientNotes || null,
@@ -403,6 +435,58 @@ async function getDoctorById(doctorId) {
   return doctor;
 }
 
+async function getDoctorAvailability({ doctorId, date }) {
+  const normalizedDoctorId = typeof doctorId === 'string' ? doctorId.trim() : doctorId;
+  if (!normalizedDoctorId || normalizedDoctorId === 'undefined' || normalizedDoctorId === 'null') {
+    throw { status: 400, message: 'doctorId is required' };
+  }
+  if (!UUID_RE.test(String(normalizedDoctorId))) {
+    throw { status: 400, message: 'doctorId must be a valid UUID' };
+  }
+  if (!date) {
+    throw { status: 400, message: 'date is required' };
+  }
+
+  const doctor = await repo.findDoctorById(normalizedDoctorId);
+  if (!doctor) throw _notFound('Doctor');
+
+  const startOfDay = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(startOfDay.getTime())) {
+    throw { status: 400, message: 'date must be a valid YYYY-MM-DD value' };
+  }
+
+  const endOfDay = new Date(startOfDay);
+  endOfDay.setDate(endOfDay.getDate() + 1);
+
+  const existing = await repo.findAppointmentsByDoctorBetween(
+    normalizedDoctorId,
+    startOfDay.toISOString(),
+    endOfDay.toISOString()
+  );
+
+  const bookedSlots = new Set(
+    existing
+      .map((appointment) => {
+        const scheduledAt = new Date(appointment.scheduled_at || appointment.scheduledAt);
+        const hour = String(scheduledAt.getHours()).padStart(2, '0');
+        return `${hour}:00`;
+      })
+      .filter(Boolean)
+  );
+
+  const now = new Date();
+  const slots = DEFAULT_BOOKING_TIME_SLOTS.filter((slot) => {
+    if (bookedSlots.has(slot)) return false;
+    return new Date(`${date}T${slot}:00`) > now;
+  });
+
+  return {
+    doctorId: normalizedDoctorId,
+    date,
+    slots,
+  };
+}
+
 export default {
   getOverview,
   getQuickActionsData,
@@ -432,7 +516,10 @@ export default {
   getCommunityQueries,
   getCommunityQueryDetails,
   addQueryResponse,
+  getPublicQueries,
+  getPublicQueryById,
   // doctors
   getAvailableDoctors,
   getDoctorById,
+  getDoctorAvailability,
 };

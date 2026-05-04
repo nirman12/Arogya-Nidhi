@@ -15,6 +15,7 @@ import {
 import authDoctor from "../middlewares/authDoctor.js";
 import { validate } from '../middlewares/validate.js';
 import { loginDoctorSchema, updateDoctorProfileSchema, appointmentIdSchema } from '../validations/doctor.validation.js';
+import * as doctorQueries from '../controllers/doctorQueries.controller.js';
 
 const doctorRouter = express.Router();
 
@@ -29,5 +30,10 @@ doctorRouter.post("/update-profile", authDoctor, validate(updateDoctorProfileSch
 doctorRouter.get("/queries", authDoctor, getHealthQueries);
 doctorRouter.get("/queries/:id", authDoctor, getHealthQueryDetails);
 doctorRouter.post("/queries/:id/responses", authDoctor, createHealthQueryResponse);
+
+// Doctor-facing patient queries
+doctorRouter.get('/queries', authDoctor, doctorQueries.listQueries);
+doctorRouter.get('/queries/:id', authDoctor, doctorQueries.getQuery);
+doctorRouter.post('/queries/:id/responses', authDoctor, doctorQueries.createResponse);
 
 export default doctorRouter;

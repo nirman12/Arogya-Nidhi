@@ -12,15 +12,22 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "server": "nodemon server.js"
+    "server": "nodemon server.js",
+    "seed:doctors": "node scripts/seed_specialty_doctors.js"
   },
   "dependencies": {
+    "@google/genai": "^1.51.0",
     "@prisma/client": "^5.22.0",
+<<<<<<< HEAD
     "@supabase/supabase-js": "^2.103.2",
+=======
+    "@supabase/supabase-js": "^2.104.1",
+>>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.6.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
+    "csv-parse": "^6.2.1",
     "dotenv": "^16.6.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
@@ -28,8 +35,10 @@
     "node-fetch": "^3.3.2",
     "pg": "^8.11.0",
     "prisma": "^5.22.0",
+    "twilio": "^6.0.0",
     "uuid": "^13.0.0",
     "validator": "^13.15.0",
+    "ws": "^8.20.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

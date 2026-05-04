@@ -9,12 +9,13 @@ const AppContextProvider = (props) => {
   // Use Nepali Rupee sign
   const currencySymbol = "रु";
   // Default to local backend when VITE_BACKEND_URL is not provided (prevents calls to dev server)
-  const backendUrl = ((import.meta.env.VITE_BACKEND_URL && import.meta.env.VITE_BACKEND_URL.trim()) || "http://localhost:3001").replace(/\/+$/, "");
+  const backendUrl = ((import.meta.env.VITE_BACKEND_URL && import.meta.env.VITE_BACKEND_URL.trim()) || "http://localhost:3000").replace(/\/+$/, "");
 
   const [doctors, setDoctors] = useState([]);
   const [token, setTokenState] = useState(localStorage.getItem("token") || false);
   const [userData, setUserData] = useState(false);
 
+<<<<<<< HEAD
   const setToken = useCallback((nextToken) => {
     if (nextToken) {
       localStorage.setItem("token", nextToken);
@@ -23,6 +24,26 @@ const AppContextProvider = (props) => {
     }
     localStorage.removeItem("token");
     setTokenState(false);
+=======
+  const syncSupabaseSessionToken = useCallback(async () => {
+    if (!supabase) return null;
+
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        return null;
+      }
+
+      const sessionToken = data?.session?.access_token || null;
+      if (sessionToken) {
+        localStorage.setItem("token", sessionToken);
+        setToken(sessionToken);
+      }
+      return sessionToken;
+    } catch {
+      return null;
+    }
+>>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
   }, []);
 
   // =========================
@@ -122,9 +143,13 @@ const AppContextProvider = (props) => {
         setUserData(payload);
       }
     } catch (error) {
-      toast.error(
-        error.response?.data?.message || "Failed to load user profile"
-      );
+      if (error?.response?.status === 401) {
+        localStorage.removeItem("token");
+        setToken(false);
+        setUserData(false);
+        return;
+      }
+      toast.error(error.response?.data?.message || "Failed to load user profile");
     }
   }, [backendUrl, token]);
 
@@ -136,6 +161,7 @@ const AppContextProvider = (props) => {
   }, [getDoctorsData]);
 
   useEffect(() => {
+<<<<<<< HEAD
     if (!supabase) return undefined;
 
     let mounted = true;
@@ -155,22 +181,56 @@ const AppContextProvider = (props) => {
       const accessToken = session?.access_token;
       if (accessToken) {
         setToken(accessToken);
+=======
+    if (!supabase) return;
+
+    syncSupabaseSessionToken();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      const sessionToken = session?.access_token || null;
+      if (sessionToken) {
+        localStorage.setItem("token", sessionToken);
+        setToken(sessionToken);
+      } else if (event === 'SIGNED_OUT') {
+        localStorage.removeItem("token");
+        setToken(false);
+        setUserData(false);
+>>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
       }
     });
 
     return () => {
+<<<<<<< HEAD
       mounted = false;
       listener?.subscription?.unsubscribe();
     };
   }, [setToken]);
 
   useEffect(() => {
+=======
+      authListener?.subscription?.unsubscribe();
+    };
+  }, [syncSupabaseSessionToken]);
+
+  useEffect(() => {
+    if (supabase) {
+      syncSupabaseSessionToken().finally(() => {
+        if (token) {
+          loadUserProfileData();
+        } else {
+          setUserData(false);
+        }
+      });
+      return;
+    }
+
+>>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
     if (token) {
       loadUserProfileData();
     } else {
       setUserData(false);
     }
-  }, [token, loadUserProfileData]);
+  }, [token, loadUserProfileData, syncSupabaseSessionToken]);
 
   // =========================
   // CONTEXT VALUE

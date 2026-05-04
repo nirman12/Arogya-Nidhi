@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import PatientSidebar from "../components/PatientSidebar";
 import {
   HeartIcon,
@@ -27,8 +27,9 @@ const SPECIALTIES = [
 const TIME_SLOTS = ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00"];
 
 const BookAppointment = () => {
-  const { setToken, backendUrl, token } = useContext(AppContext);
+  const { backendUrl, token, doctors: allDoctors } = useContext(AppContext);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [selectedSpecialty, setSelectedSpecialty] = useState(null);
   const [doctors, setDoctors] = useState([]);
@@ -42,7 +43,33 @@ const BookAppointment = () => {
   const [gettingAi, setGettingAi] = useState(false);
   const [booking, setBooking] = useState(false);
 
+  const getDoctorSpecialty = (doc) =>
+    doc?.specialty || doc?.specialization || doc?.speciality || selectedSpecialty;
+
+  const getDoctorExperience = (doc) =>
+    doc?.experienceYears ?? doc?.experience_years ?? doc?.experience ?? null;
+
+  const isDoctorAvailable = (doc) =>
+    doc?.isAvailable ?? doc?.is_available ?? doc?.available ?? false;
+
   const headers = { Authorization: `Bearer ${token}` };
+
+  // If a doctorId is provided via query param, pre-select that doctor (if available)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const qDoctorId = params.get("doctorId") || params.get("doctor_id");
+    if (!qDoctorId) return;
+
+    const found = (allDoctors || []).find((d) => {
+      const id = d?.id || d?._id || d?.doctor_id || d?.user_id || d?.user?.id || d?.doctorId;
+      return id && id.toString() === qDoctorId.toString();
+    });
+    if (found) {
+      const sp = getDoctorSpecialty(found) || selectedSpecialty;
+      if (sp) setSelectedSpecialty(sp);
+      setSelectedDoctor({ ...found, id: found?.id || found?._id || found?.doctor_id });
+    }
+  }, [location.search, allDoctors]);
 
   // Build calendar days for current month
   const today = new Date();
@@ -53,23 +80,47 @@ const BookAppointment = () => {
 
   useEffect(() => {
     if (!selectedSpecialty) return;
+
+    const normalize = (list) =>
+      (list || [])
+        .map((doc) => ({
+          ...doc,
+          id: doc?.id || doc?._id || doc?.doctorId || doc?.doctor_id || null,
+        }))
+        .filter((doc) => !!doc.id);
+
+    const filterBySpecialty = (list) =>
+      normalize(list).filter((doc) =>
+        (doc.specialty || doc.speciality || "")
+          .toLowerCase()
+          .includes(selectedSpecialty.toLowerCase())
+      );
+
+    // Prefer locally cached doctors to ensure accurate filtering
+    if (Array.isArray(allDoctors) && allDoctors.length > 0) {
+      setDoctors(filterBySpecialty(allDoctors));
+      return;
+    }
+
     const fetchDoctors = async () => {
       setLoadingDoctors(true);
       setSelectedDoctor(null);
       try {
-        const { data } = await axios.get(backendUrl + `/api/patient/doctors?specialty=${encodeURIComponent(selectedSpecialty)}`, { headers });
-        if (data.success) {
-          const list = Array.isArray(data.data) ? data.data : data.data?.doctors || [];
-          setDoctors(list);
-        }
+        const { data } = await axios.get(
+          backendUrl + `/api/patient/doctors?specialty=${encodeURIComponent(selectedSpecialty)}`,
+          { headers }
+        );
+        const list = Array.isArray(data?.data) ? data.data : data?.data?.doctors || data?.doctors || [];
+        setDoctors(filterBySpecialty(list));
       } catch (err) {
         toast.error(err.response?.data?.message || "Failed to load doctors");
       } finally {
         setLoadingDoctors(false);
       }
     };
+
     fetchDoctors();
-  }, [selectedSpecialty, backendUrl]);
+  }, [selectedSpecialty, backendUrl, token, allDoctors]);
 
   const handleGetAiRecommendation = async () => {
     if (!symptomText.trim()) return;
@@ -91,36 +142,46 @@ const BookAppointment = () => {
     if (!selectedDate) return toast.error("Please select a date");
     if (!selectedTime) return toast.error("Please select a time slot");
 
-    const [hour, minute] = selectedTime.split(":").map(Number);
-    const scheduledAt = new Date(year, month, selectedDate, hour, minute);
-    if (scheduledAt <= new Date()) return toast.error("Please select a future date and time");
+    const doctorId =
+      selectedDoctor?.user_id ||
+      selectedDoctor?.userId ||
+      selectedDoctor?.doctor_id ||
+      selectedDoctor?.doctorId ||
+      selectedDoctor?.id ||
+      selectedDoctor?._id ||
+      null;
+
+    if (!doctorId || doctorId === "undefined") {
+      return toast.error("Selected doctor is invalid. Please re-select a doctor.");
+    }
+
+    const appointmentDate = new Date(year, month, selectedDate);
+    if (appointmentDate <= new Date() && selectedTime < new Date().toTimeString().slice(0,5)) {
+      return toast.error("Please select a future date and time");
+    }
 
     setBooking(true);
     try {
+      const appointmentDateOnly = appointmentDate.toISOString().split("T")[0];
       const { data } = await axios.post(
-        backendUrl + "/api/patient/appointments",
+        `${backendUrl}/api/appointments`,
         {
-          doctorId: selectedDoctor.id,
-          scheduledAt: scheduledAt.toISOString(),
-          durationMinutes: 30,
-          patientNotes: patientNotes || null,
+          doctor_id: doctorId,
+          appointment_date: appointmentDateOnly,
+          appointment_time: selectedTime,
+          reason: patientNotes || null,
         },
         { headers }
       );
-      if (data.success) {
-        toast.success("Appointment booked successfully!");
-        navigate("/patient-portal");
-      }
+      
+      toast.success("Appointment booked successfully! Proceeding to payment.");
+      navigate(`/payment/${data.id}`);
+      
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to book appointment");
     } finally {
       setBooking(false);
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    setToken(false);
   };
 
   const doctorInitials = (name = "") =>
@@ -134,30 +195,6 @@ const BookAppointment = () => {
 
   return (
     <div className="ba-page">
-      <header className="ba-header">
-        <Link to="/patient-portal" className="ba-logo">
-          PATIENT PORTAL
-        </Link>
-        <nav>
-          <ul className="ba-nav-top">
-            <li>
-              <Link to="/patient-portal">Dashboard</Link>
-            </li>
-            <li>
-              <Link to="/patient-portal/profile">Profile</Link>
-            </li>
-            <li>
-              <a href="#">Settings</a>
-            </li>
-            <li>
-              <button type="button" className="ba-link-button" onClick={handleLogout}>
-                Logout
-              </button>
-            </li>
-          </ul>
-        </nav>
-      </header>
-
       <div className="ba-container">
         <PatientSidebar />
 
@@ -259,25 +296,44 @@ const BookAppointment = () => {
                 doctors.map((doc) => {
                   const name = doc.user?.name || doc.name || "Doctor";
                   const isSelected = selectedDoctor?.id === doc.id;
+                  const specialty = getDoctorSpecialty(doc);
+                  const experience = getDoctorExperience(doc);
+                  const available = isDoctorAvailable(doc);
+                  const imgSrc = doc.user?.profile_image || doc.profile_image || doc.image || null;
                   return (
                     <div key={doc.id} className={`ba-doctor-card${isSelected ? " ba-specialist-selected" : ""}`}>
-                      <div className="ba-doctor-avatar">{doctorInitials(name)}</div>
+                      <div className="ba-doctor-avatar">
+                        {imgSrc ? (
+                          <img
+                            src={imgSrc}
+                            alt={name}
+                            className="ba-doctor-avatar-img"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                              e.currentTarget.nextElementSibling.style.display = "";
+                            }}
+                          />
+                        ) : null}
+                        <span style={{ display: imgSrc ? "none" : "" }}>
+                          {doctorInitials(name)}
+                        </span>
+                      </div>
                       <div className="ba-doctor-info">
                         <div className="ba-doctor-name">Dr. {name}</div>
                         <div className="ba-doctor-specialty">
-                          {doc.specialization || selectedSpecialty}
-                          {doc.experience ? ` · ${doc.experience} years experience` : ""}
+                          {specialty}
+                          {experience ? ` · ${experience} years experience` : ""}
                         </div>
                         <div className="ba-doctor-meta">
                           {doc.rating != null && <span>Rating {doc.rating}</span>}
-                          {doc.isAvailable ? <span>Available</span> : <span>Unavailable</span>}
+                          {available ? <span>Available</span> : <span>Unavailable</span>}
                         </div>
                       </div>
                       <button
                         type="button"
                         className="ba-btn-book"
                         onClick={() => setSelectedDoctor(doc)}
-                        disabled={!doc.isAvailable}
+                        disabled={!available}
                       >
                         {isSelected ? "Selected" : "Select"}
                       </button>
@@ -353,7 +409,7 @@ const BookAppointment = () => {
                     </div>
                     <div className="ba-summary-row">
                       <span>Specialty</span>
-                      <span>{selectedDoctor.specialization || selectedSpecialty}</span>
+                      <span>{getDoctorSpecialty(selectedDoctor)}</span>
                     </div>
                     <div className="ba-summary-row">
                       <span>Date</span>
