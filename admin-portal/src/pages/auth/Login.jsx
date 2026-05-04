@@ -44,7 +44,6 @@ const Login = () => {
         setAToken(accessToken);
         toast.success("Admin logged in successfully");
       } else {
-        localStorage.setItem("dToken", accessToken);
         setDToken(accessToken);
         toast.success("Doctor logged in successfully");
       }

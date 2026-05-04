@@ -102,27 +102,7 @@ const Login = () => {
 
         const loggedRole = sData?.user?.user_metadata?.role || 'patient';
 
-        // For doctors, obtain the backend JWT via backend doctor login endpoint
-        if (loggedRole === 'doctor') {
-          try {
-            const { data } = await axios.post(backendUrl + '/api/doctor/login', { email, password });
-            if (data?.success && data?.token) {
-              localStorage.setItem('token', data.token);
-              setToken(data.token);
-            } else {
-              // fallback to Supabase token if backend login didn't return JWT
-              localStorage.setItem('token', accessToken);
-              setToken(accessToken);
-            }
-          } catch (err) {
-            // fallback: keep Supabase token
-            localStorage.setItem('token', accessToken);
-            setToken(accessToken);
-          }
-        } else {
-          localStorage.setItem("token", accessToken);
-          setToken(accessToken);
-        }
+        setToken(accessToken);
 
         toast.success("Logged in successfully!");
         if (loggedRole === 'doctor') navigate('/doctor-portal');

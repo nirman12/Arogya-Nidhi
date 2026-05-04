@@ -16,7 +16,8 @@ export async function authenticate(req, res, next) {
   // First try existing app access token verification
   try {
     const payload = verifyAccessToken(token);
-    req.user = payload || {};
+    const userId = payload?.userId || payload?.id || payload?.sub || null;
+    req.user = { ...payload, userId, id: payload?.id || userId, sub: payload?.sub || userId };
     // If the app JWT doesn't include a role, try to resolve from local users table
     if (!req.user.role) {
       try {
@@ -66,7 +67,7 @@ export async function authenticate(req, res, next) {
 
     // Map Supabase user to request user object. No local DB creation.
     const suppliedRole = sUser.user_metadata?.role || 'patient';
-    req.user = { sub: sUser.id, email: sUser.email, role: suppliedRole };
+    req.user = { userId: sUser.id, id: sUser.id, sub: sUser.id, email: sUser.email, role: suppliedRole };
     return next();
   } catch (err) {
     console.error('Supabase token validation error', err);

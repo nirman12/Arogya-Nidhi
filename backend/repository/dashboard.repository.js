@@ -301,6 +301,30 @@ async function findQueryById(id, patientId) {
   return data;
 }
 
+async function getCommunityQueries({ page = 1, limit = 10, isResolved } = {}) {
+  const offset = (page - 1) * limit;
+  let query = supabase
+    .from('patient_queries')
+    .select(`id,title,symptomText:symptom_text,isAnonymous:is_anonymous,isResolved:is_resolved,viewCount:view_count,createdAt:created_at,updatedAt:updated_at,patient:patients(user:users(name,avatarUrl:avatar_url)),responses:query_responses(id,responseText:response_text,isAccepted:is_accepted,createdAt:created_at,doctor:doctor_profiles(id,specialty,isVerified:is_verified,user:users(name,avatarUrl:avatar_url))),triageDecision:triage_decisions(*)`, { count: 'exact' })
+    .order('created_at', { ascending: false });
+
+  if (isResolved !== undefined) query = query.eq('is_resolved', isResolved);
+
+  const { data, count, error } = await query.range(offset, offset + limit - 1);
+  if (error) throw error;
+  return { total: count || 0, page, limit, queries: data };
+}
+
+async function findCommunityQueryById(id) {
+  const { data, error } = await supabase
+    .from('patient_queries')
+    .select(`id,title,symptomText:symptom_text,isAnonymous:is_anonymous,isResolved:is_resolved,viewCount:view_count,createdAt:created_at,updatedAt:updated_at,patient:patients(user:users(name,avatarUrl:avatar_url)),responses:query_responses(id,responseText:response_text,isAccepted:is_accepted,createdAt:created_at,doctor:doctor_profiles(id,specialty,isVerified:is_verified,user:users(name,avatarUrl:avatar_url))),triageDecision:triage_decisions(*)`)
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 async function createQuery(data) {
   // normalize camelCase keys to snake_case columns for PostgREST
   const payload = {
@@ -310,6 +334,12 @@ async function createQuery(data) {
     is_anonymous: data.isAnonymous === true || data.isAnonymous === 'true',
   };
   const { data: created, error } = await supabase.from('patient_queries').insert(payload).select().maybeSingle();
+  if (error) throw error;
+  return created;
+}
+
+async function createQueryResponse(data) {
+  const { data: created, error } = await supabase.from('query_responses').insert(data).select().maybeSingle();
   if (error) throw error;
   return created;
 }
@@ -443,6 +473,7 @@ export default {
   findQueryById,
   getPublicQueries,
   createQuery,
+  createQueryResponse,
   updateQuery,
   deleteQuery,
   incrementQueryView,

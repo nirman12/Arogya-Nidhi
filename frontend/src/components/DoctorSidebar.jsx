@@ -7,6 +7,7 @@ import {
   SparklesIcon,
   BanknotesIcon,
   DocumentTextIcon,
+  ChatBubbleOvalLeftEllipsisIcon,
 } from "@heroicons/react/24/outline";
 import "./PatientSidebar.css";
 
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
   { label: "Appointments", to: "/doctor-portal/appointments", Icon: CalendarDaysIcon },
   { label: "Consultations", to: "/doctor-portal/consultations", Icon: ChatBubbleLeftRightIcon },
   { label: "Patient History", to: "/doctor-portal/patient-history", Icon: ClipboardDocumentListIcon },
+  { label: "Health Queries", to: "/doctor-portal/health-queries", Icon: ChatBubbleOvalLeftEllipsisIcon },
   { label: "AI Summaries", to: "/doctor-portal/ai-summaries", Icon: SparklesIcon },
   { label: "Earnings", to: "/doctor-portal/earnings", Icon: BanknotesIcon },
   { label: "Reports", to: "/doctor-portal/reports", Icon: DocumentTextIcon },

@@ -18,7 +18,11 @@
   "dependencies": {
     "@google/genai": "^1.51.0",
     "@prisma/client": "^5.22.0",
+<<<<<<< HEAD
+    "@supabase/supabase-js": "^2.103.2",
+=======
     "@supabase/supabase-js": "^2.104.1",
+>>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.6.1",
     "cookie-parser": "^1.4.7",

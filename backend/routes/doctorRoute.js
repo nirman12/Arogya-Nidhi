@@ -3,8 +3,11 @@ import {
   appointmentCancel,
   appointmentComplete,
   appointmentsDoctor,
+  createHealthQueryResponse,
   doctorDashboard,
   doctorList,
+  getHealthQueryDetails,
+  getHealthQueries,
   doctorProfile,
   loginDoctor,
   updateDoctorProfile,
@@ -24,6 +27,9 @@ doctorRouter.post("/cancel-appointment", authDoctor, validate(appointmentIdSchem
 doctorRouter.get("/dashboard", authDoctor, doctorDashboard);
 doctorRouter.get("/profile", authDoctor, doctorProfile);
 doctorRouter.post("/update-profile", authDoctor, validate(updateDoctorProfileSchema), updateDoctorProfile);
+doctorRouter.get("/queries", authDoctor, getHealthQueries);
+doctorRouter.get("/queries/:id", authDoctor, getHealthQueryDetails);
+doctorRouter.post("/queries/:id/responses", authDoctor, createHealthQueryResponse);
 
 // Doctor-facing patient queries
 doctorRouter.get('/queries', authDoctor, doctorQueries.listQueries);

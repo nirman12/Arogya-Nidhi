@@ -8,6 +8,23 @@ const authConfig = (token, options = {}) => ({
   },
 });
 
+const doctorAuthConfig = (token, options = {}) => ({
+  ...options,
+  headers: {
+    dtoken: token,
+    Authorization: `Bearer ${token}`,
+    ...(options.headers || {}),
+  },
+});
+
+const studentAuthConfig = (token, options = {}) => ({
+  ...options,
+  headers: {
+    Authorization: `Bearer ${token}`,
+    ...(options.headers || {}),
+  },
+});
+
 const unwrap = (response) => response?.data?.data;
 
 export const patientPortalApi = {
@@ -129,6 +146,36 @@ export const patientPortalApi = {
   deleteQuery: (backendUrl, token, id) =>
     axios
       .delete(`${backendUrl}/api/patient/queries/${id}`, authConfig(token))
+      .then(unwrap),
+
+  getForumQueries: (backendUrl, token, role = "patient", params = {}) => {
+    if (role === "doctor") {
+      return axios.get(`${backendUrl}/api/doctor/queries`, doctorAuthConfig(token, { params })).then(unwrap);
+    }
+    if (role === "student") {
+      return axios.get(`${backendUrl}/api/students/queries`, studentAuthConfig(token, { params })).then(unwrap);
+    }
+    return axios.get(`${backendUrl}/api/patient/queries`, authConfig(token, { params })).then(unwrap);
+  },
+
+  getForumQueryById: (backendUrl, token, role = "patient", id) => {
+    if (role === "doctor") {
+      return axios.get(`${backendUrl}/api/doctor/queries/${id}`, doctorAuthConfig(token)).then(unwrap);
+    }
+    if (role === "student") {
+      return axios.get(`${backendUrl}/api/students/queries/${id}`, studentAuthConfig(token)).then(unwrap);
+    }
+    return axios.get(`${backendUrl}/api/patient/queries/${id}`, authConfig(token)).then(unwrap);
+  },
+
+  createForumQuery: (backendUrl, token, payload) =>
+    axios
+      .post(`${backendUrl}/api/patient/queries`, payload, authConfig(token))
+      .then(unwrap),
+
+  createForumResponse: (backendUrl, token, id, payload) =>
+    axios
+      .post(`${backendUrl}/api/doctor/queries/${id}/responses`, payload, doctorAuthConfig(token))
       .then(unwrap),
 
   getDoctors: (backendUrl, token, params = {}) =>

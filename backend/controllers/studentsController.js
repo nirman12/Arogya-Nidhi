@@ -199,92 +199,20 @@ export const getMetadata = async (req, res) => {
   }
 };
 
-export const recordProgress = async (req, res) => {
+export const getHealthQueries = async (req, res) => {
   try {
-    const { mcq_id, selected_option = null, is_correct, time_taken_seconds = null } = req.body;
-    // determine authenticated user id (users.id)
-    const user = req.user || {};
-    const userId = user.userId || user.id || user.sub || user?.user_id || null;
-    if (!userId) return res.status(401).json({ success: false, message: 'User not authenticated' });
-
-    // resolve student_profiles.id by user_id (student_profiles.user_id -> users.id)
-    let studentProfileId = null;
-    try {
-      const { data: existingProfile, error: profileErr } = await supabase.from('student_profiles').select('id').eq('user_id', userId).maybeSingle();
-      if (profileErr) console.log('[recordProgress] profile lookup error', profileErr.message || profileErr);
-      if (existingProfile && existingProfile.id) studentProfileId = existingProfile.id;
-      else {
-        // create a minimal student_profiles row (generate id)
-        const newId = randomUUID();
-        const minimal = { id: newId, user_id: userId };
-        const { data: createdProfile, error: createErr } = await supabase.from('student_profiles').insert([minimal]).select().maybeSingle();
-        if (createErr) {
-          console.error('[recordProgress] failed to create student_profiles', createErr);
-          return res.status(500).json({ success: false, message: 'Failed to ensure student profile exists', details: createErr.message || createErr });
-        }
-        studentProfileId = createdProfile.id;
-      }
-    } catch (e) {
-      console.error('[recordProgress] profile resolution error', e);
-      return res.status(500).json({ success: false, message: 'Failed to resolve student profile' });
-    }
-
-    if (!supabase) return res.status(500).json({ success: false, message: 'Supabase client not configured' });
-
-    const payload = {
-      student_id: studentProfileId,
-      mcq_id,
-      selected_option,
-      is_correct,
-      time_taken_seconds,
-    };
-
-    const { data, error } = await supabase.from('student_progress').insert([payload]).select().single();
-    if (error) {
-      console.error('supabase insert error', error);
-      // foreign key violation when student profile is missing
-      if (error.code === '23503') {
-        return res.status(400).json({ success: false, message: 'Invalid student or mcq reference', details: error.details || error.message });
-      }
-      return res.status(500).json({ success: false, message: 'Failed to record progress', details: error.message || error });
-    }
-
-    return res.json({ success: true, data });
-  } catch (err) {
-    console.error('recordProgress error', err);
-    return res.status(500).json({ success: false, message: 'Server error' });
+    const data = await service.getCommunityQueries(req.query);
+    return res.status(200).json({ success: true, data, message: 'Queries fetched' });
+  } catch (error) {
+    return res.status(error.status || 500).json({ success: false, message: error.message });
   }
 };
 
-export const getProgressSummary = async (req, res) => {
+export const getHealthQueryDetails = async (req, res) => {
   try {
-    const user = req.user || {};
-    const userId = user.userId || user.id || user.sub || user?.user_id || null;
-    if (!userId) return res.status(401).json({ success: false, message: 'User not authenticated' });
-
-    // find student profile id
-    const { data: profile, error: profileErr } = await supabase.from('student_profiles').select('id').eq('user_id', userId).maybeSingle();
-    if (profileErr) {
-      console.error('[getProgressSummary] profile lookup error', profileErr);
-      return res.status(500).json({ success: false, message: 'Failed to lookup profile' });
-    }
-    if (!profile || !profile.id) return res.json({ success: true, data: { total_attempts: 0, unique_mcqs: 0, correct_count: 0, recent: [] } });
-
-    const studentId = profile.id;
-    const { data: rows, error } = await supabase.from('student_progress').select('mcq_id,is_correct,attempted_at').eq('student_id', studentId).order('attempted_at', { ascending: false }).limit(50);
-    if (error) {
-      console.error('[getProgressSummary] supabase error', error);
-      return res.status(500).json({ success: false, message: 'Failed to fetch progress' });
-    }
-
-    const total_attempts = Array.isArray(rows) ? rows.length : 0;
-    const unique_mcqs = Array.isArray(rows) ? new Set(rows.map((r) => r.mcq_id)).size : 0;
-    const correct_count = Array.isArray(rows) ? rows.filter((r) => r.is_correct).length : 0;
-    const recent = (rows || []).slice(0, 10).map((r) => ({ mcq_id: r.mcq_id, is_correct: r.is_correct, attempted_at: r.attempted_at }));
-
-    return res.json({ success: true, data: { total_attempts, unique_mcqs, correct_count, recent } });
-  } catch (err) {
-    console.error('[getProgressSummary] error', err);
-    return res.status(500).json({ success: false, message: 'Server error' });
+    const data = await service.getCommunityQueryDetails(req.params.id);
+    return res.status(200).json({ success: true, data, message: 'Query details fetched' });
+  } catch (error) {
+    return res.status(error.status || 500).json({ success: false, message: error.message });
   }
 };

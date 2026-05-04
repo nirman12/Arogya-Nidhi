@@ -3,8 +3,10 @@ import jwt from "jsonwebtoken";
 // User authentication middleware
 const authUser = async (req, res, next) => {
   try {
-    // Get the token from the request headers
-    const { token } = req.headers;
+    // Accept the legacy `token` header as well as a standard bearer token.
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const token = req.headers.token || bearerToken;
 
     if (!token) {
       return res
@@ -14,7 +16,8 @@ const authUser = async (req, res, next) => {
 
     // Verify the token
     const tokenDecode = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = { userId: tokenDecode.id };
+    const userId = tokenDecode.id || tokenDecode.sub || tokenDecode.userId || null;
+    req.user = { userId, id: tokenDecode.id || userId, sub: tokenDecode.sub || userId };
 
     // Call the next middleware or route handler
     next();

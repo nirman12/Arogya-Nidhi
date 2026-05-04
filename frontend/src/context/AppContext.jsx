@@ -12,9 +12,19 @@ const AppContextProvider = (props) => {
   const backendUrl = ((import.meta.env.VITE_BACKEND_URL && import.meta.env.VITE_BACKEND_URL.trim()) || "http://localhost:3000").replace(/\/+$/, "");
 
   const [doctors, setDoctors] = useState([]);
-  const [token, setToken] = useState(localStorage.getItem("token") || false);
+  const [token, setTokenState] = useState(localStorage.getItem("token") || false);
   const [userData, setUserData] = useState(false);
 
+<<<<<<< HEAD
+  const setToken = useCallback((nextToken) => {
+    if (nextToken) {
+      localStorage.setItem("token", nextToken);
+      setTokenState(nextToken);
+      return;
+    }
+    localStorage.removeItem("token");
+    setTokenState(false);
+=======
   const syncSupabaseSessionToken = useCallback(async () => {
     if (!supabase) return null;
 
@@ -33,6 +43,7 @@ const AppContextProvider = (props) => {
     } catch {
       return null;
     }
+>>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
   }, []);
 
   // =========================
@@ -150,6 +161,27 @@ const AppContextProvider = (props) => {
   }, [getDoctorsData]);
 
   useEffect(() => {
+<<<<<<< HEAD
+    if (!supabase) return undefined;
+
+    let mounted = true;
+
+    const syncSessionToken = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (!mounted || error) return;
+      const accessToken = data?.session?.access_token;
+      if (accessToken) {
+        setToken(accessToken);
+      }
+    };
+
+    syncSessionToken();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const accessToken = session?.access_token;
+      if (accessToken) {
+        setToken(accessToken);
+=======
     if (!supabase) return;
 
     syncSupabaseSessionToken();
@@ -163,10 +195,19 @@ const AppContextProvider = (props) => {
         localStorage.removeItem("token");
         setToken(false);
         setUserData(false);
+>>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
       }
     });
 
     return () => {
+<<<<<<< HEAD
+      mounted = false;
+      listener?.subscription?.unsubscribe();
+    };
+  }, [setToken]);
+
+  useEffect(() => {
+=======
       authListener?.subscription?.unsubscribe();
     };
   }, [syncSupabaseSessionToken]);
@@ -183,6 +224,7 @@ const AppContextProvider = (props) => {
       return;
     }
 
+>>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
     if (token) {
       loadUserProfileData();
     } else {
@@ -201,7 +243,6 @@ const AppContextProvider = (props) => {
     } catch (err) {
       console.warn("Supabase signOut failed", err);
     }
-    localStorage.removeItem("token");
     setToken(false);
     setUserData(false);
   };

@@ -1,4 +1,5 @@
 import repo from '../repository/dashboard.repository.js';
+import authRepo from '../repository/auth.repository.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DEFAULT_BOOKING_TIME_SLOTS = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00'];
@@ -20,6 +21,12 @@ function _forbidden() {
 
 function _notFound(entity = 'Resource') {
   return { status: 404, message: `${entity} not found` };
+}
+
+async function _requireDoctor(userId) {
+  const doctor = await authRepo.findDoctorProfileByUserId(userId);
+  if (!doctor) throw { status: 404, message: 'Doctor profile not found' };
+  return doctor;
 }
 
 // ─── Health Score ─────────────────────────────────────────────────────────────
@@ -337,10 +344,10 @@ async function createQuery(userId, body) {
   if (!title) throw { status: 400, message: 'title is required' };
 
   return repo.createQuery({
-    patientId:   patient.id,
+    patient_id:   patient.id,
     title,
-    symptomText: symptomText || null,
-    isAnonymous: isAnonymous === true || isAnonymous === 'true',
+    symptom_text: symptomText || null,
+    is_anonymous: isAnonymous === true || isAnonymous === 'true',
   });
 }
 
@@ -348,13 +355,13 @@ async function updateQuery(userId, queryId, body) {
   const patient = await _requirePatient(userId);
   const q = await repo.findQueryById(queryId, patient.id);
   if (!q) throw _notFound('Query');
-  if (q.isResolved) throw { status: 400, message: 'Cannot edit a resolved query' };
+  if (q.isResolved ?? q.is_resolved) throw { status: 400, message: 'Cannot edit a resolved query' };
 
   const { title, symptomText, isAnonymous } = body;
   const data = {};
   if (title !== undefined)       data.title = title;
-  if (symptomText !== undefined) data.symptomText = symptomText;
-  if (isAnonymous !== undefined) data.isAnonymous = isAnonymous === true || isAnonymous === 'true';
+  if (symptomText !== undefined) data.symptom_text = symptomText;
+  if (isAnonymous !== undefined) data.is_anonymous = isAnonymous === true || isAnonymous === 'true';
 
   if (!Object.keys(data).length) throw { status: 400, message: 'No fields to update' };
   return repo.updateQuery(queryId, data);
@@ -364,16 +371,52 @@ async function closeQuery(userId, queryId) {
   const patient = await _requirePatient(userId);
   const q = await repo.findQueryById(queryId, patient.id);
   if (!q) throw _notFound('Query');
-  if (q.isResolved) throw { status: 400, message: 'Query is already resolved' };
-  return repo.updateQuery(queryId, { isResolved: true });
+  if (q.isResolved ?? q.is_resolved) throw { status: 400, message: 'Query is already resolved' };
+  return repo.updateQuery(queryId, { is_resolved: true });
 }
 
 async function deleteQuery(userId, queryId) {
   const patient = await _requirePatient(userId);
   const q = await repo.findQueryById(queryId, patient.id);
   if (!q) throw _notFound('Query');
-  if (q.isResolved) throw { status: 400, message: 'Cannot delete a resolved query' };
+  if (q.isResolved ?? q.is_resolved) throw { status: 400, message: 'Cannot delete a resolved query' };
   return repo.deleteQuery(queryId);
+}
+
+async function getCommunityQueries(query) {
+  let isResolved;
+  if (query.isResolved === 'true') isResolved = true;
+  if (query.isResolved === 'false') isResolved = false;
+
+  return repo.getCommunityQueries({
+    page: parseInt(query.page) || 1,
+    limit: Math.min(parseInt(query.limit) || 10, 50),
+    isResolved,
+  });
+}
+
+async function getCommunityQueryDetails(queryId) {
+  const q = await repo.findCommunityQueryById(queryId);
+  if (!q) throw _notFound('Query');
+  await repo.incrementQueryView(queryId);
+  return q;
+}
+
+async function addQueryResponse(userId, queryId, body) {
+  const doctor = await _requireDoctor(userId);
+  const { responseText, isAccepted } = body;
+
+  if (!responseText) throw { status: 400, message: 'responseText is required' };
+
+  const query = await repo.findCommunityQueryById(queryId);
+  if (!query) throw _notFound('Query');
+
+  return repo.createQueryResponse({
+    query_id: queryId,
+    doctor_id: doctor.id,
+    response_text: responseText,
+    is_accepted: isAccepted === true || isAccepted === 'true',
+  });
 }
 
 // ─── Doctors ──────────────────────────────────────────────────────────────────
@@ -470,6 +513,9 @@ export default {
   updateQuery,
   closeQuery,
   deleteQuery,
+  getCommunityQueries,
+  getCommunityQueryDetails,
+  addQueryResponse,
   getPublicQueries,
   getPublicQueryById,
   // doctors

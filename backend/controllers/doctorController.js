@@ -1,6 +1,7 @@
 import supabase from "../config/supabase.js";
 import { generateAccessToken } from "../util/token.util.js";
 import repo from "../repository/auth.repository.js";
+import service from "../services/dashboard.service.js";
 
 /**
  * Resolve doctor_profiles.id from logged-in user.
@@ -443,6 +444,33 @@ const updateDoctorProfile = async (req, res) => {
   }
 };
 
+const getHealthQueries = async (req, res) => {
+  try {
+    const data = await service.getCommunityQueries(req.query);
+    return res.status(200).json({ success: true, data, message: 'Queries fetched' });
+  } catch (error) {
+    return res.status(error.status || 500).json({ success: false, message: error.message });
+  }
+};
+
+const getHealthQueryDetails = async (req, res) => {
+  try {
+    const data = await service.getCommunityQueryDetails(req.params.id);
+    return res.status(200).json({ success: true, data, message: 'Query details fetched' });
+  } catch (error) {
+    return res.status(error.status || 500).json({ success: false, message: error.message });
+  }
+};
+
+const createHealthQueryResponse = async (req, res) => {
+  try {
+    const data = await service.addQueryResponse(req.user?.docId, req.params.id, req.body);
+    return res.status(201).json({ success: true, data, message: 'Response submitted successfully' });
+  } catch (error) {
+    return res.status(error.status || 500).json({ success: false, message: error.message });
+  }
+};
+
 export {
   changeAvailability,
   doctorList,
@@ -453,4 +481,7 @@ export {
   doctorDashboard,
   doctorProfile,
   updateDoctorProfile,
+  getHealthQueries,
+  getHealthQueryDetails,
+  createHealthQueryResponse,
 };
