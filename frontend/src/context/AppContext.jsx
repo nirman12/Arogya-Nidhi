@@ -12,8 +12,18 @@ const AppContextProvider = (props) => {
   const backendUrl = ((import.meta.env.VITE_BACKEND_URL && import.meta.env.VITE_BACKEND_URL.trim()) || "http://localhost:3001").replace(/\/+$/, "");
 
   const [doctors, setDoctors] = useState([]);
-  const [token, setToken] = useState(localStorage.getItem("token") || false);
+  const [token, setTokenState] = useState(localStorage.getItem("token") || false);
   const [userData, setUserData] = useState(false);
+
+  const setToken = useCallback((nextToken) => {
+    if (nextToken) {
+      localStorage.setItem("token", nextToken);
+      setTokenState(nextToken);
+      return;
+    }
+    localStorage.removeItem("token");
+    setTokenState(false);
+  }, []);
 
   // =========================
   // GET DOCTORS DATA
@@ -126,6 +136,35 @@ const AppContextProvider = (props) => {
   }, [getDoctorsData]);
 
   useEffect(() => {
+    if (!supabase) return undefined;
+
+    let mounted = true;
+
+    const syncSessionToken = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (!mounted || error) return;
+      const accessToken = data?.session?.access_token;
+      if (accessToken) {
+        setToken(accessToken);
+      }
+    };
+
+    syncSessionToken();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const accessToken = session?.access_token;
+      if (accessToken) {
+        setToken(accessToken);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      listener?.subscription?.unsubscribe();
+    };
+  }, [setToken]);
+
+  useEffect(() => {
     if (token) {
       loadUserProfileData();
     } else {
@@ -144,7 +183,6 @@ const AppContextProvider = (props) => {
     } catch (err) {
       console.warn("Supabase signOut failed", err);
     }
-    localStorage.removeItem("token");
     setToken(false);
     setUserData(false);
   };
