@@ -197,7 +197,7 @@ async function getPatientQueries(patientId, { page = 1, limit = 10, isResolved }
   const offset = (page - 1) * limit;
   let query = supabase
     .from('patient_queries')
-    .select(`*, responses:query_responses(id,response_text:responseText,is_accepted:isAccepted,created_at:createdAt, doctor:doctor_profiles(specialty, user:users(name,avatarUrl:avatar_url) )), triage_decision:triage_decisions(* )`, { count: 'exact' })
+    .select(`id,title,symptomText:symptom_text,isAnonymous:is_anonymous,isResolved:is_resolved,viewCount:view_count,createdAt:created_at,updatedAt:updated_at,responses:query_responses(id,responseText:response_text,isAccepted:is_accepted,createdAt:created_at,doctor:doctor_profiles(specialty,user:users(name,avatarUrl:avatar_url))),triageDecision:triage_decisions(*)`, { count: 'exact' })
     .eq('patient_id', patientId)
     .order('created_at', { ascending: false });
   if (isResolved !== undefined) query = query.eq('is_resolved', isResolved);
@@ -209,7 +209,7 @@ async function getPatientQueries(patientId, { page = 1, limit = 10, isResolved }
 async function findQueryById(id, patientId) {
   const { data, error } = await supabase
     .from('patient_queries')
-    .select(`*, responses:query_responses(id,response_text:responseText,is_accepted:isAccepted,created_at:createdAt, doctor:doctor_profiles(id,specialty,is_verified:isVerified, user:users(name,avatarUrl:avatar_url) )), triage_decision:triage_decisions(*)`)
+    .select(`id,title,symptomText:symptom_text,isAnonymous:is_anonymous,isResolved:is_resolved,viewCount:view_count,createdAt:created_at,updatedAt:updated_at,responses:query_responses(id,responseText:response_text,isAccepted:is_accepted,createdAt:created_at,doctor:doctor_profiles(id,specialty,isVerified:is_verified,user:users(name,avatarUrl:avatar_url))),triageDecision:triage_decisions(*)`)
     .eq('id', id)
     .eq('patient_id', patientId)
     .maybeSingle();
@@ -221,7 +221,7 @@ async function getCommunityQueries({ page = 1, limit = 10, isResolved } = {}) {
   const offset = (page - 1) * limit;
   let query = supabase
     .from('patient_queries')
-    .select(`id,title,symptom_text:symptomText,is_anonymous:isAnonymous,is_resolved:isResolved,view_count:viewCount,created_at:createdAt,updated_at:updatedAt,patient:patients(user:users(name,avatarUrl:avatar_url)),responses:query_responses(id,response_text:responseText,is_accepted:isAccepted,created_at:createdAt,doctor:doctor_profiles(id,specialty,is_verified:isVerified,user:users(name,avatarUrl:avatar_url))),triage_decision:triage_decisions(*)`, { count: 'exact' })
+    .select(`id,title,symptomText:symptom_text,isAnonymous:is_anonymous,isResolved:is_resolved,viewCount:view_count,createdAt:created_at,updatedAt:updated_at,patient:patients(user:users(name,avatarUrl:avatar_url)),responses:query_responses(id,responseText:response_text,isAccepted:is_accepted,createdAt:created_at,doctor:doctor_profiles(id,specialty,isVerified:is_verified,user:users(name,avatarUrl:avatar_url))),triageDecision:triage_decisions(*)`, { count: 'exact' })
     .order('created_at', { ascending: false });
 
   if (isResolved !== undefined) query = query.eq('is_resolved', isResolved);
@@ -234,7 +234,7 @@ async function getCommunityQueries({ page = 1, limit = 10, isResolved } = {}) {
 async function findCommunityQueryById(id) {
   const { data, error } = await supabase
     .from('patient_queries')
-    .select(`id,title,symptom_text:symptomText,is_anonymous:isAnonymous,is_resolved:isResolved,view_count:viewCount,created_at:createdAt,updated_at:updatedAt,patient:patients(user:users(name,avatarUrl:avatar_url)),responses:query_responses(id,response_text:responseText,is_accepted:isAccepted,created_at:createdAt,doctor:doctor_profiles(id,specialty,is_verified:isVerified,user:users(name,avatarUrl:avatar_url))),triage_decision:triage_decisions(*)`)
+    .select(`id,title,symptomText:symptom_text,isAnonymous:is_anonymous,isResolved:is_resolved,viewCount:view_count,createdAt:created_at,updatedAt:updated_at,patient:patients(user:users(name,avatarUrl:avatar_url)),responses:query_responses(id,responseText:response_text,isAccepted:is_accepted,createdAt:created_at,doctor:doctor_profiles(id,specialty,isVerified:is_verified,user:users(name,avatarUrl:avatar_url))),triageDecision:triage_decisions(*)`)
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;

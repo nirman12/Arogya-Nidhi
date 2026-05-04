@@ -323,13 +323,13 @@ async function updateQuery(userId, queryId, body) {
   const patient = await _requirePatient(userId);
   const q = await repo.findQueryById(queryId, patient.id);
   if (!q) throw _notFound('Query');
-  if (q.isResolved) throw { status: 400, message: 'Cannot edit a resolved query' };
+  if (q.isResolved ?? q.is_resolved) throw { status: 400, message: 'Cannot edit a resolved query' };
 
   const { title, symptomText, isAnonymous } = body;
   const data = {};
   if (title !== undefined)       data.title = title;
-  if (symptomText !== undefined) data.symptomText = symptomText;
-  if (isAnonymous !== undefined) data.isAnonymous = isAnonymous === true || isAnonymous === 'true';
+  if (symptomText !== undefined) data.symptom_text = symptomText;
+  if (isAnonymous !== undefined) data.is_anonymous = isAnonymous === true || isAnonymous === 'true';
 
   if (!Object.keys(data).length) throw { status: 400, message: 'No fields to update' };
   return repo.updateQuery(queryId, data);
@@ -339,15 +339,15 @@ async function closeQuery(userId, queryId) {
   const patient = await _requirePatient(userId);
   const q = await repo.findQueryById(queryId, patient.id);
   if (!q) throw _notFound('Query');
-  if (q.isResolved) throw { status: 400, message: 'Query is already resolved' };
-  return repo.updateQuery(queryId, { isResolved: true });
+  if (q.isResolved ?? q.is_resolved) throw { status: 400, message: 'Query is already resolved' };
+  return repo.updateQuery(queryId, { is_resolved: true });
 }
 
 async function deleteQuery(userId, queryId) {
   const patient = await _requirePatient(userId);
   const q = await repo.findQueryById(queryId, patient.id);
   if (!q) throw _notFound('Query');
-  if (q.isResolved) throw { status: 400, message: 'Cannot delete a resolved query' };
+  if (q.isResolved ?? q.is_resolved) throw { status: 400, message: 'Cannot delete a resolved query' };
   return repo.deleteQuery(queryId);
 }
 
@@ -380,10 +380,10 @@ async function addQueryResponse(userId, queryId, body) {
   if (!query) throw _notFound('Query');
 
   return repo.createQueryResponse({
-    queryId,
-    doctorId: doctor.id,
-    responseText,
-    isAccepted: isAccepted === true || isAccepted === 'true',
+    query_id: queryId,
+    doctor_id: doctor.id,
+    response_text: responseText,
+    is_accepted: isAccepted === true || isAccepted === 'true',
   });
 }
 

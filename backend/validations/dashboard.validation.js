@@ -2,12 +2,16 @@ import { z } from 'zod';
 
 const APPOINTMENT_STATUSES = ['pending', 'confirmed', 'cancelled', 'completed', 'no_show'];
 const VALID_TEST_TYPES = ['blood_pressure', 'blood_glucose', 'heart_rate', 'spo2', 'temperature', 'weight', 'ecg', 'other'];
+const MAX_LIMIT = 50;
 
 // ─── Shared ───────────────────────────────────────────────────────────────────
 
 const paginationQuery = z.object({
   page:  z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().positive().max(50).optional(),
+  limit: z.coerce.number().int().positive().optional().transform((value) => {
+    if (value === undefined) return value;
+    return Math.min(value, MAX_LIMIT);
+  }),
 });
 
 // ─── Appointments ─────────────────────────────────────────────────────────────
