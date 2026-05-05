@@ -407,17 +407,6 @@ async function findQueryByIdForDoctor(id) {
   return data;
 }
 
-async function createQueryResponse({ queryId, doctorId, responseText }) {
-  const payload = {
-    query_id: queryId,
-    doctor_id: doctorId,
-    response_text: responseText || null,
-  };
-  const { data: created, error } = await supabase.from('query_responses').insert(payload).select().maybeSingle();
-  if (error) throw error;
-  return created;
-}
-
 // ─── Doctors (for booking) ────────────────────────────────────────────────────
 
 async function getAvailableDoctors({ page = 1, limit = 10, specialty } = {}) {
@@ -480,7 +469,6 @@ export default {
   // doctor-facing
   getAllQueriesForDoctor,
   findQueryByIdForDoctor,
-  createQueryResponse,
   // doctors
   getAvailableDoctors,
   findDoctorById,

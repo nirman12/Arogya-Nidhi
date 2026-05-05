@@ -1,6 +1,7 @@
 import fetch from "node-fetch";
 import supabase from '../config/supabase.js';
 import { randomUUID } from 'crypto';
+import service from "../services/dashboard.service.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
@@ -196,6 +197,100 @@ export const getMetadata = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+async function resolveStudentProfileId(req) {
+  const possibleUserId = req.user?.studentId || req.user?.profileId || req.user?.userId || req.user?.id || req.user?.sub;
+
+  if (!possibleUserId) {
+    throw { status: 401, message: "Student identity not found" };
+  }
+
+  const { data, error } = await supabase
+    .from('student_profiles')
+    .select('id, user_id')
+    .eq('user_id', possibleUserId)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (data?.id) {
+    return data.id;
+  }
+
+  const directProfile = await supabase
+    .from('student_profiles')
+    .select('id')
+    .eq('id', possibleUserId)
+    .maybeSingle();
+
+  if (directProfile.error) throw directProfile.error;
+
+  if (directProfile.data?.id) {
+    return directProfile.data.id;
+  }
+
+  throw { status: 404, message: "Student profile not found" };
+}
+
+export const recordProgress = async (req, res) => {
+  try {
+    const studentProfileId = await resolveStudentProfileId(req);
+    const { mcq_id, selected_option, is_correct, time_taken_seconds } = req.body;
+
+    const payload = {
+      student_id: studentProfileId,
+      mcq_id,
+      selected_option: selected_option ?? null,
+      is_correct,
+      time_taken_seconds: time_taken_seconds ?? null,
+    };
+
+    const { data, error } = await supabase
+      .from('student_progress')
+      .insert(payload)
+      .select('id, student_id, mcq_id, selected_option, is_correct, time_taken_seconds, attempted_at')
+      .single();
+
+    if (error) throw error;
+
+    return res.status(201).json({ success: true, data, message: 'Progress recorded' });
+  } catch (error) {
+    return res.status(error.status || 500).json({ success: false, message: error.message });
+  }
+};
+
+export const getProgressSummary = async (req, res) => {
+  try {
+    const studentProfileId = await resolveStudentProfileId(req);
+
+    const { data, error } = await supabase
+      .from('student_progress')
+      .select('id, mcq_id, selected_option, is_correct, time_taken_seconds, attempted_at')
+      .eq('student_id', studentProfileId)
+      .order('attempted_at', { ascending: false });
+
+    if (error) throw error;
+
+    const attempts = data || [];
+    const correctAnswers = attempts.filter((attempt) => attempt.is_correct).length;
+    const totalAttempts = attempts.length;
+    const totalTime = attempts.reduce((sum, attempt) => sum + (attempt.time_taken_seconds || 0), 0);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalAttempts,
+        correctAnswers,
+        accuracy: totalAttempts ? Math.round((correctAnswers / totalAttempts) * 100) : 0,
+        averageTimeSeconds: totalAttempts ? Math.round(totalTime / totalAttempts) : 0,
+        recentAttempts: attempts.slice(0, 10),
+      },
+      message: 'Progress summary fetched',
+    });
+  } catch (error) {
+    return res.status(error.status || 500).json({ success: false, message: error.message });
   }
 };
 

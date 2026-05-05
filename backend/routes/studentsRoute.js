@@ -1,12 +1,10 @@
 import express from "express";
-import { getMCQs, getMetadata, getHealthQueries, getHealthQueryDetails } from "../controllers/studentsController.js";
-import { validate } from '../middlewares/validate.js';
-import { authenticate, requireRole } from '../middlewares/auth.js';
 import { getMCQs, getMetadata, recordProgress } from "../controllers/studentsController.js";
 import { getProgressSummary } from "../controllers/studentsController.js";
 import { validate } from '../middlewares/validate.js';
 import { getQuestionsSchema, postProgressSchema } from '../validations/student.validation.js';
 import { authenticate, requireRole } from '../middlewares/auth.js';
+import { getHealthQueries, getHealthQueryDetails } from "../controllers/studentsController.js";
 
 const router = express.Router();
 
