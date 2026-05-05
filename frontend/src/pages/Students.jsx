@@ -19,13 +19,9 @@ import MRI from "../components/students/MRI";
 import Pneumonia from "../components/students/Pneumonia";
 import DiseaseGlossary from "../components/students/DiseaseGlossary";
 import StudentDashboard from "../components/students/StudentDashboard";
-<<<<<<< HEAD
-import { Link } from "react-router-dom";
-=======
 import "./PatientPortal.css";
 import "../components/PatientSidebar.css";
 import "./StudentPortal.css";
->>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
 
 const NAV = [
   { id: "dashboard", label: "Dashboard",          Icon: HomeIcon },
@@ -97,49 +93,7 @@ const Students = () => {
             <p className="sp-content-desc">{NAV_DESC[active]}</p>
           </div>
 
-<<<<<<< HEAD
-        <main className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <nav className="md:col-span-1">
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-700">Tools</h3>
-              <div className="mt-3 space-y-2">
-                {NAV.map((n) => (
-                  <button
-                    key={n.id}
-                    onClick={() => setActive(n.id)}
-                    className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between transition-colors duration-150
-                      ${active === n.id ? "bg-indigo-50 border border-indigo-100 text-indigo-700" : "hover:bg-gray-50 text-gray-700"}`}
-                  >
-                    <div>
-                      <div className="text-sm font-medium">{n.label}</div>
-                      <div className="text-xs text-gray-400">{n.desc}</div>
-                    </div>
-                    <div className="text-xs text-gray-300">›</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </nav>
-
-          <section className="md:col-span-3">
-            <div className="bg-white rounded-2xl p-6 shadow-lg min-h-[40vh]">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h2 className="text-xl font-semibold">{NAV.find((n) => n.id === active)?.label}</h2>
-                  <p className="text-sm text-gray-400">{NAV.find((n) => n.id === active)?.desc}</p>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-400">
-                  <Link to="/student-portal/health-queries" className="text-indigo-600 font-medium hover:underline">Health Queries</Link>
-                  <span>Quick • Minimal • Focused</span>
-                </div>
-              </div>
-
-              <div className="mt-2">{renderActive()}</div>
-            </div>
-          </section>
-=======
           {renderActive()}
->>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
         </main>
       </div>
     </div>

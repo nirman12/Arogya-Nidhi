@@ -1,25 +1,16 @@
-<<<<<<< HEAD
 import { useContext, useEffect, useMemo, useState } from "react";
-=======
-import { useContext, useEffect, useState } from "react";
->>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, ChatBubbleLeftIcon, ChevronLeftIcon, ChevronRightIcon, EyeIcon, PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import DoctorSidebar from "../components/DoctorSidebar";
 import PatientSidebar from "../components/PatientSidebar";
 import { AppContext } from "../context/AppContext";
 import { patientPortalApi } from "../utils/patientPortalApi";
-<<<<<<< HEAD
 import { toast } from "react-toastify";
-=======
-import { usePosts } from "../context/PostsContext";
->>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
 import "./HealthQueries.css";
 
 const SORT_TABS = ["Hot", "New", "Top", "Trending"];
 const POSTS_PER_PAGE = 5;
 
-<<<<<<< HEAD
 const ROLE_META = {
   patient: {
     title: "PATIENT PORTAL",
@@ -101,11 +92,6 @@ const roleLabel = (role) => (role === "doctor" ? "Doctor" : role === "student" ?
 
 const HealthQueries = ({ mode = "patient" }) => {
   const { token, backendUrl, setToken, setUserData } = useContext(AppContext);
-=======
-const HealthQueries = () => {
-  const { posts, addPost, votePost } = usePosts();
-  const { backendUrl, token, userData } = useContext(AppContext);
->>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
   const navigate = useNavigate();
 
   const role = ROLE_META[mode] ? mode : "patient";
@@ -141,7 +127,6 @@ const HealthQueries = () => {
     loadQueries();
   }, [backendUrl, role, token]);
 
-<<<<<<< HEAD
   const handleLogout = () => {
     localStorage.removeItem("token");
     setToken(false);
@@ -176,102 +161,6 @@ const HealthQueries = () => {
 
   const filtered = queries.filter((query) => {
     if (categoryFilter !== "All" && query.category !== categoryFilter) return false;
-=======
-  const handleCreatePost = () => {
-    if (!newPost.title.trim() || !newPost.excerpt.trim()) return;
-    if (newPost.title.trim().length < 3) {
-      // Client-side guard to match backend validation
-      console.error('Title must be at least 3 characters');
-      return;
-    }
-    // Create via API when logged in as patient
-    if (token) {
-      patientPortalApi.createQuery(backendUrl, token, {
-        title: newPost.title.trim(),
-        symptomText: newPost.excerpt.trim(),
-        isAnonymous: false,
-      }).then((created) => {
-        // Refresh list
-        loadQueries();
-      }).catch((err) => {
-        console.error('Create query failed', err);
-      });
-    } else {
-      addPost({
-        id: Date.now(),
-        authorInitials: "Me",
-        authorName: "You",
-        authorRole: "patient",
-        title: newPost.title.trim(),
-        body: newPost.excerpt.trim(),
-        excerpt: newPost.excerpt.trim(),
-        category: newPost.category,
-        comments: 0,
-        views: "0",
-        votes: 1,
-        userVote: "up",
-        postedAt: new Date().toISOString(),
-        comments_data: [],
-      });
-    }
-    setNewPost({ title: "", category: "General Health", excerpt: "" });
-    setShowModal(false);
-    setSortTab("New");
-    setCurrentPage(1);
-  };
-
-  const [queries, setQueries] = useState([]);
-
-  const loadQueries = async () => {
-    if (!token) return;
-    try {
-      const res = await patientPortalApi.getQueries(backendUrl, token, { page: 1, limit: 50 });
-      setQueries(res.queries || []);
-    } catch (err) {
-      console.error('Failed to load queries', err);
-    }
-  };
-
-  useEffect(() => {
-    loadQueries();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
-
-  const mapApiToPost = (q) => {
-    const author = q.patient?.user || { name: 'Anonymous' };
-    return {
-      id: q.id,
-      authorInitials: (author.name || '').split(' ').map(s => s[0]).slice(0,2).join('') || 'P',
-      authorName: q.isAnonymous ? 'Anonymous' : (author.name || 'Patient'),
-      authorRole: 'patient',
-      title: q.title,
-      body: q.symptomText || '',
-      excerpt: (q.symptomText || '').slice(0,200),
-      category: 'Health',
-      comments: (q.responses || []).length,
-      views: q.view_count || 0,
-      votes: 0,
-      userVote: null,
-      postedAt: q.created_at,
-      comments_data: (q.responses || []).map((r) => ({
-        id: r.id,
-        authorInitials: (r.doctor?.user?.name || 'Dr').split(' ').map(s=>s[0]).slice(0,2).join(''),
-        authorName: r.doctor?.user?.name || 'Doctor',
-        authorRole: 'doctor',
-        body: r.responseText || '',
-        votes: r.isAccepted ? 1 : 0,
-        userVote: null,
-        postedAt: r.createdAt,
-        replies: [],
-      })),
-    };
-  };
-
-  const source = token ? queries.map(mapApiToPost) : posts;
-
-  const filtered = source.filter((p) => {
-    if (categoryFilter !== "All" && p.category !== categoryFilter) return false;
->>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
     if (activeSearch) {
       const needle = activeSearch.toLowerCase();
       if (!query.title.toLowerCase().includes(needle) && !query.body.toLowerCase().includes(needle)) {
@@ -294,7 +183,6 @@ const HealthQueries = () => {
 
   return (
     <div className="hq-page">
-<<<<<<< HEAD
       <header className="hq-header">
         <Link to={meta.backLink} className="hq-logo">{meta.title}</Link>
         <nav>
@@ -306,8 +194,6 @@ const HealthQueries = () => {
         </nav>
       </header>
 
-=======
->>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
       <div className="hq-container">
         {Sidebar ? <Sidebar /> : null}
 

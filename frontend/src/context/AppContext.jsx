@@ -15,7 +15,6 @@ const AppContextProvider = (props) => {
   const [token, setTokenState] = useState(localStorage.getItem("token") || false);
   const [userData, setUserData] = useState(false);
 
-<<<<<<< HEAD
   const setToken = useCallback((nextToken) => {
     if (nextToken) {
       localStorage.setItem("token", nextToken);
@@ -24,7 +23,8 @@ const AppContextProvider = (props) => {
     }
     localStorage.removeItem("token");
     setTokenState(false);
-=======
+  }, []);
+
   const syncSupabaseSessionToken = useCallback(async () => {
     if (!supabase) return null;
 
@@ -36,15 +36,13 @@ const AppContextProvider = (props) => {
 
       const sessionToken = data?.session?.access_token || null;
       if (sessionToken) {
-        localStorage.setItem("token", sessionToken);
         setToken(sessionToken);
       }
       return sessionToken;
     } catch {
       return null;
     }
->>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
-  }, []);
+  }, [setToken]);
 
   // =========================
   // GET DOCTORS DATA
@@ -161,7 +159,6 @@ const AppContextProvider = (props) => {
   }, [getDoctorsData]);
 
   useEffect(() => {
-<<<<<<< HEAD
     if (!supabase) return undefined;
 
     let mounted = true;
@@ -181,36 +178,17 @@ const AppContextProvider = (props) => {
       const accessToken = session?.access_token;
       if (accessToken) {
         setToken(accessToken);
-=======
-    if (!supabase) return;
-
-    syncSupabaseSessionToken();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      const sessionToken = session?.access_token || null;
-      if (sessionToken) {
-        localStorage.setItem("token", sessionToken);
-        setToken(sessionToken);
-      } else if (event === 'SIGNED_OUT') {
-        localStorage.removeItem("token");
+      } else {
         setToken(false);
         setUserData(false);
->>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
       }
     });
 
     return () => {
-<<<<<<< HEAD
       mounted = false;
       listener?.subscription?.unsubscribe();
     };
   }, [setToken]);
-
-  useEffect(() => {
-=======
-      authListener?.subscription?.unsubscribe();
-    };
-  }, [syncSupabaseSessionToken]);
 
   useEffect(() => {
     if (supabase) {
@@ -224,7 +202,6 @@ const AppContextProvider = (props) => {
       return;
     }
 
->>>>>>> 7288240fb42a353ce19d6ebc95ff513a5b45f2cf
     if (token) {
       loadUserProfileData();
     } else {
