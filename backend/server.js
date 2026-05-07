@@ -25,28 +25,8 @@ const app = express();
 
 // MongoDB is not used in this project; Supabase client handles DB connections
 
-const defaultCorsOrigins = [
-	"http://localhost:5173",
-	"http://localhost:5174",
-	"https://arogya-nidhi.vercel.app",
-];
-const envCorsOrigins = (process.env.CORS_ORIGINS || "https://arogya-nidhi.vercel.app")
-	.split(",")
-	.map((origin) => origin.trim())
-	.filter(Boolean);
-const allowedCorsOrigins = envCorsOrigins.length ? envCorsOrigins : defaultCorsOrigins;
-
-const corsOptions = {
-	origin: (origin, callback) => {
-		if (!origin) return callback(null, true);
-		if (allowedCorsOrigins.includes(origin)) return callback(null, true);
-		return callback(null, false);
-	},
-	credentials: true,
-};
-
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+//app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:5174', 'https://arogya-nidhi-qobi5xkae-nirman12s-projects.vercel.app', 'https://arogya-nidhi-git-main-nirman12s-projects.vercel.app', 'https://arogya-nidhi.vercel.app'], credentials: true }));
+app.use(cors({ origin: ['https://arogya-nidhi.vercel.app'], credentials: true }));
 app.use(express.json());
 app.use("/api/consultation-summaries", consultationSummaryRoute);
 app.use(express.urlencoded({ extended: false }));
@@ -74,32 +54,28 @@ const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
 attachTwilioConversationRelayServer(server);
 
-const isVercel = process.env.VERCEL === "1";
-
-if (!isVercel) {
-	server.listen(PORT, () => {
-		console.log(`Server running on port ${PORT}`);
-		try {
-			const routes = [];
-			if (app._router && Array.isArray(app._router.stack)) {
-				app._router.stack.forEach((layer) => {
-					if (layer.route) {
-						const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
-						routes.push(`${methods} ${layer.route.path}`);
-					} else if (layer.name === 'router' && layer.handle && Array.isArray(layer.handle.stack)) {
-						layer.handle.stack.forEach((l) => {
-							if (l.route) {
-								const methods = Object.keys(l.route.methods).join(',').toUpperCase();
-								routes.push(`${methods} ${layer.regexp} -> ${l.route.path}`);
-							}
-						});
-					}
-				});
-			}
-		} catch (err) {
-			console.warn('Failed to list routes', err);
+server.listen(PORT, () => {
+	console.log(`Server running on port ${PORT}`);
+	try {
+		const routes = [];
+		if (app._router && Array.isArray(app._router.stack)) {
+			app._router.stack.forEach((layer) => {
+				if (layer.route) {
+					const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
+					routes.push(`${methods} ${layer.route.path}`);
+				} else if (layer.name === 'router' && layer.handle && Array.isArray(layer.handle.stack)) {
+					layer.handle.stack.forEach((l) => {
+						if (l.route) {
+							const methods = Object.keys(l.route.methods).join(',').toUpperCase();
+							routes.push(`${methods} ${layer.regexp} -> ${l.route.path}`);
+						}
+					});
+				}
+			});
 		}
-	});
-}
+	} catch (err) {
+		console.warn('Failed to list routes', err);
+	}
+});
 
 export default app;
