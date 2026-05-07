@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -11,6 +11,7 @@ const Payment = () => {
   const navigate = useNavigate();
   const [appointment, setAppointment] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const esewaFormRef = useRef(null);
 
   useEffect(() => {
     const fetchAppointment = async () => {
@@ -30,31 +31,84 @@ const Payment = () => {
     }
   }, [token, appointmentId, backendUrl, navigate]);
 
-  const handlePayment = async () => {
-    setProcessing(true);
+  // ─────────────────────────────────────────────────────────────────
+  // eSewa Payment Handler
+  // ─────────────────────────────────────────────────────────────────
+  const payWithEsewa = async () => {
     try {
-      // 1. Simulate creating a payment record
-      // In a real app, you would integrate with a payment gateway here
-      // and create a payment record in your 'payments' table.
-      // For now, we'll just assume the payment is successful.
+      setProcessing(true);
 
-      // 2. Update the appointment status and add a meeting link
-      const meetingLink = 'https://meet.google.com/lookup/fake-meeting-code'; // Dummy link
-      await axios.patch(
-        `${backendUrl}/api/appointments/${appointmentId}`,
-        {
-          status: 'CONFIRMED',
-          meeting_link: meetingLink,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      // Call backend to get eSewa payload
+      const { data: initiateResponse } = await axios.post(
+        `${backendUrl}/api/payments/esewa/initiate`,
+        { appointmentId },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      toast.success('Payment successful! Your appointment is confirmed.');
-      navigate('/patient-portal/appointments');
+      if (initiateResponse.status !== 'Success') {
+        toast.error(initiateResponse.message || 'Failed to initiate eSewa payment');
+        return;
+      }
+
+      const payload = initiateResponse.payload;
+
+      // Populate and submit hidden form to eSewa
+      if (esewaFormRef.current) {
+        const form = esewaFormRef.current;
+        form.amt.value = payload.amount;
+        form.psc.value = payload.product_service_charge || 0;
+        form.pdc.value = payload.product_delivery_charge || 0;
+        form.txAmt.value = payload.tax_amount;
+        form.tAmt.value = payload.total_amount;
+        form.pid.value = payload.transaction_uuid;
+        form.scd.value = payload.product_code;
+        form.su.value = payload.success_url;
+        form.fu.value = payload.failure_url;
+        form.spn.value = 'Consultation Fee';
+        form.sfn.value = payload.signed_field_names;
+        form.sig.value = payload.signature;
+
+        // Submit form to eSewa
+        form.submit();
+      }
     } catch (error) {
-      toast.error('Payment failed. Please try again.');
+      console.error('eSewa initiate error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to initiate eSewa payment');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────
+  // Khalti Payment Handler
+  // ─────────────────────────────────────────────────────────────────
+  const payWithKhalti = async () => {
+    try {
+      setProcessing(true);
+
+      // Call backend to get Khalti payment URL
+      const { data: initiateResponse } = await axios.post(
+        `${backendUrl}/api/payments/khalti/initiate`,
+        { appointmentId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (initiateResponse.status !== 'Success') {
+        toast.error(initiateResponse.message || 'Failed to initiate Khalti payment');
+        return;
+      }
+
+      const khaltiData = initiateResponse.khalti_data;
+
+      // Open Khalti payment URL
+      if (khaltiData.payment_url) {
+        window.location.href = khaltiData.payment_url;
+      } else {
+        toast.error('Invalid Khalti payment URL');
+      }
+    } catch (error) {
+      console.error('Khalti initiate error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to initiate Khalti payment');
     } finally {
       setProcessing(false);
     }
@@ -73,11 +127,32 @@ const Payment = () => {
           <p><strong>Specialty:</strong> {appointment.doctor?.doctor_profile?.[0]?.specialty || "General"}</p>
           <p><strong>Date:</strong> {new Date(appointment.appointment_date).toLocaleDateString()}</p>
           <p><strong>Time:</strong> {appointment.appointment_time}</p>
-          <p className="fee"><strong>Consultation Fee:</strong> ${appointment.doctor?.doctor_profile?.[0]?.consultation_fee || "-"}</p>
+          <p className="fee"><strong>Consultation Fee:</strong> ₹{appointment.doctor?.doctor_profile?.[0]?.consultation_fee || "-"}</p>
         </div>
-        <button onClick={handlePayment} disabled={processing} className="pay-button">
-          {processing ? 'Processing...' : `Pay $${appointment.doctor?.doctor_profile?.[0]?.consultation_fee || "-"}`}
-        </button>
+        <div className="payment-buttons">
+          <button onClick={payWithEsewa} disabled={processing} className="pay-button esewa">
+            {processing ? 'Processing...' : 'Pay with eSewa'}
+          </button>
+          <button onClick={payWithKhalti} disabled={processing} className="pay-button khalti">
+            {processing ? 'Processing...' : 'Pay with Khalti'}
+          </button>
+        </div>
+
+        {/* Hidden eSewa form */}
+        <form ref={esewaFormRef} action="https://esewa.com.np/epay/main" method="POST" style={{ display: 'none' }}>
+          <input name="amt" type="hidden" />
+          <input name="psc" type="hidden" />
+          <input name="pdc" type="hidden" />
+          <input name="txAmt" type="hidden" />
+          <input name="tAmt" type="hidden" />
+          <input name="pid" type="hidden" />
+          <input name="scd" type="hidden" />
+          <input name="su" type="hidden" />
+          <input name="fu" type="hidden" />
+          <input name="spn" type="hidden" />
+          <input name="sfn" type="hidden" />
+          <input name="sig" type="hidden" />
+        </form>
       </div>
     </div>
   );

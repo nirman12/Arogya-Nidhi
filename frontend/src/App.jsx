@@ -39,6 +39,9 @@ import DoctorProfile from "./pages/DoctorProfile";
 import StudentPortal from "./pages/StudentPortal";
 import AdminPortal from "./pages/AdminPortal";
 import Payment from "./pages/Payment";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFailure from "./pages/PaymentFailure";
+import KhaltiReturn from "./pages/KhaltiReturn";
 import PatientPrescriptions from "./pages/PatientPrescriptions";
 
 
@@ -119,6 +122,9 @@ const App = () => {
           element={<DiscussionDetail mode="student" />}
         />
         <Route path="/payment/:appointmentId" element={<Payment />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/failure" element={<PaymentFailure />} />
+        <Route path="/payment/khalti-return" element={<KhaltiReturn />} />
 
         <Route path="/doctor-portal" element={<DoctorDashboard />} />
         <Route path="/doctor-portal/appointments" element={<DoctorAppointments />} />
