@@ -114,6 +114,82 @@ function cleanDoctorName(name) {
   return String(name || 'Doctor').replace(/^dr\.?\s+/i, '').trim() || 'Doctor';
 }
 
+function normalizeDoctorNameText(value) {
+  return normalizeText(value)
+    .replace(/\b(dr|doctor)\.?\b/g, ' ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function levenshteinDistance(a, b) {
+  const left = String(a || '');
+  const right = String(b || '');
+  if (left === right) return 0;
+  if (!left) return right.length;
+  if (!right) return left.length;
+
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  const current = Array.from({ length: right.length + 1 }, () => 0);
+
+  for (let i = 1; i <= left.length; i += 1) {
+    current[0] = i;
+    for (let j = 1; j <= right.length; j += 1) {
+      const substitutionCost = left[i - 1] === right[j - 1] ? 0 : 1;
+      current[j] = Math.min(
+        current[j - 1] + 1,
+        previous[j] + 1,
+        previous[j - 1] + substitutionCost
+      );
+    }
+    for (let j = 0; j <= right.length; j += 1) {
+      previous[j] = current[j];
+    }
+  }
+
+  return previous[right.length];
+}
+
+function similarityScore(a, b) {
+  const left = normalizeDoctorNameText(a);
+  const right = normalizeDoctorNameText(b);
+  if (!left || !right) return 0;
+  const distance = levenshteinDistance(left, right);
+  return 1 - distance / Math.max(left.length, right.length);
+}
+
+function doctorNameScore(input, doctor) {
+  const text = normalizeDoctorNameText(input);
+  const name = normalizeDoctorNameText(doctor.user?.name || doctor.name || '');
+  if (!text || !name) return 0;
+
+  if (text.includes(name) || name.includes(text)) return 1;
+
+  const nameParts = name.split(' ').filter((part) => part.length > 2);
+  if (nameParts.length > 0 && nameParts.every((part) => text.includes(part))) return 0.98;
+
+  const textParts = text.split(' ').filter((part) => part.length > 2);
+  const bestFullNameScore = textParts.length >= 2
+    ? Math.max(
+        ...textParts.map((_, index) => {
+          const phrase = textParts.slice(index, index + nameParts.length).join(' ');
+          return similarityScore(phrase, name);
+        })
+      )
+    : 0;
+
+  const matchedNameParts = nameParts.filter((namePart) =>
+    textParts.some((textPart) => similarityScore(textPart, namePart) >= 0.78)
+  ).length;
+  const partScore = nameParts.length ? matchedNameParts / nameParts.length : 0;
+
+  return Math.max(bestFullNameScore, partScore);
+}
+
+function doctorNameMatches(input, doctor) {
+  return doctorNameScore(input, doctor) >= 0.78;
+}
+
 function stripJsonFence(text) {
   return String(text || '')
     .trim()
@@ -210,7 +286,8 @@ function buildGeminiPrompt(session, message) {
     'Rules:',
     '- If the user wants to restart or start over, set restart to true.',
     '- If the current step is specialty, extract a specialty that matches one of the available specialties.',
-    '- If the current step is doctor, choose the doctor by index, id, or name from the provided doctor list.',
+    '- If the user reports a new symptom that maps to a different specialty than the current draft, switch to that new specialty.',
+    '- If the current step is doctor, choose the doctor by index, id, or name from the provided doctor list, allowing minor speech-to-text spelling mistakes in names.',
     '- If the current step is date, normalize the date when possible.',
     '- If the current step is time, normalize the time when possible and prefer one of the available time slots.',
     '- If the current step is notes, store the note text unless the user says skip, none, no, or n/a.',
@@ -259,8 +336,10 @@ function buildGeminiVoicePrompt(session, message) {
     'Rules:',
     '- Sound like a human receptionist on a phone call, not a voice menu.',
     '- If the patient mentions symptoms, infer the right specialty (मुटु दुख्यो / chest pain → Cardiology, टाउको दुख्यो / headache → Neurology, etc.).',
+    '- If the patient changes symptoms before confirmation, switch to the new matching specialty and forget the previous doctor/date/time draft.',
     '- Extract multiple fields at once when possible.',
     '- When listing doctors, say their names naturally. Nepali example: "Doctor Smith र Doctor Jones उपलब्ध छन्, कुन रोज्नुहुन्छ?"',
+    '- Treat close speech-to-text name variants as the intended listed doctor when the match is clear.',
     '- When listing time slots, group them naturally. Nepali example: "बिहान ९ र १० बजे, वा दिउँसो २ बजे उपलब्ध छ।"',
     '- When confirming, mention doctor, date, and time in one natural sentence.',
     '- Keep reply under 35 words.',
@@ -315,6 +394,13 @@ function detectSymptomTriage(input) {
   };
 }
 
+function detectRequestedSpecialty(input, plan = null) {
+  const triage = detectSymptomTriage(input);
+  const specialty = resolveSpecialtyCandidate(plan?.specialty) || findSpecialty(input) || triage?.specialty;
+  if (!specialty) return null;
+  return { specialty, triage };
+}
+
 function mentionsBookingIntent(input) {
   const text = normalizeText(input);
   return /\b(book|appointment|schedule|consult|visit)\b/.test(text);
@@ -338,6 +424,55 @@ function isThanks(input) {
 function isAvailabilityQuestion(input) {
   const text = normalizeText(input);
   return /\b(available|availability|slot|slots|time|times|when|schedule|free)\b/.test(text);
+}
+
+function hasAnyPhrase(text, phrases = []) {
+  return phrases.some((phrase) => text.includes(phrase));
+}
+
+function isPositiveConfirmation(input) {
+  const text = normalizeText(input).replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!text) return false;
+  if (['yes', 'yep', 'yeah', 'ok', 'okay', 'sure', 'confirm', 'proceed'].includes(text)) return true;
+
+  return hasAnyPhrase(text, [
+    'yes book',
+    'book it',
+    'confirm it',
+    'just confirm',
+    'go ahead',
+    'go on',
+    'please book',
+    'book the appointment',
+    'confirm booking',
+    'confirm the booking',
+    'confirm appointment',
+    'confirm the appointment',
+    'make the booking',
+    'schedule it',
+    'do it',
+    'that works',
+    'sounds good',
+  ]);
+}
+
+function isNegativeConfirmation(input) {
+  const text = normalizeText(input).replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!text) return false;
+  if (['no', 'nope', 'nah', 'change', 'edit', 'back', 'cancel'].includes(text)) return true;
+
+  return hasAnyPhrase(text, [
+    'do not',
+    'dont',
+    "don't",
+    'not now',
+    'change it',
+    'change doctor',
+    'change date',
+    'change time',
+    'start over',
+    'cancel it',
+  ]);
 }
 
 function formatDoctorList(doctors = []) {
@@ -435,10 +570,18 @@ function parseDoctorChoice(input, doctors = []) {
     if (doctors[idx]) return doctors[idx];
   }
 
-  return doctors.find((doctor) => {
-    const name = normalizeText(doctor.user?.name || doctor.name || '');
-    return name && (text.includes(name) || name.includes(text));
-  }) || null;
+  return findBestDoctorNameMatch(input, doctors);
+}
+
+function findBestDoctorNameMatch(input, doctors = []) {
+  const ranked = doctors
+    .map((doctor) => ({ doctor, score: doctorNameScore(input, doctor) }))
+    .filter((entry) => entry.score >= 0.78)
+    .sort((a, b) => b.score - a.score);
+
+  if (!ranked.length) return null;
+  if (ranked.length > 1 && ranked[0].score - ranked[1].score < 0.08) return null;
+  return ranked[0].doctor;
 }
 
 function resolveDoctorCandidate(plan, doctors = [], fallbackText = '') {
@@ -454,10 +597,7 @@ function resolveDoctorCandidate(plan, doctors = [], fallbackText = '') {
       return doctors[numeric - 1];
     }
 
-    const byName = doctors.find((doctor) => {
-      const doctorName = normalizeText(doctor.user?.name || doctor.name || '');
-      return doctorName && (doctorName.includes(exactText) || exactText.includes(doctorName));
-    });
+    const byName = findBestDoctorNameMatch(exactText, doctors);
     if (byName) return byName;
   }
 
@@ -536,6 +676,45 @@ function makeDoctorPrompt(doctors, options = {}) {
 function buildTriageReply(triage) {
   if (!triage) return '';
   return `${triage.causeHint} Please consult a ${triage.specialty.label}. Here are available ${triage.specialty.label} professionals you can choose from.`;
+}
+
+async function applySpecialtyToSession(session, specialty) {
+  session.draft.specialty = specialty.key;
+  session.draft.doctorId = null;
+  session.draft.doctorName = null;
+  session.draft.date = null;
+  session.draft.time = null;
+  session.draft.notes = null;
+  session.availableSlots = [...TIME_SLOTS];
+
+  const doctorsResult = await dashboardService.getAvailableDoctors({ specialty: specialty.key, page: 1, limit: 10 });
+  session.doctors = doctorsResult.doctors || [];
+  session.step = session.doctors.length ? 'doctor' : 'specialty';
+  return session.doctors;
+}
+
+async function makeSpecialtyDoctorsReply(session, specialty, triage, options = {}) {
+  const doctors = await applySpecialtyToSession(session, specialty);
+
+  if (!doctors.length) {
+    session.draft.specialty = null;
+    return {
+      reply: forChannel(
+        `I could not find a doctor for ${specialty.label}. Please choose another specialty.`,
+        `I'm sorry, I couldn't find an available ${specialty.label} right now. Can I help you with a different specialty?`,
+        options
+      ),
+      stage: 'specialty',
+      actions: SPECIALTIES.map((s) => buildAction('specialty', s.label, s.key)),
+    };
+  }
+
+  const prompt = makeDoctorPrompt(doctors, options);
+  const triageReply = triage && triage.specialty.key === specialty.key ? buildTriageReply(triage) : '';
+  return {
+    ...prompt,
+    reply: triageReply ? `${triageReply} ${prompt.reply}` : prompt.reply,
+  };
 }
 
 function makeDatePrompt(session, options = {}) {
@@ -841,42 +1020,30 @@ async function processMessage(userId, message, options = {}) {
     }
   }
 
+  const requested = detectRequestedSpecialty(text, plan);
+  const currentSpecialty = resolveSpecialtyCandidate(session.draft.specialty);
+  const shouldSwitchSpecialty =
+    requested?.specialty &&
+    currentSpecialty &&
+    requested.specialty.key !== currentSpecialty.key &&
+    session.step !== 'confirm';
+
+  if (shouldSwitchSpecialty) {
+    return makeSpecialtyDoctorsReply(session, requested.specialty, requested.triage, options);
+  }
+
   if (!session.draft.specialty) {
-    const triage = detectSymptomTriage(text);
-    const specialty = resolveSpecialtyCandidate(plan?.specialty) || findSpecialty(text) || triage?.specialty;
-    if (!specialty) {
+    if (!requested?.specialty) {
       const prompt = makeSpecialtyPrompt(options);
       return { ...prompt, reply: replyForStage(plan, prompt.reply) };
     }
 
-    session.draft.specialty = specialty.key;
-    const doctorsResult = await dashboardService.getAvailableDoctors({ specialty: specialty.key, page: 1, limit: 10 });
-    session.doctors = doctorsResult.doctors || [];
-
-    if (!session.doctors.length) {
-      session.draft.specialty = null;
-      return {
-        reply: forChannel(
-          `I could not find a doctor for ${specialty.label}. Please choose another specialty.`,
-          `I'm sorry, I couldn't find an available ${specialty.label} right now. Can I help you with a different specialty?`,
-          options
-        ),
-        stage: 'specialty',
-        actions: SPECIALTIES.map((s) => buildAction('specialty', s.label, s.key)),
-      };
-    }
-
-    session.step = 'doctor';
-    const prompt = makeDoctorPrompt(session.doctors, options);
-    const triageReply = triage && triage.specialty.key === specialty.key ? buildTriageReply(triage) : '';
-    return {
-      ...prompt,
-      reply: triageReply ? `${triageReply} ${prompt.reply}` : replyForStage(plan, prompt.reply),
-    };
+    return makeSpecialtyDoctorsReply(session, requested.specialty, requested.triage, options);
   }
 
   if (!session.draft.doctorId) {
-    const doctor = resolveDoctorCandidate(plan, session.doctors, text);
+    const doctor = resolveDoctorCandidate(plan, session.doctors, text) ||
+      (session.doctors.length === 1 && mentionsBookingIntent(text) ? session.doctors[0] : null);
     if (!doctor) {
       const prompt = makeDoctorPrompt(session.doctors, options);
       return { ...prompt, reply: replyForStage(plan, prompt.reply) };
@@ -886,7 +1053,7 @@ async function processMessage(userId, message, options = {}) {
     session.draft.doctorName = cleanDoctorName(doctor.user?.name || doctor.name || 'Doctor');
     session.step = 'date';
     const prompt = makeDatePrompt(session, options);
-    return { ...prompt, reply: replyForStage(plan, prompt.reply) };
+    return prompt;
   }
 
   if (!session.draft.date) {
@@ -954,8 +1121,8 @@ async function processMessage(userId, message, options = {}) {
   }
 
   if (session.step === 'confirm') {
-    const positiveConfirmation = plan?.confirm === true || ['yes', 'confirm', 'book', 'book it', 'proceed'].includes(normalized);
-    const negativeConfirmation = plan?.confirm === false || ['no', 'change', 'edit', 'back'].includes(normalized);
+    const positiveConfirmation = plan?.confirm === true || isPositiveConfirmation(text);
+    const negativeConfirmation = plan?.confirm === false || isNegativeConfirmation(text);
 
     if (positiveConfirmation) {
       const scheduledAt = new Date(`${session.draft.date}T${session.draft.time}:00`);
