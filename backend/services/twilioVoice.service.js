@@ -55,6 +55,19 @@ function buildConversationHints() {
   return hints.join(', ');
 }
 
+function normalizeProviderName(value) {
+  const provider = String(value || '').trim().toLowerCase();
+  const providers = {
+    google: 'Google',
+    amazon: 'Amazon',
+    elevenlabs: 'ElevenLabs',
+    eleven_labs: 'ElevenLabs',
+    'eleven-labs': 'ElevenLabs',
+  };
+
+  return providers[provider] || String(value || '').trim();
+}
+
 function buildConversationRelayOptions(req) {
   const httpBaseUrl = getTwilioConversationRelayHttpBase(req);
   const websocketUrl = `${toWsUrl(httpBaseUrl)}${getTwilioConversationRelayPath()}`;
@@ -73,10 +86,10 @@ function buildConversationRelayOptions(req) {
   const speechModel = process.env.TWILIO_SPEECH_MODEL || '';
 
   if (language) options.language = language;
-  if (ttsProvider) options.ttsProvider = ttsProvider;
+  if (ttsProvider) options.ttsProvider = normalizeProviderName(ttsProvider);
   if (ttsVoice) options.voice = ttsVoice;
   if (transcriptionLanguage) options.transcriptionLanguage = transcriptionLanguage;
-  if (transcriptionProvider) options.transcriptionProvider = transcriptionProvider;
+  if (transcriptionProvider) options.transcriptionProvider = normalizeProviderName(transcriptionProvider);
   if (speechModel) options.speechModel = speechModel;
 
   return options;
