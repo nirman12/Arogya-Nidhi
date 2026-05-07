@@ -30,7 +30,7 @@ const defaultCorsOrigins = [
 	"http://localhost:5174",
 	"https://arogya-nidhi.vercel.app",
 ];
-const envCorsOrigins = (process.env.CORS_ORIGINS || "")
+const envCorsOrigins = (process.env.CORS_ORIGINS || "https://arogya-nidhi.vercel.app")
 	.split(",")
 	.map((origin) => origin.trim())
 	.filter(Boolean);
