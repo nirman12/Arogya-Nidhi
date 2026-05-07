@@ -18,6 +18,7 @@ import publicRoutes from "./routes/public.routes.js"
 import studentsRoutes from "./routes/studentsRoute.js"
 import appointmentRoutes from "./routes/appointment.route.js"
 import consultationSummaryRoute from "./routes/consultationSummary.route.js";
+import paymentRoutes from './routes/payment.route.js';
 
 
 
@@ -48,6 +49,7 @@ app.use('/api/doctor', doctorRoutes);
 app.use('/api', publicRoutes);
 app.use('/api/students', studentsRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/payments', paymentRoutes);
 
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
