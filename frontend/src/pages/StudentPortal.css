@@ -199,6 +199,67 @@ button.ps-menu-link {
   overflow: hidden;
 }
 
+/* ── Learning resources ────────────────────────────────── */
+.sp-article-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.sp-article-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sp-article-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--pp-text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.sp-article-meta {
+  font-size: 0.75rem;
+  color: var(--pp-text-muted);
+}
+
+.sp-article-content {
+  font-size: 0.875rem;
+  color: var(--pp-text-secondary);
+  line-height: 1.6;
+}
+
+.sp-article-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sp-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: var(--pp-primary-lighter);
+  color: var(--pp-primary-dark);
+  border: 1px solid var(--pp-primary-light);
+}
+
+.sp-tag-light {
+  background: var(--pp-background);
+  color: var(--pp-text-secondary);
+  border-color: var(--pp-border);
+}
+
+.sp-tag-outline {
+  background: transparent;
+  color: var(--pp-text-secondary);
+  border: 1px solid var(--pp-border);
+}
+
 .sp-activity-item {
   display: flex;
   align-items: center;

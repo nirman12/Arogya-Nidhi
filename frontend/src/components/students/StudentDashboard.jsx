@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabaseClient';
 
 const StatCard = ({ label, value, icon }) => (
   <div className="sp-stat-card">
@@ -8,18 +10,27 @@ const StatCard = ({ label, value, icon }) => (
   </div>
 );
 
-const ResourceCard = ({ title, desc, icon }) => (
-  <div className="sp-resource-card">
-    <div className="sp-resource-img">{icon}</div>
-    <div>
-      <div className="sp-resource-title">{title}</div>
-      <div className="sp-resource-desc">{desc}</div>
+const ResourceCard = ({ title, desc, icon, target }) => {
+  const navigate = useNavigate();
+  const handleAccess = () => {
+    try { if (target) localStorage.setItem('studentPortalInitialTab', target); } catch {}
+    // include navigation state as well so Students can react even when already on the route
+    navigate('/student-portal', { state: { initialTab: target } });
+  };
+
+  return (
+    <div className="sp-resource-card">
+      <div className="sp-resource-img">{icon}</div>
+      <div>
+        <div className="sp-resource-title">{title}</div>
+        <div className="sp-resource-desc">{desc}</div>
+      </div>
+      <div className="sp-resource-footer">
+        <button className="sp-btn-primary" onClick={handleAccess}>Access</button>
+      </div>
     </div>
-    <div className="sp-resource-footer">
-      <button className="sp-btn-primary">Access</button>
-    </div>
-  </div>
-);
+  );
+};
 
 const AICard = ({ title, desc, btn }) => (
   <div className="sp-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -76,7 +87,8 @@ const RESOURCE_ICONS = {
 };
 
 const StudentDashboard = () => {
-  const [progress, setProgress] = useState({ total_attempts: 0, unique_mcqs: 0, correct_count: 0 });
+  const [progress, setProgress] = useState({ totalAttempts: 0, uniqueMcqs: 0, correctAnswers: 0 });
+  const [resourceCount, setResourceCount] = useState(0);
 
   useEffect(() => {
     const fetchProgress = async () => {
@@ -87,12 +99,34 @@ const StudentDashboard = () => {
         const res = await fetch('/api/students/progress', { headers });
         if (!res.ok) return;
         const payload = await res.json();
-        if (payload.success && payload.data) setProgress(payload.data);
+        if (payload.success && payload.data) {
+          const data = payload.data;
+          setProgress({
+            totalAttempts: data.totalAttempts ?? data.total_attempts ?? 0,
+            uniqueMcqs: data.uniqueMcqs ?? data.unique_mcqs ?? 0,
+            correctAnswers: data.correctAnswers ?? data.correct_count ?? 0,
+          });
+        }
       } catch (err) {
         console.error('Failed to load progress', err);
       }
     };
+    const fetchLearningResources = async () => {
+      if (!supabase) return;
+      try {
+        const { count, error } = await supabase
+          .from('learning_resources')
+          .select('id', { count: 'exact', head: true })
+          .eq('is_published', true);
+        if (error) throw error;
+        setResourceCount(count || 0);
+      } catch (err) {
+        console.error('Failed to load learning resources count', err);
+      }
+    };
+
     fetchProgress();
+    fetchLearningResources();
   }, []);
 
   return (
@@ -104,10 +138,10 @@ const StudentDashboard = () => {
         </div>
 
         <div className="sp-stats-grid">
-          <StatCard label="Total Courses"  value={12}                     icon={BOOK_ICON} />
-          <StatCard label="MCQs Completed" value={progress.unique_mcqs}   icon={MCQ_ICON} />
-          <StatCard label="Correct MCQs"   value={progress.correct_count} icon={CHECK_ICON} />
-          <StatCard label="Attempts"        value={progress.total_attempts} icon={ATTEMPT_ICON} />
+          <StatCard label="Total Articles"  value={resourceCount}           icon={BOOK_ICON} />
+          <StatCard label="MCQs Completed" value={progress.uniqueMcqs}   icon={MCQ_ICON} />
+          <StatCard label="Correct MCQs"   value={progress.correctAnswers} icon={CHECK_ICON} />
+          <StatCard label="Attempts"        value={progress.totalAttempts} icon={ATTEMPT_ICON} />
         </div>
       </section>
 
@@ -118,39 +152,15 @@ const StudentDashboard = () => {
         </div>
 
         <div className="sp-resources-grid">
-          <ResourceCard title="Study Materials"  desc="Curated notes and PDFs to support learning."              icon={RESOURCE_ICONS.study} />
-          <ResourceCard title="MCQ Practice"     desc="Practice multiple choice questions and track progress."  icon={RESOURCE_ICONS.mcq} />
-          <ResourceCard title="3D Organ Models"  desc="Interactive 3D anatomical models for study."            icon={RESOURCE_ICONS.organ} />
+          <ResourceCard title="Study Materials"  desc="Curated notes and PDFs to support learning."              icon={RESOURCE_ICONS.study} target="medicine" />
+          <ResourceCard title="MCQ Practice"     desc="Practice multiple choice questions and track progress."  icon={RESOURCE_ICONS.mcq} target="mcq" />
+          <ResourceCard title="3D Organ Models"  desc="Interactive 3D anatomical models for study."            icon={RESOURCE_ICONS.organ} target="viewer" />
+          <ResourceCard title="Diagnostic Lab"   desc="AI patient simulator & diagnostics."                    icon={RESOURCE_ICONS.study} target="diag" />
+          <ResourceCard title="Medicine Info"    desc="Drug information & FDA labels."                         icon={RESOURCE_ICONS.study} target="medicine" />
+          <ResourceCard title="MRI Viewer"       desc="MRI prediction models and tools."                      icon={RESOURCE_ICONS.organ} target="mri" />
         </div>
       </section>
 
-      <section className="sp-section">
-        <h3 className="sp-section-title" style={{ marginBottom: '1rem' }}>AI Tools</h3>
-        <div className="sp-two-col">
-          <AICard title="MCQ Explanations"    desc="Get step-by-step AI explanations for practice questions." btn="Get Explanation" />
-          <AICard title="Concept Explanations" desc="Ask AI about medical concepts and clinical reasoning."   btn="Ask AI" />
-        </div>
-      </section>
-
-      <section className="sp-section">
-        <h3 className="sp-section-title" style={{ marginBottom: '0.75rem' }}>Recent Activity</h3>
-        <div className="sp-activity-list">
-          {[
-            { title: 'Completed: Cardiology basics',              meta: '2 hours ago' },
-            { title: 'Attempted: Hypertension MCQ',               meta: 'Yesterday' },
-            { title: 'Viewed: Brain 3D model',                    meta: '2 days ago' },
-            { title: 'Accessed: Study material — Pharmacology',   meta: '3 days ago' },
-          ].map((row, i) => (
-            <div className="sp-activity-item" key={i}>
-              <div>
-                <div className="sp-activity-title">{row.title}</div>
-                <div className="sp-activity-meta">{row.meta}</div>
-              </div>
-              <div className="sp-activity-dot" />
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   );
 };

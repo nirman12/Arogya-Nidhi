@@ -37,6 +37,7 @@ import DoctorAISummaries from "./pages/DoctorAISummaries";
 import DoctorQueries from "./pages/DoctorQueries";
 import DoctorQueryDetail from "./pages/DoctorQueryDetail";
 import DoctorProfile from "./pages/DoctorProfile";
+import DoctorArticle from "./pages/DoctorArticle";
 import StudentPortal from "./pages/StudentPortal";
 import AdminPortal from "./pages/AdminPortal";
 import Payment from "./pages/Payment";
@@ -143,6 +144,7 @@ const App = () => {
         <Route path="/doctor-portal/ai-summaries" element={<DoctorAISummaries />} />
         <Route path="/doctor-portal/earnings" element={<DoctorEarnings />} />
         <Route path="/doctor-portal/reports" element={<DoctorReports />} />
+        <Route path="/doctor-portal/article" element={<DoctorArticle />} />
         <Route path="/doctor-portal/queries" element={<DoctorQueries />} />
         <Route path="/doctor-portal/queries/:id" element={<DoctorQueryDetail />} />
         <Route path="/doctor-portal/profile" element={<DoctorProfile />} />
