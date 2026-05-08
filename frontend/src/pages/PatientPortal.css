@@ -545,7 +545,7 @@
   background: var(--pp-surface);
   border: 1px solid var(--pp-border);
   border-radius: 0.5rem;
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: var(--pp-shadow-sm);
 }
 
@@ -660,5 +660,33 @@
 
   .pp-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .pp-table {
+    min-width: 640px;
+  }
+
+  .pp-row-between,
+  .pp-chat-input-container {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pp-appointment-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pp-appointment-icon {
+    display: none;
+  }
+
+  .pp-appointment-actions {
+    width: 100%;
+  }
+
+  .pp-appointment-actions .pp-btn,
+  .pp-appointment-actions a {
+    flex: 1;
   }
 }
