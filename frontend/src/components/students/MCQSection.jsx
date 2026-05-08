@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { AppContext } from "../../context/AppContext";
 
 const sampleQuestions = [
   {
@@ -19,6 +20,7 @@ const sampleQuestions = [
 ];
 
 const MCQSection = () => {
+  const { backendUrl } = useContext(AppContext);
   const [allQuestions, setAllQuestions] = useState(sampleQuestions);
   const [questions, setQuestions] = useState(sampleQuestions);
   const [current, setCurrent] = useState(0);
@@ -106,7 +108,7 @@ const MCQSection = () => {
       const token = localStorage.getItem('token');
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers.Authorization = `Bearer ${token}`;
-      await fetch('/api/students/progress', {
+      await fetch(`${backendUrl}/api/students/progress`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ mcq_id: mcqId, selected_option: selectedOption, is_correct: Boolean(isCorrect), time_taken_seconds: timeTakenSeconds }),
@@ -145,7 +147,7 @@ const MCQSection = () => {
     setLoading(true);
     try {
       const q = buildFilterQuery();
-      const res = await fetch(`/api/students/mcqs${q}`);
+      const res = await fetch(`${backendUrl}/api/students/mcqs${q}`);
       if (!res.ok) throw new Error(`Server ${res.status}`);
       const payload = await res.json();
       if (payload.success) {
@@ -189,7 +191,7 @@ const MCQSection = () => {
   const fetchMetadata = async () => {
     setMetaLoading(true);
     try {
-      const res = await fetch(`/api/students/metadata?table=${encodeURIComponent(tableName)}`);
+      const res = await fetch(`${backendUrl}/api/students/metadata?table=${encodeURIComponent(tableName)}`);
       if (!res.ok) return;
       const payload = await res.json();
       if (payload.success && payload.data) {

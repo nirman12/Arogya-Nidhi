@@ -1,10 +1,12 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useContext } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { AppContext } from "../context/AppContext";
 
 const Quiz = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
   const filters = state || {};
+  const { backendUrl } = useContext(AppContext);
 
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +33,7 @@ const Quiz = () => {
     setLoading(true);
     try {
       const q = buildQuery();
-      const res = await fetch(`/api/students/mcqs${q}`);
+      const res = await fetch(`${backendUrl}/api/students/mcqs${q}`);
       if (!res.ok) throw new Error(`Server ${res.status}`);
       const payload = await res.json();
       if (payload.success && Array.isArray(payload.data)) {
