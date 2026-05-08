@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useContext } from "react";
+import { useLocation } from "react-router-dom";
 import { assets } from "../assets/assets";
 import { AdminContext } from "../context/AdminContext";
 import { DoctorContext } from "../context/DoctorContext";
@@ -8,7 +9,9 @@ const Navbar = () => {
   const { aToken, setAToken } = useContext(AdminContext);
   const { dToken, setDToken } = useContext(DoctorContext);
   const [open, setOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const ref = useRef(null);
+  const location = useLocation();
 
   const isAdmin = !!aToken;
   const role = isAdmin ? "Admin" : "Doctor";
@@ -22,6 +25,15 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  useEffect(() => {
+    document.body.classList.toggle("ap-sidebar-open", sidebarOpen);
+    return () => document.body.classList.remove("ap-sidebar-open");
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
   const handleLogout = () => {
     setAToken("");
     localStorage.removeItem("aToken");
@@ -31,32 +43,44 @@ const Navbar = () => {
   };
 
   return (
-    <div
-      style={{
-        background: "#ffffff",
-        borderBottom: "1px solid #e2e8f0",
-        padding: "0 2rem",
-        height: 65,
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        position: "sticky",
-        top: 0,
-        zIndex: 100,
-        boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-      }}
-    >
-      {/* Logo */}
-      <div style={{ lineHeight: 0 }}>
-        <img
-          style={{ width: 140, cursor: "default" }}
-          src={assets.logo}
-          alt="ArogyaNidhi"
-        />
-      </div>
+    <>
+      <div
+        style={{
+          background: "#ffffff",
+          borderBottom: "1px solid #e2e8f0",
+          padding: "0 2rem",
+          height: 65,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        }}
+      >
+        {/* Logo */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, lineHeight: 0 }}>
+          <button
+            type="button"
+            className="ap-menu-button"
+            aria-label="Toggle sidebar"
+            aria-expanded={sidebarOpen}
+            onClick={() => setSidebarOpen((value) => !value)}
+          >
+            <svg className="ap-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <img
+            style={{ width: 140, cursor: "default" }}
+            src={assets.logo}
+            alt="ArogyaNidhi"
+          />
+        </div>
 
-      {/* Right side */}
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        {/* Right side */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
         {/* Avatar dropdown */}
         <div ref={ref} style={{ position: "relative" }}>
           <button
@@ -160,8 +184,17 @@ const Navbar = () => {
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="ap-sidebar-overlay"
+          aria-label="Close sidebar"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+    </>
   );
 };
 

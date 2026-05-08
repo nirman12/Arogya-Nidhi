@@ -19,23 +19,30 @@ const NAV_ITEMS = [
   {label: "Prescriptions",  to: "/patient-portal/prescriptions",                Icon: ClipboardDocumentListIcon  },
 ];
 
-const PatientSidebar = () => (
-  <aside className="ps-sidebar">
-    <ul className="ps-menu-list">
-      {NAV_ITEMS.map(({ label, to, end, Icon }) => (
-        <li key={to} className="ps-menu-item">
-          <NavLink
-            to={to}
-            end={end}
-            className={({ isActive }) => `ps-menu-link${isActive ? " active" : ""}`}
-          >
-            <Icon className="ps-menu-icon" />
-            {label}
-          </NavLink>
-        </li>
-      ))}
-    </ul>
-  </aside>
-);
+const PatientSidebar = () => {
+  const closeSidebar = () => {
+    document.body.classList.remove("portal-sidebar-open");
+  };
+
+  return (
+    <aside className="ps-sidebar">
+      <ul className="ps-menu-list">
+        {NAV_ITEMS.map(({ label, to, end, Icon }) => (
+          <li key={to} className="ps-menu-item">
+            <NavLink
+              to={to}
+              end={end}
+              onClick={closeSidebar}
+              className={({ isActive }) => `ps-menu-link${isActive ? " active" : ""}`}
+            >
+              <Icon className="ps-menu-icon" />
+              {label}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  );
+};
 
 export default PatientSidebar;

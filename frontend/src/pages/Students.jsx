@@ -94,6 +94,11 @@ const Students = () => {
     }
   };
 
+  const handleNavClick = (id) => {
+    setActive(id);
+    document.body.classList.remove("portal-sidebar-open");
+  };
+
   return (
     <div className="pp-page">
       <div className="pp-container">
@@ -103,7 +108,7 @@ const Students = () => {
               <li key={id} className="ps-menu-item">
                 <button
                   className={`ps-menu-link${active === id ? " active" : ""}`}
-                  onClick={() => setActive(id)}
+                  onClick={() => handleNavClick(id)}
                 >
                   <Icon className="ps-menu-icon" />
                   {label}
