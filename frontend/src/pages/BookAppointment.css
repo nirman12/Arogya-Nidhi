@@ -641,8 +641,15 @@
 }
 
 @media (max-width: 768px) {
+  .ba-page {
+    height: auto;
+    overflow: auto;
+  }
+
   .ba-container {
+    height: auto;
     margin-left: 0;
+    overflow: visible;
     width: 100%;
   }
 
@@ -660,6 +667,9 @@
   }
 
   .ba-main-content {
+    margin-left: 0;
+    height: auto;
+    overflow: visible;
     padding: 1rem;
   }
 }

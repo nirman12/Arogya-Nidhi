@@ -606,9 +606,10 @@
 }
 
 @media (max-width: 768px) {
-.iot-container { margin-left: 0; width: 100%; }
-.iot-header { padding: 1rem; }
-  .iot-main-content { padding: 1rem; }
+  .iot-page { height: auto; overflow: auto; }
+  .iot-container { height: auto; margin-left: 0; overflow: visible; width: 100%; }
+  .iot-header { padding: 1rem; }
+  .iot-main-content { margin-left: 0; height: auto; overflow: visible; padding: 1rem; }
   .iot-result-card { flex-direction: column; align-items: flex-start; }
   .iot-result-actions { width: 100%; }
   .iot-result-actions .iot-btn { flex: 1; }

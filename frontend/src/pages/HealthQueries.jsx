@@ -184,7 +184,7 @@ const HealthQueries = ({ mode = "patient" }) => {
       <div className="hq-container">
         {Sidebar ? <Sidebar /> : null}
 
-        <main className="hq-main-content">
+        <main className={`hq-main-content${Sidebar ? "" : " hq-main-content-full"}`}>
           <Link to={meta.backLink} className="hq-back-link"><ArrowLeftIcon style={{ width: 16, height: 16 }} /> Back</Link>
 
           <div className="hq-page-header">

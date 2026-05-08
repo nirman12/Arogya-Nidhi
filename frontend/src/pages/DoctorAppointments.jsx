@@ -134,9 +134,10 @@ const DoctorAppointments = () => {
           <p className="pp-welcome">Manage Appointments</p>
 
           <section className="pp-section">
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <input
                 className="pp-chat-input"
+                style={{ minWidth: 180 }}
                 placeholder="Search patient…"
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
@@ -144,6 +145,7 @@ const DoctorAppointments = () => {
 
               <select
                 className="pp-chat-input"
+                style={{ minWidth: 180 }}
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >

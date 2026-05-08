@@ -159,7 +159,9 @@ const LanguageSwitcher = () => {
 /* ── Portal Navbar ─────────────────────────────────────────── */
 const PortalNavbar = ({ token, userData, logout }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -167,6 +169,24 @@ const PortalNavbar = ({ token, userData, logout }) => {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  useEffect(() => {
+    if (!sidebarOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setSidebarOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    document.body.classList.toggle("portal-sidebar-open", sidebarOpen);
+    return () => document.body.classList.remove("portal-sidebar-open");
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   const logoutFunc = async () => { await logout(); navigate("/"); };
 
@@ -179,44 +199,60 @@ const PortalNavbar = ({ token, userData, logout }) => {
   };
 
   return (
-    <div
-      style={{
-        background: "#ffffff",
-        borderBottom: "1px solid #e2e8f0",
-        padding: "0 2rem",
-        height: 65,
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        position: "sticky",
-        top: 0,
-        zIndex: 100,
-        boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-      }}
-    >
-      <Link to="/" onClick={goToDashboard} style={{ lineHeight: 0 }}>
-        <img style={{ width: 140, cursor: "pointer" }} src={assets.logo} alt="ArogyaNidhi" />
-      </Link>
+    <>
+      <div
+        style={{
+          background: "#ffffff",
+          borderBottom: "1px solid #e2e8f0",
+          padding: "0 2rem",
+          height: 65,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button
+            type="button"
+            className="portal-menu-button"
+            aria-label="Toggle sidebar"
+            aria-expanded={sidebarOpen}
+            onClick={() => setSidebarOpen((value) => !value)}
+          >
+            <svg className="portal-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <Link to="/" onClick={goToDashboard} style={{ lineHeight: 0 }}>
+            <img style={{ width: 140, cursor: "pointer" }} src={assets.logo} alt="ArogyaNidhi" />
+          </Link>
+        </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        <LanguageSwitcher />
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <div className="portal-lang">
+            <LanguageSwitcher />
+          </div>
 
-        <Link
-          to="/public-queries"
-          style={{
-            textDecoration: "none",
-            color: "#64748b",
-            fontSize: "0.875rem",
-            fontWeight: 500,
-            padding: "0.5rem 0.875rem",
-            borderRadius: "0.375rem",
-            transition: "all 0.15s",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "#eff6ff"; e.currentTarget.style.color = "#1e40af"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#64748b"; }}
-        >
-          All Chat
-        </Link>
+          <Link
+            to="/public-queries"
+            style={{
+              textDecoration: "none",
+              color: "#64748b",
+              fontSize: "0.875rem",
+              fontWeight: 500,
+              padding: "0.5rem 0.875rem",
+              borderRadius: "0.375rem",
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#eff6ff"; e.currentTarget.style.color = "#1e40af"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#64748b"; }}
+          >
+            All Chat
+          </Link>
 
         {token ? (
           userData ? (
@@ -325,8 +361,17 @@ const PortalNavbar = ({ token, userData, logout }) => {
             Login
           </button>
         )}
+        </div>
       </div>
-    </div>
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="portal-sidebar-overlay"
+          aria-label="Close sidebar"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+    </>
   );
 };
 
