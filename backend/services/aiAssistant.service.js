@@ -687,7 +687,12 @@ async function applySpecialtyToSession(session, specialty) {
   session.draft.notes = null;
   session.availableSlots = [...TIME_SLOTS];
 
-  const doctorsResult = await dashboardService.getAvailableDoctors({ specialty: specialty.key, page: 1, limit: 10 });
+  const doctorsResult = await dashboardService.getAvailableDoctors({
+    specialty: specialty.key,
+    page: 1,
+    limit: 10,
+    includeUnverified: true,
+  });
   session.doctors = doctorsResult.doctors || [];
   session.step = session.doctors.length ? 'doctor' : 'specialty';
   return session.doctors;
@@ -866,6 +871,7 @@ async function maybeHandleAvailabilityQuestion(text, session, options = {}) {
     specialty: specialty.key,
     page: 1,
     limit: 5,
+    includeUnverified: true,
   });
   const doctors = doctorsResult.doctors || [];
 
@@ -1132,6 +1138,8 @@ async function processMessage(userId, message, options = {}) {
           scheduledAt: scheduledAt.toISOString(),
           durationMinutes: 30,
           patientNotes: session.draft.notes || null,
+        }, {
+          allowUnverifiedDoctor: true,
         });
         resetSession(sessionKey);
         return {

@@ -176,7 +176,7 @@ async function getAppointmentDetails(userId, appointmentId) {
   return appt;
 }
 
-async function bookAppointment(userId, body) {
+async function bookAppointment(userId, body, options = {}) {
   const patient = await _requirePatient(userId);
   const { doctorId, scheduledAt, durationMinutes, patientNotes } = body;
   const normalizedDoctorId = typeof doctorId === 'string' ? doctorId.trim() : doctorId;
@@ -192,7 +192,9 @@ async function bookAppointment(userId, body) {
   const doctor = await repo.findDoctorById(normalizedDoctorId);
   if (!doctor)             throw _notFound('Doctor');
   if (!doctor.isAvailable) throw { status: 400, message: 'Doctor is not available' };
-  if (!doctor.isVerified)  throw { status: 400, message: 'Doctor is not verified' };
+  if (!doctor.isVerified && !options.allowUnverifiedDoctor) {
+    throw { status: 400, message: 'Doctor is not verified' };
+  }
 
   const scheduledDate = new Date(scheduledAt);
   if (scheduledDate <= new Date()) {
@@ -426,6 +428,7 @@ async function getAvailableDoctors(query) {
     page:      parseInt(query.page)  || 1,
     limit:     Math.min(parseInt(query.limit) || 10, 50),
     specialty: query.specialty || undefined,
+    includeUnverified: query.includeUnverified === true,
   });
 }
 
