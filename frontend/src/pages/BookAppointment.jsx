@@ -5,7 +5,6 @@ import {
   HeartIcon,
   BoltIcon,
   SparklesIcon,
-  WrenchScrewdriverIcon,
   FaceSmileIcon,
   UserIcon,
   ArrowLeftIcon,
@@ -16,12 +15,12 @@ import { AppContext } from "../context/AppContext";
 import "./BookAppointment.css";
 
 const SPECIALTIES = [
-  { key: "Cardiology",    label: "Cardiologist",     Icon: HeartIcon,             desc: "Heart and cardiovascular care" },
-  { key: "Neurology",    label: "Neurologist",       Icon: BoltIcon,              desc: "Brain and nervous system" },
-  { key: "Dermatology",  label: "Dermatologist",     Icon: SparklesIcon,          desc: "Skin conditions and care" },
-  { key: "Orthopedics",  label: "Orthopedic",        Icon: WrenchScrewdriverIcon, desc: "Bones and joints" },
-  { key: "Pediatrics",   label: "Pediatrician",      Icon: FaceSmileIcon,         desc: "Child healthcare" },
-  { key: "General",      label: "General Physician", Icon: UserIcon,              desc: "Primary care and checkups" },
+  { key: "General physician", label: "General physician", Icon: UserIcon, desc: "Primary care and checkups" },
+  { key: "Gynecologist", label: "Gynecologist", Icon: FaceSmileIcon, desc: "Women's health and pregnancy care" },
+  { key: "Dermatologist", label: "Dermatologist", Icon: SparklesIcon, desc: "Skin conditions and care" },
+  { key: "Pediatricians", label: "Pediatricians", Icon: FaceSmileIcon, desc: "Child healthcare" },
+  { key: "Neurologist", label: "Neurologist", Icon: BoltIcon, desc: "Brain and nervous system" },
+  { key: "Gastroenterologist", label: "Gastroenterologist", Icon: HeartIcon, desc: "Digestive system care" },
 ];
 
 const TIME_SLOTS = ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00"];
@@ -53,6 +52,9 @@ const BookAppointment = () => {
     doc?.isAvailable ?? doc?.is_available ?? doc?.available ?? false;
 
   const headers = { Authorization: `Bearer ${token}` };
+
+  const normalizeSpecialty = (value = "") =>
+    String(value).trim().toLowerCase().replace(/\s+/g, " ");
 
   // If a doctorId is provided via query param, pre-select that doctor (if available)
   useEffect(() => {
@@ -90,10 +92,8 @@ const BookAppointment = () => {
         .filter((doc) => !!doc.id);
 
     const filterBySpecialty = (list) =>
-      normalize(list).filter((doc) =>
-        (doc.specialty || doc.speciality || "")
-          .toLowerCase()
-          .includes(selectedSpecialty.toLowerCase())
+      normalize(list).filter(
+        (doc) => normalizeSpecialty(getDoctorSpecialty(doc)) === normalizeSpecialty(selectedSpecialty)
       );
 
     // Prefer locally cached doctors to ensure accurate filtering

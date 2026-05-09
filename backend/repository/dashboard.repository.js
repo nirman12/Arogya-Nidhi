@@ -34,7 +34,7 @@ async function getUpcomingAppointmentsCount(patientId) {
     .select('*', { count: 'exact' })
     .eq('patient_id', patientId)
     .gte('scheduled_at', now)
-    .in('status', ['PENDING', 'CONFIRMED']);
+    .in('status', ['pending', 'confirmed', 'PENDING', 'CONFIRMED']);
   if (error) throw error;
   return count || 0;
 }
@@ -130,10 +130,10 @@ async function getUpcomingAppointments(patientId, { page = 1, limit = 10 } = {})
   const offset = (page - 1) * limit;
   const base = supabase
     .from('appointments')
-      .select(`*, doctor:doctor_profiles(id,specialty,consultationFee:consultation_fee, user:users(name,avatar_url)), consultation_summary:consultation_summaries(diagnosis,prescription,followUpDate:followup_date), payment:payments(status,amount,currency)`, { count: 'exact' })
+    .select(`*, doctor:doctor_profiles(id,specialty,consultationFee:consultation_fee, user:users(name,avatar_url)), consultation_summary:consultation_summaries(diagnosis,prescription,followUpDate:followup_date), payment:payments(status,amount,currency)`, { count: 'exact' })
     .eq('patient_id', patientId)
     .gte('scheduled_at', now)
-    .in('status', ['PENDING', 'CONFIRMED'])
+    .in('status', ['pending', 'confirmed', 'PENDING', 'CONFIRMED'])
     .order('scheduled_at', { ascending: true })
     .range(offset, offset + limit - 1);
   const { data, count, error } = await base;
@@ -183,7 +183,7 @@ async function findAppointmentsByDoctorBetween(doctorId, startsAt, endsAt) {
     .eq('doctor_id', doctorId)
     .gte('scheduled_at', startsAt)
     .lt('scheduled_at', endsAt)
-    .in('status', ['PENDING', 'CONFIRMED'])
+    .in('status', ['pending', 'confirmed', 'PENDING', 'CONFIRMED'])
     .order('scheduled_at', { ascending: true });
   if (error) throw error;
   return data || [];
@@ -442,7 +442,7 @@ async function getAvailableDoctors({ page = 1, limit = 10, specialty } = {}) {
     .eq('is_available', true)
     .eq('is_verified', true)
     .order('id', { ascending: true });
-  if (specialty) query = query.ilike('specialty', `%${specialty}%`);
+  if (specialty) query = query.ilike('specialty', specialty.trim());
   const { data, count, error } = await query.range(offset, offset + limit - 1);
   if (error) throw error;
   return { total: count || 0, page, limit, doctors: data };

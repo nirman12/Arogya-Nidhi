@@ -94,7 +94,7 @@ const DoctorAppointments = () => {
   });
 
   const scheduled = filtered.filter((appointment) =>
-    ["confirmed", "scheduled"].includes(normalizeStatus(appointment.status))
+    ["pending", "confirmed", "scheduled"].includes(normalizeStatus(appointment.status))
   );
 
   const completed = filtered.filter(

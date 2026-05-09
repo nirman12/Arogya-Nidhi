@@ -6,60 +6,12 @@ import { AppContext } from "../context/AppContext";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import "./PatientPortal.css";
 
-const DUMMY_SUMMARIES = [
-  {
-    id: "s1",
-    patientName: "Rajan Adhikari",
-    date: "Apr 30, 2026",
-    aiSummary: `Patient Rajan Adhikari (52M) presents for routine hypertension follow-up.
-
-Key findings:
-• BP: 135/85 mmHg (improved from 165/95 at initial visit)
-• Heart rate: 72 bpm, regular rhythm
-• No signs of end-organ damage
-• Compliant with Amlodipine 5mg daily
-
-Assessment: Hypertension — well controlled on current regimen.
-Plan: Continue Amlodipine 5mg. Sodium restriction, daily 30-min walk. Follow-up in 4 weeks. Renal function panel in 3 months.`,
-  },
-  {
-    id: "s2",
-    patientName: "Sunita Poudel",
-    date: "Apr 29, 2026",
-    aiSummary: `Patient Sunita Poudel (41F) — post-cholecystectomy day 10 follow-up.
-
-Key findings:
-• Laparoscopic wound healing well — no erythema or discharge
-• Mild periumbilical tenderness on palpation
-• Ambulating independently, tolerating soft diet
-• Bowel function restored day 4 post-op
-
-Assessment: Normal post-operative recovery.
-Plan: Suture removal today. Paracetamol 500mg PRN for pain. Resume normal diet. Return if fever >38°C or worsening pain. Full return to activity in 2 weeks.`,
-  },
-  {
-    id: "s3",
-    patientName: "Bikash Shrestha",
-    date: "Apr 28, 2026",
-    aiSummary: `Patient Bikash Shrestha (45M) — Type 2 Diabetes 3-month review.
-
-Key findings:
-• HbA1c: 7.4% (improved from 8.2% — target <7%)
-• Fasting glucose: 112 mg/dL
-• Weight: 78kg (down 2kg from last visit)
-• No hypoglycaemic episodes reported
-
-Assessment: Type 2 Diabetes — improving control.
-Plan: Continue Metformin 1000mg BD. Reinforce dietary advice. Foot examination at next visit. Repeat HbA1c in 3 months. Ophthalmology referral pending.`,
-  },
-];
-
 const DoctorAISummaries = () => {
   const { token, backendUrl } = useContext(AppContext);
   const location = useLocation();
   const requestedPatient = location.state || null;
   const [loading, setLoading] = useState(false);
-  const [summaries, setSummaries] = useState(DUMMY_SUMMARIES);
+  const [summaries, setSummaries] = useState([]);
   const [selected, setSelected] = useState(null);
   const [query, setQuery] = useState("");
 
@@ -77,33 +29,44 @@ const DoctorAISummaries = () => {
         const { data } = await axios
           .get(backendUrl + "/api/doctor/ai-summaries", { headers })
           .catch(() => ({ data: null }));
-        if (data?.success && Array.isArray(data.summaries) && data.summaries.length > 0) {
+
+        if (data?.success && Array.isArray(data.summaries)) {
           setSummaries(data.summaries);
         }
       } catch {
-        // keep dummy summaries
+        setSummaries([]);
       } finally {
         setLoading(false);
       }
     };
+
     if (token) load();
   }, [backendUrl, token]);
 
-  const filtered = summaries.filter(
-    (s) =>
-      !query ||
-      (s.patientName || "").toLowerCase().includes(query.toLowerCase()) ||
-      (s.patientEmail || "").toLowerCase().includes(query.toLowerCase()) ||
-      (s.aiSummary || "").toLowerCase().includes(query.toLowerCase())
-  );
+  const filtered = summaries.filter((summary) => {
+    const needle = query.toLowerCase();
+    return (
+      !needle ||
+      (summary.patientName || "").toLowerCase().includes(needle) ||
+      (summary.patientEmail || "").toLowerCase().includes(needle) ||
+      (summary.aiSummary || "").toLowerCase().includes(needle)
+    );
+  });
 
   useEffect(() => {
     if (!requestedPatient?.patientName && !requestedPatient?.patientEmail) return;
-    const patientNeedle = String(requestedPatient.patientName || requestedPatient.patientEmail || "").toLowerCase();
-    const match = summaries.find((s) =>
-      String(s.patientName || "").toLowerCase().includes(patientNeedle) ||
-      String(s.patientEmail || "").toLowerCase().includes(patientNeedle)
-    );
+
+    const patientName = String(requestedPatient.patientName || "").toLowerCase();
+    const patientEmail = String(requestedPatient.patientEmail || "").toLowerCase();
+    const match = summaries.find((summary) => {
+      const summaryName = String(summary.patientName || "").toLowerCase();
+      const summaryEmail = String(summary.patientEmail || "").toLowerCase();
+      return (
+        (patientName && summaryName.includes(patientName)) ||
+        (patientEmail && summaryEmail.includes(patientEmail))
+      );
+    });
+
     if (match) setSelected(match);
   }, [requestedPatient?.patientName, requestedPatient?.patientEmail, summaries]);
 
@@ -122,9 +85,12 @@ const DoctorAISummaries = () => {
                 </div>
                 <div>
                   <div className="pp-ai-title">AI Clinical Summaries</div>
-                  <div className="pp-ai-subtitle">Auto-generated patient consultation summaries</div>
+                  <div className="pp-ai-subtitle">
+                    Auto-generated from booked patients' medical history and allergies
+                  </div>
                 </div>
               </div>
+
               {requestedPatient?.patientName && (
                 <div className="pp-panel" style={{ marginBottom: 12, padding: 12 }}>
                   <div style={{ fontWeight: 700 }}>{requestedPatient.patientName}</div>
@@ -133,12 +99,13 @@ const DoctorAISummaries = () => {
                   </div>
                 </div>
               )}
+
               <input
                 className="pp-chat-input"
                 style={{ width: "100%" }}
-                placeholder="Search by patient name or summary text…"
+                placeholder="Search by patient name, email, or summary text..."
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(event) => setQuery(event.target.value)}
               />
             </div>
           </section>
@@ -150,89 +117,114 @@ const DoctorAISummaries = () => {
                 <div className="pp-stat-label">Loading summaries...</div>
               </div>
             ) : filtered.length === 0 ? (
-              <div className="pp-panel">No summaries found.</div>
+              <div className="pp-panel">
+                No summaries found. A summary will appear here after a patient books with you and has medical history or allergies saved in their profile.
+              </div>
             ) : (
               <div style={{ display: "grid", gap: 12 }}>
-                {filtered.map((s) => (
-                  <div
-                    key={s.id}
-                    className="pp-panel"
-                    style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}
-                  >
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, marginBottom: 4 }}>
-                        {s.patientName || "Unknown Patient"}
+                {filtered.map((summary) => {
+                  const isExpanded = selected?.id === summary.id;
+                  return (
+                    <div key={summary.id} className="pp-panel">
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 700, marginBottom: 4 }}>
+                            {summary.patientName || "Unknown Patient"}
+                          </div>
+                          <div style={{ fontSize: "0.8125rem", color: "var(--pp-text-muted)", marginBottom: 8 }}>
+                            {[summary.date, summary.patientEmail].filter(Boolean).join(" | ")}
+                          </div>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                            <span style={pillStyle}>History: {summary.medicalHistory || "Not recorded"}</span>
+                            <span style={pillStyle}>Allergies: {summary.allergies || "Not recorded"}</span>
+                          </div>
+                        </div>
+                        <button
+                          className="pp-btn pp-btn-outline pp-btn-sm"
+                          style={{ flexShrink: 0 }}
+                          onClick={() => setSelected(isExpanded ? null : summary)}
+                        >
+                          {isExpanded ? "Close" : "View Summary"}
+                        </button>
                       </div>
-                      <div style={{ fontSize: "0.8125rem", color: "var(--pp-text-muted)", marginBottom: 8 }}>
-                        {s.date || ""}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "0.875rem",
-                          color: "var(--pp-text-secondary)",
-                          whiteSpace: "pre-wrap",
-                          lineHeight: 1.6,
-                        }}
-                      >
-                        {(s.aiSummary || "No summary available.").slice(0, 200)}
-                        {(s.aiSummary || "").length > 200 ? "…" : ""}
-                      </div>
+
+                      {isExpanded && (
+                        <div style={{ marginTop: 12 }}>
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                              gap: 10,
+                              marginBottom: 12,
+                            }}
+                          >
+                            <div style={detailBoxStyle}>
+                              <div className="pp-stat-label" style={{ marginBottom: 4 }}>Medical History</div>
+                              <div style={detailTextStyle}>{summary.medicalHistory || "Not recorded"}</div>
+                            </div>
+                            <div style={detailBoxStyle}>
+                              <div className="pp-stat-label" style={{ marginBottom: 4 }}>Allergies</div>
+                              <div style={detailTextStyle}>{summary.allergies || "Not recorded"}</div>
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              background: "var(--pp-background)",
+                              padding: 16,
+                              borderRadius: 6,
+                              whiteSpace: "pre-wrap",
+                              fontSize: "0.875rem",
+                              color: "var(--pp-text-secondary)",
+                              lineHeight: 1.7,
+                            }}
+                          >
+                            {summary.aiSummary || "No AI summary available."}
+                          </div>
+                        </div>
+                      )}
+
+                      {!isExpanded && (
+                        <div
+                          style={{
+                            fontSize: "0.875rem",
+                            color: "var(--pp-text-secondary)",
+                            whiteSpace: "pre-wrap",
+                            lineHeight: 1.6,
+                          }}
+                        >
+                          {(summary.aiSummary || "No summary available.").slice(0, 220)}
+                          {(summary.aiSummary || "").length > 220 ? "..." : ""}
+                        </div>
+                      )}
                     </div>
-                    <button
-                      className="pp-btn pp-btn-outline pp-btn-sm"
-                      style={{ flexShrink: 0 }}
-                      onClick={() => setSelected(s)}
-                    >
-                      View Full
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
-
-          {selected && (
-            <section className="pp-section">
-              <div className="pp-panel">
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    marginBottom: 12,
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: "1rem" }}>{selected.patientName}</div>
-                    <div style={{ fontSize: "0.8125rem", color: "var(--pp-text-muted)" }}>{selected.date}</div>
-                  </div>
-                  <button
-                    className="pp-btn pp-btn-outline pp-btn-sm"
-                    onClick={() => setSelected(null)}
-                  >
-                    Close
-                  </button>
-                </div>
-                <div
-                  style={{
-                    background: "var(--pp-background)",
-                    padding: 16,
-                    borderRadius: 6,
-                    whiteSpace: "pre-wrap",
-                    fontSize: "0.875rem",
-                    color: "var(--pp-text-secondary)",
-                    lineHeight: 1.7,
-                  }}
-                >
-                  {selected.aiSummary || "No AI summary available."}
-                </div>
-              </div>
-            </section>
-          )}
         </main>
       </div>
     </div>
   );
+};
+
+const pillStyle = {
+  border: "1px solid var(--pp-border)",
+  borderRadius: 6,
+  padding: "4px 8px",
+  fontSize: "0.75rem",
+  color: "var(--pp-text-secondary)",
+};
+
+const detailBoxStyle = {
+  border: "1px solid var(--pp-border)",
+  borderRadius: 6,
+  padding: 12,
+};
+
+const detailTextStyle = {
+  color: "var(--pp-text-secondary)",
+  fontSize: "0.875rem",
 };
 
 export default DoctorAISummaries;
