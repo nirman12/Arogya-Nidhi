@@ -364,6 +364,7 @@ const doctorDashboard = async (req, res) => {
       }
     });
 
+<<<<<<< HEAD
     // Monthly earnings for the last 6 months
     const monthlyMap = {};
     for (let i = 5; i >= 0; i--) {
@@ -413,6 +414,24 @@ const doctorDashboard = async (req, res) => {
       todayAppointmentsList: appts.filter((a) => (a.scheduled_at || "").slice(0, 10) === todayStr),
       pendingAppointmentsList: pendingAppointments,
       latestAppointments: recentConsultations,
+=======
+    const patients = Array.from(
+      new Set((appointments || []).map((a) => a.patient_id))
+    );
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const todaysAppointments = (appointments || []).filter((appointment) => {
+      if (!appointment.scheduled_at) return false;
+      return new Date(appointment.scheduled_at).toISOString().slice(0, 10) === todayKey;
+    });
+
+    const dashData = {
+      earning,
+      appointments: (appointments || []).length,
+      todayAppointments: todaysAppointments.length,
+      patients: patients.length,
+      latestAppointments: todaysAppointments.slice(0, 5),
+      recentAppointments: (appointments || []).slice(0, 5),
+>>>>>>> 352ee70822e55df39e704018e54b9408d74ec37e
     };
 
     return res.status(200).json({ success: true, dashData });

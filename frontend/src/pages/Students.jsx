@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   HomeIcon,
   AcademicCapIcon,
@@ -9,6 +10,7 @@ import {
   PhotoIcon,
   HeartIcon,
   LanguageIcon,
+  NewspaperIcon,
 } from "@heroicons/react/24/outline";
 import MCQSection from "../components/students/MCQSection";
 import OrganViewer from "../components/students/OrganViewer";
@@ -19,6 +21,7 @@ import MRI from "../components/students/MRI";
 import Pneumonia from "../components/students/Pneumonia";
 import DiseaseGlossary from "../components/students/DiseaseGlossary";
 import StudentDashboard from "../components/students/StudentDashboard";
+import LearningResources from "../components/students/LearningResources";
 import "./PatientPortal.css";
 import "../components/PatientSidebar.css";
 import "./StudentPortal.css";
@@ -33,6 +36,7 @@ const NAV = [
   { id: "mri",       label: "MRI Viewer",          Icon: PhotoIcon },
   { id: "pneumonia", label: "Pneumonia",           Icon: HeartIcon },
   { id: "glossary",  label: "EN–NE Glossary",      Icon: LanguageIcon },
+  { id: "learning",  label: "Learning Resources",  Icon: NewspaperIcon },
 ];
 
 const NAV_DESC = {
@@ -45,10 +49,32 @@ const NAV_DESC = {
   mri:       "MRI image prediction",
   pneumonia: "Chest X-ray AI",
   glossary:  "English ↔ Nepali terms",
+  learning:  "Articles from doctors",
 };
 
 const Students = () => {
   const [active, setActive] = useState("mcq");
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // prefer navigation state when present (works even if already on /student-portal)
+    const fromState = location?.state?.initialTab;
+    const fromStorage = (() => {
+      try { return localStorage.getItem('studentPortalInitialTab'); } catch { return null; }
+    })();
+
+    const pick = fromState || fromStorage;
+    if (!pick) return;
+    const exists = NAV.some((n) => n.id === pick);
+    if (exists) setActive(pick);
+
+    // clear both sources
+    try { localStorage.removeItem('studentPortalInitialTab'); } catch {}
+    // replace history to clear state so repeated clicks behave predictably
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location, navigate]);
 
   const activeNav = NAV.find((n) => n.id === active) || NAV[0];
 
@@ -63,8 +89,14 @@ const Students = () => {
       case "mri":       return <MRI />;
       case "pneumonia": return <Pneumonia />;
       case "glossary":  return <DiseaseGlossary />;
+      case "learning":  return <LearningResources />;
       default:          return null;
     }
+  };
+
+  const handleNavClick = (id) => {
+    setActive(id);
+    document.body.classList.remove("portal-sidebar-open");
   };
 
   return (
@@ -76,7 +108,7 @@ const Students = () => {
               <li key={id} className="ps-menu-item">
                 <button
                   className={`ps-menu-link${active === id ? " active" : ""}`}
-                  onClick={() => setActive(id)}
+                  onClick={() => handleNavClick(id)}
                 >
                   <Icon className="ps-menu-icon" />
                   {label}

@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { AppContext } from "../../context/AppContext";
 
 const sampleQuestions = [
   {
@@ -19,6 +20,7 @@ const sampleQuestions = [
 ];
 
 const MCQSection = () => {
+  const { backendUrl } = useContext(AppContext);
   const [allQuestions, setAllQuestions] = useState(sampleQuestions);
   const [questions, setQuestions] = useState(sampleQuestions);
   const [current, setCurrent] = useState(0);
@@ -48,6 +50,23 @@ const MCQSection = () => {
   const [showAnswer, setShowAnswer] = useState(false);
   const timerRef = useRef(null);
   const questionStartRef = useRef(Date.now());
+
+  const shuffleArray = (arr) => {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  const normalizeQuestion = (q) => {
+    if (!Array.isArray(q.options) || q.options.length === 0) return q;
+    const optPairs = q.options.map((opt, idx) => ({ opt, idx }));
+    shuffleArray(optPairs);
+    const newOptions = optPairs.map((p) => p.opt);
+    const newAnswerIndex = optPairs.findIndex((p) => p.idx === q.answer);
+    return { ...q, options: newOptions, answer: newAnswerIndex >= 0 ? newAnswerIndex : 0 };
+  };
 
   const getQuestionKey = (question, index) => question?.id || `idx-${index}`;
 
@@ -89,7 +108,7 @@ const MCQSection = () => {
       const token = localStorage.getItem('token');
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers.Authorization = `Bearer ${token}`;
-      await fetch('/api/students/progress', {
+      await fetch(`${backendUrl}/api/students/progress`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ mcq_id: mcqId, selected_option: selectedOption, is_correct: Boolean(isCorrect), time_taken_seconds: timeTakenSeconds }),
@@ -128,30 +147,41 @@ const MCQSection = () => {
     setLoading(true);
     try {
       const q = buildFilterQuery();
-      const res = await fetch(`/api/students/mcqs${q}`);
+      const res = await fetch(`${backendUrl}/api/students/mcqs${q}`);
       if (!res.ok) throw new Error(`Server ${res.status}`);
       const payload = await res.json();
       if (payload.success) {
         const mapped = payload.data.map((r) => ({
           id: r.id,
           question: r.question,
-          options: r.options || [],
+          options: Array.isArray(r.options) ? r.options.slice() : (r.options || []),
           answer: typeof r.answer === "number" ? r.answer : Number(r.answer || 0),
           explanation: r.explanation || "",
           meta: { exam: r.exam, subject: r.subject, topic: r.topic, year: r.year, created_at: r.created_at },
         }));
+
+        // shuffle mapped questions order
+        const shuffledQuestions = shuffleArray(mapped.slice());
+
+        // limit requested count
         const requested = clampQuestionCount(numQuestions);
-        const limited = mapped.length ? mapped.slice(0, Math.min(requested, mapped.length)) : sampleQuestions;
-        setAllQuestions(mapped.length ? mapped : sampleQuestions);
-        setQuestions(limited.length ? limited : sampleQuestions);
+        const limited = shuffledQuestions.length ? shuffledQuestions.slice(0, Math.min(requested, shuffledQuestions.length)) : sampleQuestions;
+
+        const normalizedAll = mapped.map(normalizeQuestion);
+        const normalizedLimited = limited.map(normalizeQuestion);
+
+        setAllQuestions(normalizedAll.length ? normalizedAll : sampleQuestions);
+        setQuestions(normalizedLimited.length ? normalizedLimited : sampleQuestions);
         resetQuizState();
       } else {
-        setAllQuestions(sampleQuestions); setQuestions(sampleQuestions);
+        const shuffledFallback = shuffleArray(sampleQuestions.slice()).map(normalizeQuestion);
+        setAllQuestions(shuffledFallback); setQuestions(shuffledFallback);
         resetQuizState();
       }
     } catch (err) {
       console.error(err);
-      setAllQuestions(sampleQuestions); setQuestions(sampleQuestions);
+      const shuffledFallback = shuffleArray(sampleQuestions.slice()).map(normalizeQuestion);
+      setAllQuestions(shuffledFallback); setQuestions(shuffledFallback);
       resetQuizState();
     } finally {
       setLoading(false);
@@ -161,7 +191,7 @@ const MCQSection = () => {
   const fetchMetadata = async () => {
     setMetaLoading(true);
     try {
-      const res = await fetch(`/api/students/metadata?table=${encodeURIComponent(tableName)}`);
+      const res = await fetch(`${backendUrl}/api/students/metadata?table=${encodeURIComponent(tableName)}`);
       if (!res.ok) return;
       const payload = await res.json();
       if (payload.success && payload.data) {
@@ -204,6 +234,7 @@ const MCQSection = () => {
   useEffect(() => {
     let mounted = true;
     const refetch = async () => { if (mounted) await fetchFromBackend(); };
+    // Also shuffle existing questions when using sampleQuestions fallback
     refetch();
     return () => { mounted = false; };
   }, [filterSubject, filterTopic, filterYear, numQuestions, tableName]);

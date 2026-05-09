@@ -108,18 +108,23 @@ export const getMCQs = async (req, res) => {
         options = [];
       }
 
-      // answer handling: Supabase schema stores `answer` which may be index or text
+      // answer handling: Supabase schema stores `correct_option` (string) or `answer` (index/text)
       let answerIndex = 0;
-      const rawAnswer = row.answer ?? null;
-      if (rawAnswer === null || rawAnswer === undefined) {
+      const rawAnswer = row.correct_option ?? row.correctOption ?? row.answer ?? null;
+      const normalizedAnswer = rawAnswer === null || rawAnswer === undefined ? "" : String(rawAnswer).trim();
+
+      if (rawAnswer === null || rawAnswer === undefined || normalizedAnswer === "") {
         answerIndex = 0;
-      } else if (typeof rawAnswer === "number") {
-        answerIndex = rawAnswer;
-      } else if (/^\d+$/.test(String(rawAnswer).trim())) {
-        answerIndex = Number(String(rawAnswer).trim());
+      } else if (/^[A-D]$/i.test(normalizedAnswer)) {
+        answerIndex = normalizedAnswer.toUpperCase().charCodeAt(0) - 65;
+      } else if (/^\d+$/.test(normalizedAnswer)) {
+        answerIndex = Number(normalizedAnswer);
       } else {
         // treat rawAnswer as option text; find its index in options
-        const idx = options.findIndex((o) => String(o).trim() === String(rawAnswer).trim());
+        const idx = options.findIndex((o) => {
+          const text = typeof o === "string" ? o : (o?.text ?? o?.label ?? o?.value ?? "");
+          return String(text).trim() === normalizedAnswer;
+        });
         answerIndex = idx >= 0 ? idx : 0;
       }
 
@@ -274,6 +279,7 @@ export const getProgressSummary = async (req, res) => {
     const attempts = data || [];
     const correctAnswers = attempts.filter((attempt) => attempt.is_correct).length;
     const totalAttempts = attempts.length;
+    const uniqueMcqs = new Set(attempts.map((attempt) => attempt.mcq_id)).size;
     const totalTime = attempts.reduce((sum, attempt) => sum + (attempt.time_taken_seconds || 0), 0);
 
     return res.status(200).json({
@@ -281,6 +287,10 @@ export const getProgressSummary = async (req, res) => {
       data: {
         totalAttempts,
         correctAnswers,
+        uniqueMcqs,
+        total_attempts: totalAttempts,
+        correct_count: correctAnswers,
+        unique_mcqs: uniqueMcqs,
         accuracy: totalAttempts ? Math.round((correctAnswers / totalAttempts) * 100) : 0,
         averageTimeSeconds: totalAttempts ? Math.round(totalTime / totalAttempts) : 0,
         recentAttempts: attempts.slice(0, 10),

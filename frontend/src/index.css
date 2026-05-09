@@ -67,6 +67,57 @@
   width: 88px;
 }
 
+/* ── Portal navbar mobile controls ─────────────────────────── */
+.portal-menu-button {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .portal-menu-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 0.5rem;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #1e40af;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .portal-menu-button:hover {
+    background: #eff6ff;
+  }
+
+  .portal-menu-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .portal-lang {
+    display: none;
+  }
+
+  .portal-sidebar-overlay {
+    position: fixed;
+    top: 65px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.4);
+    border: 0;
+    padding: 0;
+    margin: 0;
+    z-index: 30;
+  }
+
+  body.portal-sidebar-open {
+    overflow: hidden;
+  }
+}
+
 @media (min-width: 768px) {
   .top-doctor-spotlight {
     width: 286px;

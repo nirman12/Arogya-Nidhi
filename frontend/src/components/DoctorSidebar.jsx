@@ -6,8 +6,8 @@ import {
   ClipboardDocumentListIcon,
   SparklesIcon,
   BanknotesIcon,
-  DocumentTextIcon,
   ChatBubbleOvalLeftEllipsisIcon,
+  PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 import "./PatientSidebar.css";
 
@@ -19,22 +19,33 @@ const NAV_ITEMS = [
   { label: "Health Queries", to: "/doctor-portal/health-queries", Icon: ChatBubbleOvalLeftEllipsisIcon },
   { label: "AI Summaries", to: "/doctor-portal/ai-summaries", Icon: SparklesIcon },
   { label: "Earnings", to: "/doctor-portal/earnings", Icon: BanknotesIcon },
-  { label: "Reports", to: "/doctor-portal/reports", Icon: DocumentTextIcon },
+  { label: "Article", to: "/doctor-portal/article", Icon: PencilSquareIcon },
 ];
 
-const DoctorSidebar = () => (
-  <aside className="ps-sidebar">
-    <ul className="ps-menu-list">
-      {NAV_ITEMS.map(({ label, to, end, Icon }) => (
-        <li key={to} className="ps-menu-item">
-          <NavLink to={to} end={end} className={({ isActive }) => `ps-menu-link${isActive ? " active" : ""}`}>
-            <Icon className="ps-menu-icon" />
-            {label}
-          </NavLink>
-        </li>
-      ))}
-    </ul>
-  </aside>
-);
+const DoctorSidebar = () => {
+  const closeSidebar = () => {
+    document.body.classList.remove("portal-sidebar-open");
+  };
+
+  return (
+    <aside className="ps-sidebar">
+      <ul className="ps-menu-list">
+        {NAV_ITEMS.map(({ label, to, end, Icon }) => (
+          <li key={to} className="ps-menu-item">
+            <NavLink
+              to={to}
+              end={end}
+              onClick={closeSidebar}
+              className={({ isActive }) => `ps-menu-link${isActive ? " active" : ""}`}
+            >
+              <Icon className="ps-menu-icon" />
+              {label}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  );
+};
 
 export default DoctorSidebar;

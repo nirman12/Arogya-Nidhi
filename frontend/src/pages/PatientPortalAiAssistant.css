@@ -657,8 +657,15 @@
 }
 
 @media (max-width: 768px) {
+  .paa-page {
+    height: auto;
+    overflow: auto;
+  }
+
   .paa-container {
     flex-direction: column;
+    height: auto;
+    overflow: visible;
   }
 
   .paa-header {
@@ -670,7 +677,14 @@
   }
 
   .paa-main-content {
+    margin-left: 0;
+    height: auto;
+    overflow: visible;
     padding: 1rem;
+  }
+
+  .paa-chat-container {
+    height: min(680px, calc(100vh - 2rem));
   }
 
   .paa-call-panel {

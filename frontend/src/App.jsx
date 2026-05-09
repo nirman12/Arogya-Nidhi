@@ -31,14 +31,14 @@ import DoctorDashboard from "./pages/DoctorDashboard";
 import DoctorAppointments from "./pages/DoctorAppointments";
 import DoctorConsultations from "./pages/DoctorConsultations";
 import DoctorEarnings from "./pages/DoctorEarnings";
-import DoctorReports from "./pages/DoctorReports";
 import DoctorPatientHistory from "./pages/DoctorPatientHistory";
 import DoctorAISummaries from "./pages/DoctorAISummaries";
 import DoctorQueries from "./pages/DoctorQueries";
 import DoctorQueryDetail from "./pages/DoctorQueryDetail";
 import DoctorProfile from "./pages/DoctorProfile";
+import DoctorArticle from "./pages/DoctorArticle";
 import StudentPortal from "./pages/StudentPortal";
-import AdminPortal from "./pages/AdminPortal";
+import AdminPortalApp from "./admin/App";
 import Payment from "./pages/Payment";
 import PatientPrescriptions from "./pages/PatientPrescriptions";
 import { AppContext } from "./context/AppContext";
@@ -61,20 +61,22 @@ const RoleAwareHome = () => {
 
 const App = () => {
   const location = useLocation();
+  const isAdminPortalRoute = location.pathname.startsWith("/admin-portal");
   const isPatientPortalRoute =
     location.pathname.startsWith("/patient-portal") ||
     location.pathname.startsWith("/doctor-portal") ||
     location.pathname.startsWith("/student-portal") ||
-    location.pathname.startsWith("/admin-portal") ||
+    isAdminPortalRoute ||
     location.pathname.startsWith("/public-queries") ||
     location.pathname === "/iot";
+  const isIntegratedAdminRoute = location.pathname.startsWith("/admin-portal");
 
 
 
   return (
     <div className="min-h-screen w-full">
       <ToastContainer />
-      <Navbar />
+      {!isIntegratedAdminRoute && <Navbar />}
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<RoleAwareHome />} />
@@ -142,12 +144,12 @@ const App = () => {
         <Route path="/doctor-portal/patient-history" element={<DoctorPatientHistory />} />
         <Route path="/doctor-portal/ai-summaries" element={<DoctorAISummaries />} />
         <Route path="/doctor-portal/earnings" element={<DoctorEarnings />} />
-        <Route path="/doctor-portal/reports" element={<DoctorReports />} />
+        <Route path="/doctor-portal/article" element={<DoctorArticle />} />
         <Route path="/doctor-portal/queries" element={<DoctorQueries />} />
         <Route path="/doctor-portal/queries/:id" element={<DoctorQueryDetail />} />
         <Route path="/doctor-portal/profile" element={<DoctorProfile />} />
         <Route path="/student-portal" element={<StudentPortal />} />
-        <Route path="/admin-portal" element={<AdminPortal />} />
+        <Route path="/admin-portal/*" element={<AdminPortalApp />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

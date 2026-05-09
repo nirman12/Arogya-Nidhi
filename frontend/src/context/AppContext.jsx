@@ -9,12 +9,30 @@ export const AppContext = createContext();
 const AppContextProvider = (props) => {
   // Use Nepali Rupee sign
   const currencySymbol = "रु";
-  // Default to local backend when VITE_BACKEND_URL is not provided (prevents calls to dev server)
-  const backendUrl = ((import.meta.env.VITE_BACKEND_URL && import.meta.env.VITE_BACKEND_URL.trim()) || "http://localhost:3001").replace(/\/+$/, "");
+  // Use the local backend in development and the deployed backend route in production.
+  const backendUrl = (
+    (import.meta.env.VITE_BACKEND_URL && import.meta.env.VITE_BACKEND_URL.trim()) ||
+    (import.meta.env.DEV ? "http://localhost:3001" : "/_/backend")
+  ).replace(/\/+$/, "");
 
   const [doctors, setDoctors] = useState([]);
   const [token, setTokenState] = useState(localStorage.getItem("token") || false);
   const [userData, setUserData] = useState(false);
+
+  const syncPortalTokenForRole = useCallback((nextRole, accessToken) => {
+    const normalizedRole = String(nextRole || "").toLowerCase();
+
+    localStorage.removeItem("aToken");
+    localStorage.removeItem("dToken");
+
+    if (!accessToken) return;
+
+    if (normalizedRole === "admin") {
+      localStorage.setItem("aToken", accessToken);
+    } else if (normalizedRole === "doctor") {
+      localStorage.setItem("dToken", accessToken);
+    }
+  }, []);
 
   const setToken = useCallback((nextToken) => {
     if (nextToken) {
@@ -123,6 +141,7 @@ const AppContextProvider = (props) => {
               name: metadata.name || sUser.email?.split('@')?.[0] || '',
               image: metadata.avatar_url || metadata.avatarUrl || sUser?.user_metadata?.avatar_url || null,
             };
+            syncPortalTokenForRole(payload.role, token);
             setUserData(payload);
             return;
           }
@@ -140,6 +159,7 @@ const AppContextProvider = (props) => {
         const payload = data.data?.user || {};
         const avatar = payload?.avatarUrl || payload?.avatar_url || payload?.avatar || payload?.image || null;
         payload.image = avatar || payload.image || (payload.user ? payload.user.avatarUrl : null);
+        syncPortalTokenForRole(payload.role || payload?.user?.role, token);
         setUserData(payload);
       }
     } catch (error) {
@@ -151,7 +171,7 @@ const AppContextProvider = (props) => {
       }
       toast.error(error.response?.data?.message || "Failed to load user profile");
     }
-  }, [backendUrl, token]);
+  }, [backendUrl, syncPortalTokenForRole, token]);
 
   // =========================
   // EFFECTS
@@ -215,6 +235,11 @@ const AppContextProvider = (props) => {
   // CONTEXT VALUE
   // =========================
   const logout = async () => {
+    setToken(false);
+    setUserData(false);
+    localStorage.removeItem("aToken");
+    localStorage.removeItem("dToken");
+
     try {
       if (supabase) {
         await supabase.auth.signOut();
@@ -222,8 +247,6 @@ const AppContextProvider = (props) => {
     } catch (err) {
       console.warn("Supabase signOut failed", err);
     }
-    setToken(false);
-    setUserData(false);
   };
   const value = useMemo(
     () => ({
