@@ -15,7 +15,7 @@ const PaymentFailure = () => {
       const appointmentId = searchParams.get('appointmentId');
 
       if (!appointmentId) {
-        navigate('/patient-portal/appointments');
+        navigate('/my-appointments');
         return;
       }
 
@@ -32,11 +32,11 @@ const PaymentFailure = () => {
 
         toast.error('Payment failed. Please try again.');
         setTimeout(() => {
-          navigate('/patient-portal/appointments');
+          navigate('/my-appointments');
         }, 2000);
       } catch (error) {
         console.error('Payment failure error:', error);
-        navigate('/patient-portal/appointments');
+        navigate('/my-appointments');
       }
     };
 

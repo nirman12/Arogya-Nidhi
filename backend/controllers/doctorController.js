@@ -41,6 +41,16 @@ async function resolveDoctorProfileId(req) {
   if (userIdError) throw userIdError;
 
   if (!byUserId?.id) {
+    // Log what we found to help debug
+    console.error(`[resolveDoctorProfileId] No doctor_profiles row found for user_id=${possibleId}`);
+    
+    // Last resort: check if the table uses a different column or the profile exists at all
+    const { data: anyProfile } = await supabase
+      .from("doctor_profiles")
+      .select("id, user_id")
+      .limit(5);
+    console.error(`[resolveDoctorProfileId] Sample doctor_profiles rows:`, JSON.stringify(anyProfile));
+    
     throw new Error("Doctor profile not found");
   }
 
@@ -453,10 +463,10 @@ const doctorDashboard = async (req, res) => {
       monthlyEarnings,
       appointments: appts.length,
       patients: patients.length,
-      todayAppointments: todaysAppointments.length,
-      todayAppointmentsList: todaysAppointments,
+      todayAppointments,
+      todayAppointmentsList: appts.filter((a) => (a.scheduled_at || "").slice(0, 10) === todayStr),
       pendingAppointmentsList: pendingAppointments,
-      latestAppointments: todaysAppointments.slice(0, 5),
+      latestAppointments: recentConsultations,
       recentAppointments: recentConsultations,
     };
 
