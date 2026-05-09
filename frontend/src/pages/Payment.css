@@ -65,3 +65,52 @@
   background-color: #a5b4fc;
   cursor: not-allowed;
 }
+
+.payment-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.payment-method {
+  width: 100%;
+}
+
+.divider {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin: 0.25rem 0;
+}
+
+.esewa-btn {
+  background-color: #60bb46;
+}
+
+.esewa-btn:hover:not(:disabled) {
+  background-color: #4ea336;
+}
+
+.esewa-btn.active {
+  background-color: #4ea336;
+}
+
+.khalti-btn {
+  background-color: #5c2d91;
+}
+
+.khalti-btn:hover:not(:disabled) {
+  background-color: #4a2275;
+}
+
+.khalti-btn.active {
+  background-color: #4a2275;
+}
+
+.security-info {
+  color: #64748b;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}

@@ -11,6 +11,7 @@ const Payment = () => {
   const navigate = useNavigate();
   const [appointment, setAppointment] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [selectedGateway, setSelectedGateway] = useState(null);
 
   useEffect(() => {
     const fetchAppointment = async () => {
@@ -21,7 +22,7 @@ const Payment = () => {
         setAppointment(data);
       } catch (error) {
         toast.error('Failed to fetch appointment details');
-        navigate('/patient-portal/appointments');
+        navigate('/my-appointments');
       }
     };
 
@@ -30,33 +31,77 @@ const Payment = () => {
     }
   }, [token, appointmentId, backendUrl, navigate]);
 
-  const handlePayment = async () => {
-    setProcessing(true);
-    try {
-      // 1. Simulate creating a payment record
-      // In a real app, you would integrate with a payment gateway here
-      // and create a payment record in your 'payments' table.
-      // For now, we'll just assume the payment is successful.
+  // Get consultation fee from the flat doctor object returned by the API
+  const getAmount = () =>
+    appointment?.doctor?.consultation_fee ??
+    appointment?.doctor?.doctor_profile?.[0]?.consultation_fee ??
+    0;
 
-      // 2. Update the appointment status and add a meeting link
-      const meetingLink = 'https://meet.google.com/lookup/fake-meeting-code'; // Dummy link
-      await axios.patch(
-        `${backendUrl}/api/appointments/${appointmentId}`,
-        {
-          status: 'CONFIRMED',
-          meeting_link: meetingLink,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+  const handleEsewaPayment = async () => {
+    setProcessing(true);
+    setSelectedGateway('esewa');
+    try {
+      const amount = getAmount();
+      const { data } = await axios.post(
+        `${backendUrl}/api/payments/esewa/initiate`,
+        { appointmentId, amount },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      toast.success('Payment successful! Your appointment is confirmed.');
-      navigate('/patient-portal/appointments');
+      if (!data.success) {
+        toast.error('Failed to initiate eSewa payment');
+        setProcessing(false);
+        setSelectedGateway(null);
+        return;
+      }
+
+      // Submit form to eSewa
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+
+      Object.entries(data.payload).forEach(([key, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
     } catch (error) {
-      toast.error('Payment failed. Please try again.');
-    } finally {
+      toast.error('Failed to process eSewa payment');
+      console.error('eSewa error:', error);
       setProcessing(false);
+      setSelectedGateway(null);
+    }
+  };
+
+  const handleKhaltiPayment = async () => {
+    setProcessing(true);
+    setSelectedGateway('khalti');
+    try {
+      const amount = getAmount();
+      const { data } = await axios.post(
+        `${backendUrl}/api/payments/khalti/initiate`,
+        { appointmentId, amount },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (!data.success) {
+        toast.error('Failed to initiate Khalti payment');
+        setProcessing(false);
+        setSelectedGateway(null);
+        return;
+      }
+
+      window.location.href = data.payment_url;
+    } catch (error) {
+      toast.error('Failed to process Khalti payment');
+      console.error('Khalti error:', error);
+      setProcessing(false);
+      setSelectedGateway(null);
     }
   };
 
@@ -64,20 +109,48 @@ const Payment = () => {
     return <div className="payment-container">Loading...</div>;
   }
 
+  const amount = getAmount();
+  const doctorName = appointment.doctor?.user?.name || appointment.doctor?.name || 'Doctor';
+  const specialty = appointment.doctor?.specialty || appointment.doctor?.specialization || 'General';
+
   return (
     <div className="payment-container">
       <div className="payment-card">
-        <h2>Confirm Your Appointment</h2>
+        <h2>Confirm Your Appointment &amp; Pay</h2>
+
         <div className="appointment-details">
-          <p><strong>Doctor:</strong> {appointment.doctor?.name}</p>
-          <p><strong>Specialty:</strong> {appointment.doctor?.doctor_profile?.[0]?.specialty || "General"}</p>
-          <p><strong>Date:</strong> {new Date(appointment.appointment_date).toLocaleDateString()}</p>
-          <p><strong>Time:</strong> {appointment.appointment_time}</p>
-          <p className="fee"><strong>Consultation Fee:</strong> ${appointment.doctor?.doctor_profile?.[0]?.consultation_fee || "-"}</p>
+          <p><strong>Doctor:</strong> {doctorName}</p>
+          <p><strong>Specialty:</strong> {specialty}</p>
+          <p><strong>Date &amp; Time:</strong> {new Date(appointment.scheduled_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+          <p><strong>Duration:</strong> {appointment.duration_minutes || 30} minutes</p>
+          <p className="fee"><strong>Consultation Fee:</strong> रु {amount}</p>
         </div>
-        <button onClick={handlePayment} disabled={processing} className="pay-button">
-          {processing ? 'Processing...' : `Pay $${appointment.doctor?.doctor_profile?.[0]?.consultation_fee || "-"}`}
-        </button>
+
+        <div className="payment-methods">
+          <div className="payment-method">
+            <button
+              onClick={handleEsewaPayment}
+              disabled={processing}
+              className={`pay-button esewa-btn${selectedGateway === 'esewa' ? ' active' : ''}`}
+            >
+              {processing && selectedGateway === 'esewa' ? 'Processing...' : 'Pay with eSewa'}
+            </button>
+          </div>
+
+          <div className="divider">OR</div>
+
+          <div className="payment-method">
+            <button
+              onClick={handleKhaltiPayment}
+              disabled={processing}
+              className={`pay-button khalti-btn${selectedGateway === 'khalti' ? ' active' : ''}`}
+            >
+              {processing && selectedGateway === 'khalti' ? 'Processing...' : 'Pay with Khalti'}
+            </button>
+          </div>
+        </div>
+
+        <p className="security-info">✓ Secure payment processing</p>
       </div>
     </div>
   );

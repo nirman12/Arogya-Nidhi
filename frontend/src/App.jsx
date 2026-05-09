@@ -40,6 +40,9 @@ import DoctorArticle from "./pages/DoctorArticle";
 import StudentPortal from "./pages/StudentPortal";
 import AdminPortalApp from "./admin/App";
 import Payment from "./pages/Payment";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFailure from "./pages/PaymentFailure";
+import KhaltiReturn from "./pages/KhaltiReturn";
 import PatientPrescriptions from "./pages/PatientPrescriptions";
 import { AppContext } from "./context/AppContext";
 import { getDashboardPathForRole, getUserRole } from "./utils/roleDashboard";
@@ -136,6 +139,9 @@ const App = () => {
           element={<DiscussionDetail mode="student" />}
         />
         <Route path="/payment/:appointmentId" element={<Payment />} />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
+        <Route path="/payment-failure" element={<PaymentFailure />} />
+        <Route path="/khalti-return" element={<KhaltiReturn />} />
 
         <Route path="/doctor-portal" element={<DoctorDashboard />} />
         <Route path="/doctor-portal/appointments" element={<DoctorAppointments />} />
