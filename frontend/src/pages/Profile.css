@@ -1,24 +1,22 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
-
 :root {
   --profile-ink: #0f172a;
   --profile-muted: #64748b;
   --profile-line: #e2e8f0;
-  --profile-accent: #0f766e;
-  --profile-accent-dark: #0b4f4d;
+  --profile-accent: #2563eb;
+  --profile-accent-dark: #1e40af;
   --profile-warm: #f59e0b;
   --profile-surface: #ffffff;
-  --profile-sand: #fef3c7;
-  --profile-glow: rgba(15, 118, 110, 0.12);
+  --profile-sand: #eff6ff;
+  --profile-glow: rgba(37, 99, 235, 0.18);
 }
 
 .profile-shell {
   min-height: 100vh;
-  background: radial-gradient(circle at 10% 10%, #ecfeff, transparent 45%),
-    radial-gradient(circle at 85% 0%, #fff7ed, transparent 40%),
-    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  background: radial-gradient(circle at 10% 10%, #eff6ff, transparent 45%),
+    radial-gradient(circle at 85% 0%, #e0e7ff, transparent 40%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
   color: var(--profile-ink);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: Outfit, sans-serif;
   position: relative;
   overflow: hidden;
   padding: 3.5rem clamp(1.5rem, 4vw, 4.5rem) 4rem;
@@ -31,7 +29,7 @@
   top: -10rem;
   width: 26rem;
   height: 26rem;
-  background: radial-gradient(circle, rgba(15, 118, 110, 0.2), transparent 70%);
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.2), transparent 70%);
   filter: blur(0);
   z-index: 0;
 }
@@ -46,13 +44,14 @@
   margin-bottom: 2.5rem;
 }
 
-.profile-title {
-  font-family: 'Fraunces', serif;
-  font-size: clamp(2rem, 2.8vw, 3rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin: 0 0 0.4rem;
+.profile-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
 }
+
+
 
 .profile-subtitle {
   color: var(--profile-muted);
@@ -66,7 +65,7 @@
   gap: 0.5rem;
   padding: 0.5rem 0.9rem;
   border-radius: 999px;
-  background: #e0f2f1;
+  background: #eff6ff;
   color: var(--profile-accent-dark);
   font-weight: 600;
   font-size: 0.85rem;
@@ -89,6 +88,12 @@
   animation: liftIn 0.6s ease both;
 }
 
+.profile-main-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
 .profile-card + .profile-card {
   animation-delay: 0.1s;
 }
@@ -106,9 +111,32 @@
   height: 96px;
   border-radius: 24px;
   overflow: hidden;
-  border: 3px solid #ccfbf1;
+  border: 3px solid #dbeafe;
   box-shadow: 0 10px 24px -18px var(--profile-glow);
-  background: #f0fdfa;
+  background: #eff6ff;
+}
+
+.profile-avatar-editable {
+  position: relative;
+}
+
+.profile-avatar-action {
+  position: absolute;
+  bottom: -0.5rem;
+  right: -0.5rem;
+  background: var(--profile-accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 10px 24px -16px rgba(37, 99, 235, 0.6);
+}
+
+.profile-file-input {
+  display: none;
 }
 
 .profile-avatar img {
@@ -131,8 +159,51 @@
   font-size: 0.95rem;
 }
 
+.profile-identity-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.profile-tags span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: var(--profile-accent-dark);
+  border: 1px solid #dbeafe;
+}
+
 .profile-section {
   margin-bottom: 1.8rem;
+}
+
+.profile-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.profile-section-caption {
+  color: var(--profile-muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.profile-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .profile-section-title {
@@ -148,6 +219,14 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
+}
+
+.profile-two-col {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.profile-field-wide {
+  grid-column: 1 / -1;
 }
 
 .profile-static-grid {
@@ -185,6 +264,17 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.profile-textarea {
+  border: 1px solid var(--profile-line);
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  min-height: 92px;
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
 .profile-static {
   border: 1px solid var(--profile-line);
   border-radius: 12px;
@@ -195,10 +285,48 @@
 }
 
 .profile-input:focus,
-.profile-select:focus {
+.profile-select:focus,
+.profile-textarea:focus {
   outline: none;
   border-color: var(--profile-accent);
-  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.profile-upload {
+  border: 1px dashed var(--profile-line);
+  border-radius: 16px;
+  padding: 1rem 1.2rem;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.profile-upload-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.6rem 1.4rem;
+  font-weight: 600;
+  background: #eff6ff;
+  color: var(--profile-accent-dark);
+  cursor: pointer;
+  width: fit-content;
+}
+
+.profile-upload-hint {
+  color: var(--profile-muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.profile-upload-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--profile-muted);
 }
 
 .profile-actions {
@@ -221,7 +349,7 @@
 .profile-btn-primary {
   background: var(--profile-accent);
   color: white;
-  box-shadow: 0 12px 30px -20px rgba(15, 118, 110, 0.7);
+  box-shadow: 0 12px 30px -20px rgba(37, 99, 235, 0.7);
 }
 
 .profile-btn-secondary {
@@ -251,7 +379,7 @@
 }
 
 .profile-code {
-  font-family: 'Space Grotesk', monospace;
+  font-family: Outfit, sans-serif;
   font-size: 1rem;
   letter-spacing: 0.12em;
   color: var(--profile-accent-dark);
@@ -273,7 +401,7 @@
 .profile-copy button {
   border: 1px solid var(--profile-line);
   background: var(--profile-sand);
-  color: #92400e;
+  color: var(--profile-accent-dark);
   border-radius: 999px;
   padding: 0.4rem 0.9rem;
   font-size: 0.8rem;
@@ -319,5 +447,10 @@
   .profile-avatar {
     width: 84px;
     height: 84px;
+  }
+
+  .profile-section-head {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

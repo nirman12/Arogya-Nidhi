@@ -458,51 +458,6 @@ const IoTDevicePanel = ({ patientId, backendUrl, token }) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DUMMY_APPOINTMENTS = [
-  {
-    id: "dummy-appt-1",
-    status: "scheduled",
-    scheduled_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    type: "Consultation",
-    patient: {
-      id: "dummy-patient-1",
-      user: {
-        name: "Dummy Patient One",
-        email: "patient.one@example.com",
-      },
-    },
-    patient_notes: "Headache and fatigue for 3 days.",
-  },
-  {
-    id: "dummy-appt-2",
-    status: "pending",
-    scheduled_at: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-    type: "Follow-up",
-    patient: {
-      id: "dummy-patient-2",
-      user: {
-        name: "Dummy Patient Two",
-        email: "patient.two@example.com",
-      },
-    },
-    patient_notes: "Follow-up for blood pressure check.",
-  },
-  {
-    id: "dummy-appt-3",
-    status: "completed",
-    scheduled_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    type: "Consultation",
-    patient: {
-      id: "dummy-patient-1",
-      user: {
-        name: "Dummy Patient One",
-        email: "patient.one@example.com",
-      },
-    },
-    patient_notes: "Previous visit: mild fever, resolved.",
-  },
-];
-
 const DoctorConsultations = () => {
   const { token, backendUrl } = useContext(AppContext);
   const location = useLocation();
@@ -611,7 +566,7 @@ const DoctorConsultations = () => {
 
       if (data?.success) {
         const fetched = data.appointments || [];
-        const list = fetched.length > 0 ? fetched : DUMMY_APPOINTMENTS;
+        const list = fetched;
         setAppointments(list);
 
         const routeSelection = routeSelectionRef.current;

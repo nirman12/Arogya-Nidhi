@@ -14,26 +14,41 @@ const TRIAGE_RULES = [
     specialty: 'Cardiology',
     keywords: ['heart pain', 'chest pain', 'chest tightness', 'chest pressure', 'palpitation', 'shortness of breath', 'left chest'],
     causeHint: 'Possible reasons include acidity, muscle strain, anxiety, or reduced blood flow to the heart.',
+    urgencyLevel: 'high',
+    confidenceScore: 0.92,
+    aiReasoning: 'Chest discomfort, palpitations, or shortness of breath can indicate a cardiac concern, so cardiology review is recommended.',
   },
   {
     specialty: 'Neurology',
     keywords: ['headache', 'migraine', 'dizziness', 'vertigo', 'seizure', 'numbness', 'tingling', 'memory loss'],
     causeHint: 'Possible reasons include migraine, nerve irritation, inner-ear imbalance, or other neurological causes.',
+    urgencyLevel: 'medium',
+    confidenceScore: 0.86,
+    aiReasoning: 'Headache, dizziness, seizure-like symptoms, numbness, or memory symptoms point toward a neurological evaluation.',
   },
   {
     specialty: 'Dermatology',
     keywords: ['rash', 'itching', 'itchy skin', 'acne', 'eczema', 'psoriasis', 'skin infection', 'hair fall'],
     causeHint: 'Possible reasons include allergy, infection, dermatitis, or inflammatory skin conditions.',
+    urgencyLevel: 'low',
+    confidenceScore: 0.84,
+    aiReasoning: 'Skin rash, itching, acne, eczema, psoriasis, infection, or hair fall are best assessed by dermatology.',
   },
   {
     specialty: 'Orthopedics',
     keywords: ['joint pain', 'knee pain', 'back pain', 'neck pain', 'shoulder pain', 'fracture', 'sprain', 'bone pain'],
     causeHint: 'Possible reasons include ligament strain, arthritis, disc issues, or minor bone and joint injury.',
+    urgencyLevel: 'medium',
+    confidenceScore: 0.82,
+    aiReasoning: 'Joint, back, neck, shoulder, fracture, sprain, or bone pain suggests a musculoskeletal issue for orthopedics.',
   },
   {
     specialty: 'Pediatrics',
     keywords: ['my child', 'my baby', 'child has', 'baby has', 'infant', 'child fever', 'pediatric'],
     causeHint: 'Possible reasons vary by age and symptom, including viral infections and common pediatric illnesses.',
+    urgencyLevel: 'medium',
+    confidenceScore: 0.8,
+    aiReasoning: 'Symptoms described for a child, baby, or infant should be reviewed by pediatrics.',
   },
 ];
 
@@ -108,6 +123,38 @@ function formatSpecialtyList() {
 
 function buildAction(type, label, value, extra = {}) {
   return { type, label, value, ...extra };
+}
+
+function formatConfidenceScore(value) {
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) return null;
+  return Math.max(0, Math.min(1, parsed)).toFixed(4);
+}
+
+function makeTriageDecisionPayload(triage, symptomText) {
+  const confidenceScore = formatConfidenceScore(triage?.confidenceScore) || '0.7500';
+  return {
+    queryId: null,
+    recommendedSpecialty: triage?.specialty?.key || triage?.specialty?.label || null,
+    urgencyLevel: triage?.urgencyLevel || 'medium',
+    confidenceScore,
+    aiReasoning:
+      triage?.aiReasoning ||
+      `${triage?.causeHint || 'The symptom description suggests a specialty referral.'} Patient described: ${String(symptomText || '').slice(0, 240)}`,
+  };
+}
+
+function formatTriageDecisionBlock(decision) {
+  if (!decision) return '';
+
+  return [
+    'Triage decision:',
+    `query_id: ${decision.queryId || 'not_saved'}`,
+    `recommended_specialty: ${decision.recommendedSpecialty || '-'}`,
+    `urgency_level: ${decision.urgencyLevel || '-'}`,
+    `confidence_score: ${decision.confidenceScore || '-'}`,
+    `ai_reasoning: ${decision.aiReasoning || '-'}`,
+  ].join('\n');
 }
 
 function cleanDoctorName(name) {
@@ -391,14 +438,38 @@ function detectSymptomTriage(input) {
   return {
     specialty,
     causeHint: matched.causeHint,
+    urgencyLevel: matched.urgencyLevel,
+    confidenceScore: matched.confidenceScore,
+    aiReasoning: matched.aiReasoning,
+  };
+}
+
+function buildInferredTriage(specialty, input) {
+  if (!specialty) return null;
+
+  const rule = TRIAGE_RULES.find((item) => item.specialty === specialty.key);
+  return {
+    specialty,
+    causeHint:
+      rule?.causeHint ||
+      `Your symptoms may be related to ${specialty.label.toLowerCase()} care.`,
+    urgencyLevel: rule?.urgencyLevel || 'medium',
+    confidenceScore: rule?.confidenceScore ? Math.min(rule.confidenceScore, 0.76) : 0.72,
+    aiReasoning:
+      rule?.aiReasoning ||
+      `The assistant interpreted the symptom description as most consistent with ${specialty.label}. Patient described: ${String(input || '').slice(0, 240)}`,
   };
 }
 
 function detectRequestedSpecialty(input, plan = null) {
   const triage = detectSymptomTriage(input);
-  const specialty = resolveSpecialtyCandidate(plan?.specialty) || findSpecialty(input) || triage?.specialty;
+  const plannedSpecialty = resolveSpecialtyCandidate(plan?.specialty);
+  const textSpecialty = findSpecialty(input);
+  const specialty = plannedSpecialty || textSpecialty || triage?.specialty;
   if (!specialty) return null;
-  return { specialty, triage };
+
+  const inferredTriage = triage || (plannedSpecialty && !textSpecialty ? buildInferredTriage(specialty, input) : null);
+  return { specialty, triage: inferredTriage };
 }
 
 function mentionsBookingIntent(input) {
@@ -678,6 +749,35 @@ function buildTriageReply(triage) {
   return `${triage.causeHint} Please consult a ${triage.specialty.label}. Here are available ${triage.specialty.label} professionals you can choose from.`;
 }
 
+async function recordAssistantTriageDecision(userId, symptomText, triage) {
+  const decision = makeTriageDecisionPayload(triage, symptomText);
+
+  try {
+    const result = await dashboardService.recordTriageDecision(userId, {
+      title: `AI triage: ${decision.recommendedSpecialty}`,
+      symptomText,
+      recommendedSpecialty: decision.recommendedSpecialty,
+      urgencyLevel: decision.urgencyLevel,
+      confidenceScore: decision.confidenceScore,
+      aiReasoning: decision.aiReasoning,
+    });
+
+    return {
+      ...decision,
+      id: result.triageDecision?.id || null,
+      queryId: result.query?.id || result.triageDecision?.query_id || null,
+      persisted: true,
+    };
+  } catch (error) {
+    console.warn('Failed to record assistant triage decision', error?.message || error);
+    return {
+      ...decision,
+      persisted: false,
+      error: error?.message || 'Failed to save triage decision',
+    };
+  }
+}
+
 async function applySpecialtyToSession(session, specialty) {
   session.draft.specialty = specialty.key;
   session.draft.doctorId = null;
@@ -687,7 +787,12 @@ async function applySpecialtyToSession(session, specialty) {
   session.draft.notes = null;
   session.availableSlots = [...TIME_SLOTS];
 
-  const doctorsResult = await dashboardService.getAvailableDoctors({ specialty: specialty.key, page: 1, limit: 10 });
+  const doctorsResult = await dashboardService.getAvailableDoctors({
+    specialty: specialty.key,
+    page: 1,
+    limit: 10,
+    includeUnverified: true,
+  });
   session.doctors = doctorsResult.doctors || [];
   session.step = session.doctors.length ? 'doctor' : 'specialty';
   return session.doctors;
@@ -710,10 +815,20 @@ async function makeSpecialtyDoctorsReply(session, specialty, triage, options = {
   }
 
   const prompt = makeDoctorPrompt(doctors, options);
+  let triageDecision = null;
   const triageReply = triage && triage.specialty.key === specialty.key ? buildTriageReply(triage) : '';
+
+  if (triageReply) {
+    triageDecision = await recordAssistantTriageDecision(options.userId, options.symptomText, triage);
+  }
+
+  const triageDecisionBlock = triageDecision ? formatTriageDecisionBlock(triageDecision) : '';
+  const replyParts = [triageReply, triageDecisionBlock, prompt.reply].filter(Boolean);
+
   return {
     ...prompt,
-    reply: triageReply ? `${triageReply} ${prompt.reply}` : prompt.reply,
+    reply: replyParts.join('\n\n'),
+    ...(triageDecision ? { triageDecision } : {}),
   };
 }
 
@@ -866,6 +981,7 @@ async function maybeHandleAvailabilityQuestion(text, session, options = {}) {
     specialty: specialty.key,
     page: 1,
     limit: 5,
+    includeUnverified: true,
   });
   const doctors = doctorsResult.doctors || [];
 
@@ -1029,7 +1145,11 @@ async function processMessage(userId, message, options = {}) {
     session.step !== 'confirm';
 
   if (shouldSwitchSpecialty) {
-    return makeSpecialtyDoctorsReply(session, requested.specialty, requested.triage, options);
+    return makeSpecialtyDoctorsReply(session, requested.specialty, requested.triage, {
+      ...options,
+      userId,
+      symptomText: text,
+    });
   }
 
   if (!session.draft.specialty) {
@@ -1038,7 +1158,11 @@ async function processMessage(userId, message, options = {}) {
       return { ...prompt, reply: replyForStage(plan, prompt.reply) };
     }
 
-    return makeSpecialtyDoctorsReply(session, requested.specialty, requested.triage, options);
+    return makeSpecialtyDoctorsReply(session, requested.specialty, requested.triage, {
+      ...options,
+      userId,
+      symptomText: text,
+    });
   }
 
   if (!session.draft.doctorId) {
@@ -1132,6 +1256,8 @@ async function processMessage(userId, message, options = {}) {
           scheduledAt: scheduledAt.toISOString(),
           durationMinutes: 30,
           patientNotes: session.draft.notes || null,
+        }, {
+          allowUnverifiedDoctor: true,
         });
         resetSession(sessionKey);
         return {

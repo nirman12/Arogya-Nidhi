@@ -5,6 +5,7 @@ import axios from "axios";
 import QRCode from "react-qr-code";
 import { toast } from "react-toastify";
 import DoctorSidebar from "../components/DoctorSidebar";
+import { DOCTOR_SPECIALIZATIONS } from "../constants/doctorSpecializations";
 import {
   UserCircleIcon,
   DocumentIcon,
@@ -16,19 +17,7 @@ import {
 } from "@heroicons/react/24/outline";
 import "./PatientPortal.css";
 
-const SPECIALIZATIONS = [
-  "Cardiology", "Dermatology", "ENT", "General Medicine", "Gynaecology",
-  "Neurology", "Ophthalmology", "Orthopaedics", "Paediatrics", "Psychiatry",
-  "Radiology", "Surgery", "Urology",
-];
-
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-const DUMMY_DOCS = [
-  { id: "d1", name: "Medical Degree Certificate", type: "PDF", status: "verified" },
-  { id: "d2", name: "License Registration", type: "PDF", status: "verified" },
-  { id: "d3", name: "Specialization Certificate", type: "JPG", status: "pending" },
-];
 
 const StatusBadge = ({ status }) => {
   const styles = {
@@ -64,7 +53,7 @@ const DoctorProfile = () => {
 
   const [profileImage, setProfileImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  const [docs, setDocs] = useState(DUMMY_DOCS);
+  const [docs, setDocs] = useState([]);
   const [dragOver, setDragOver] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -226,7 +215,7 @@ const DoctorProfile = () => {
   };
 
   return (
-    <div className="pp-page">
+    <div className="pp-page pp-page-profile">
       <div className="pp-container">
         <DoctorSidebar />
 
@@ -369,7 +358,7 @@ const DoctorProfile = () => {
                 <FormField label="Specialization" required>
                   <select className="dp-input dp-select" name="specialization" value={form.specialization} onChange={handleField} required>
                     <option value="">Select Specialization</option>
-                    {SPECIALIZATIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    {DOCTOR_SPECIALIZATIONS.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </FormField>
                 <FormField label="License Number" required>
@@ -589,7 +578,7 @@ const DoctorProfile = () => {
               <button
                 type="button"
                 className="pp-btn pp-btn-outline"
-                onClick={() => navigate("/doctor-portal/profile/preview")}
+                onClick={() => navigate("/profile")}
               >
                 Preview Profile
               </button>

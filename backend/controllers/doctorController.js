@@ -401,14 +401,17 @@ const doctorDashboard = async (req, res) => {
 
     // Today's appointments
     const todayStr = now.toISOString().slice(0, 10);
-    const todayAppointments = appts.filter((a) => (a.scheduled_at || "").slice(0, 10) === todayStr).length;
+    const todaysAppointments = appts.filter((appointment) => {
+      if (!appointment.scheduled_at) return false;
+      return new Date(appointment.scheduled_at).toISOString().slice(0, 10) === todayStr;
+    });
 
     // Pending appointments (PENDING status)
-    const pendingAppointments = appts.filter((a) => a.status === "PENDING");
+    const pendingAppointments = appts.filter((a) => ["pending", "PENDING"].includes(a.status));
 
     // Recent confirmed/completed consultations
     const recentConsultations = appts
-      .filter((a) => a.status === "CONFIRMED" || a.status === "COMPLETED")
+      .filter((a) => ["confirmed", "CONFIRMED", "completed", "COMPLETED"].includes(a.status))
       .slice(0, 5);
 
     const dashData = {
@@ -423,12 +426,276 @@ const doctorDashboard = async (req, res) => {
       todayAppointmentsList: appts.filter((a) => (a.scheduled_at || "").slice(0, 10) === todayStr),
       pendingAppointmentsList: pendingAppointments,
       latestAppointments: recentConsultations,
+      recentAppointments: recentConsultations,
     };
 
     return res.status(200).json({ success: true, dashData });
   } catch (error) {
     console.error("doctorDashboard error", error);
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const buildPatientAiSummary = (appointment) => {
+  const patient = appointment?.patient || {};
+  const user = patient?.users || patient?.user || {};
+  const patientName = user?.name || "Unknown Patient";
+  const scheduledAt = appointment?.scheduled_at
+    ? new Date(appointment.scheduled_at).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "Not scheduled";
+  const medicalHistory = patient?.medical_history || "No medical history recorded.";
+  const allergies = patient?.allergies || "No known allergies recorded.";
+  const demographics = [
+    patient?.gender ? `Gender: ${patient.gender}` : null,
+    patient?.date_of_birth ? `DOB: ${patient.date_of_birth}` : null,
+    patient?.blood_group ? `Blood group: ${patient.blood_group}` : null,
+  ].filter(Boolean);
+  const notes = appointment?.patient_notes || appointment?.reason || appointment?.ai_triage_summary || "No appointment notes provided.";
+
+  return `Pre-consultation AI summary for ${patientName}
+
+Appointment:
+- Scheduled for: ${scheduledAt}
+- Status: ${appointment?.status || "pending"}
+- Patient notes: ${notes}
+
+Patient profile:
+${demographics.length ? demographics.map((item) => `- ${item}`).join("\n") : "- No demographic details recorded."}
+
+Medical history:
+- ${medicalHistory}
+
+Allergies:
+- ${allergies}
+
+Clinical focus:
+- Review the listed medical history before starting the consultation.
+- Confirm allergy details before prescribing medication.
+- Ask whether symptoms, medications, or chronic conditions have changed since registration.`;
+};
+
+const doctorAiSummaries = async (req, res) => {
+  try {
+    const docId = await resolveDoctorProfileId(req);
+
+    const { data: appointments, error } = await supabase
+      .from("appointments")
+      .select(`
+        id,
+        patient_id,
+        scheduled_at,
+        status,
+        ai_triage_summary,
+        patient:patients(
+          id,
+          medical_history,
+          allergies,
+          blood_group,
+          gender,
+          date_of_birth,
+          users(name,email,phone,avatar_url)
+        )
+      `)
+      .eq("doctor_id", docId)
+      .in("status", ["pending", "confirmed", "PENDING", "CONFIRMED"])
+      .order("scheduled_at", { ascending: false });
+
+    if (error) throw error;
+
+    const latestAppointmentByPatient = new Map();
+    (appointments || []).forEach((appointment) => {
+      const patient = appointment?.patient || {};
+      const patientId = appointment.patient_id || patient.id;
+      if (!patientId || latestAppointmentByPatient.has(patientId)) return;
+      latestAppointmentByPatient.set(patientId, appointment);
+    });
+
+    const summaries = Array.from(latestAppointmentByPatient.values()).map((appointment) => {
+      const patient = appointment?.patient || {};
+      const user = patient?.users || patient?.user || {};
+      return {
+        id: appointment.id,
+        appointmentId: appointment.id,
+        patientId: appointment.patient_id || patient.id,
+        patientName: user?.name || "Unknown Patient",
+        patientEmail: user?.email || "",
+        date: appointment.scheduled_at
+          ? new Date(appointment.scheduled_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "",
+        medicalHistory: patient?.medical_history || "",
+        allergies: patient?.allergies || "",
+        aiSummary: buildPatientAiSummary(appointment),
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      summaries,
+    });
+  } catch (error) {
+    console.error("doctorAiSummaries error", error);
+    return res.status(500).json({
+      success: false,
+      message: error?.message || "Failed to load AI summaries",
+    });
+  }
+};
+
+const doctorPatientHistory = async (req, res) => {
+  try {
+    const docId = await resolveDoctorProfileId(req);
+    const search = String(req.params.patientId || "").trim();
+
+    if (!search) {
+      return res.status(400).json({ success: false, message: "Patient search is required" });
+    }
+
+    let patient = null;
+
+    const { data: byId, error: byIdError } = await supabase
+      .from("patients")
+      .select(`
+        id,
+        user_id,
+        date_of_birth,
+        blood_group,
+        gender,
+        medical_history,
+        allergies,
+        users(name,email,phone,avatar_url)
+      `)
+      .eq("id", search)
+      .maybeSingle();
+
+    if (byIdError) throw byIdError;
+    patient = byId;
+
+    if (!patient) {
+      const { data: users, error: usersError } = await supabase
+        .from("users")
+        .select("id,name,email,phone,avatar_url")
+        .or(`email.ilike.%${search}%,name.ilike.%${search}%`)
+        .limit(5);
+
+      if (usersError) throw usersError;
+      const userIds = (users || []).map((user) => user.id);
+
+      if (userIds.length) {
+        const { data: patients, error: patientsError } = await supabase
+          .from("patients")
+          .select(`
+            id,
+            user_id,
+            date_of_birth,
+            blood_group,
+            gender,
+            medical_history,
+            allergies,
+            users(name,email,phone,avatar_url)
+          `)
+          .in("user_id", userIds)
+          .limit(1);
+
+        if (patientsError) throw patientsError;
+        patient = patients?.[0] || null;
+      }
+    }
+
+    if (!patient) {
+      return res.status(404).json({ success: false, message: "Patient not found" });
+    }
+
+    const { data: appointments, error: appointmentsError } = await supabase
+      .from("appointments")
+      .select(`
+        id,
+        scheduled_at,
+        status,
+        patient_id,
+        doctor_id,
+        consultation_summary:consultation_summaries(
+          id,
+          diagnosis,
+          prescription,
+          followup_date,
+          doctor_notes,
+          created_at
+        )
+      `)
+      .eq("doctor_id", docId)
+      .eq("patient_id", patient.id)
+      .order("scheduled_at", { ascending: false });
+
+    if (appointmentsError) throw appointmentsError;
+
+    const getSummary = (appointment) =>
+      Array.isArray(appointment.consultation_summary)
+        ? appointment.consultation_summary[0]
+        : appointment.consultation_summary;
+
+    const consultations = (appointments || []).map((appointment) => {
+      const summary = getSummary(appointment);
+      return {
+        id: appointment.id,
+        date: appointment.scheduled_at,
+        scheduled_at: appointment.scheduled_at,
+        status: appointment.status,
+        diagnosis: summary?.diagnosis || "",
+        notes: summary?.doctor_notes || "",
+      };
+    });
+
+    const prescriptions = (appointments || [])
+      .map(getSummary)
+      .filter((summary) => summary?.id && (summary.prescription || summary.diagnosis));
+
+    const { data: labReports, error: labError } = await supabase
+      .from("iot_readings")
+      .select("id,test_type,recorded_at,sensor_data")
+      .eq("patient_id", patient.id)
+      .order("recorded_at", { ascending: false })
+      .limit(10);
+
+    if (labError) throw labError;
+
+    const user = patient.users || {};
+    const profile = {
+      id: patient.id,
+      name: user.name || user.email || "Patient",
+      email: user.email || "",
+      phone: user.phone || "",
+      date_of_birth: patient.date_of_birth,
+      blood_group: patient.blood_group,
+      gender: patient.gender,
+      medical_history: patient.medical_history,
+      allergies: patient.allergies,
+    };
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        profile,
+        consultations,
+        prescriptions,
+        labReports: labReports || [],
+      },
+    });
+  } catch (error) {
+    console.error("doctorPatientHistory error", error);
+    return res.status(500).json({
+      success: false,
+      message: error?.message || "Failed to load patient history",
+    });
   }
 };
 
@@ -548,6 +815,8 @@ export {
   appointmentComplete,
   appointmentCancel,
   doctorDashboard,
+  doctorAiSummaries,
+  doctorPatientHistory,
   doctorProfile,
   updateDoctorProfile,
   getHealthQueries,

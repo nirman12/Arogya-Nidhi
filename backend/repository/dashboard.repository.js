@@ -1,5 +1,14 @@
 import supabase from '../config/supabase.js';
 
+const DOCTOR_SPECIALTY_ALIASES = {
+  cardiology: ['Cardiology', 'Cardiologist', 'Heart Specialist'],
+  neurology: ['Neurology', 'Neurologist'],
+  dermatology: ['Dermatology', 'Dermatologist'],
+  orthopedics: ['Orthopedics', 'Orthopedic', 'Orthopedist', 'Orthopedic Surgeon'],
+  pediatrics: ['Pediatrics', 'Pediatrician', 'Pediatricians'],
+  general: ['General', 'General Physician', 'General physician', 'Physician'],
+};
+
 function normalizeIotReading(row) {
   if (!row) return row;
   const sensorData = row.sensorData ?? row.sensor_data ?? {};
@@ -11,6 +20,35 @@ function normalizeIotReading(row) {
     recordedAt: row.recordedAt ?? row.recorded_at ?? null,
     createdAt: row.createdAt ?? row.recorded_at ?? row.recordedAt ?? null,
   };
+}
+
+function normalizeSpecialty(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getSpecialtySearchTerms(specialty) {
+  const requested = String(specialty || '').trim();
+  if (!requested) return [];
+
+  const normalized = normalizeSpecialty(requested);
+  const aliasEntry = Object.entries(DOCTOR_SPECIALTY_ALIASES).find(([, aliases]) =>
+    aliases.some((alias) => {
+      const aliasText = normalizeSpecialty(alias);
+      return aliasText === normalized || aliasText.includes(normalized) || normalized.includes(aliasText);
+    })
+  );
+
+  const terms = aliasEntry ? aliasEntry[1] : [requested];
+  return [...new Set([requested, ...terms].map((term) => String(term || '').trim()).filter(Boolean))];
+}
+
+function escapePostgrestOrValue(value) {
+  return String(value || '').replace(/[(),]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 // ─── Patient lookup ───────────────────────────────────────────────────────────
@@ -34,7 +72,7 @@ async function getUpcomingAppointmentsCount(patientId) {
     .select('*', { count: 'exact' })
     .eq('patient_id', patientId)
     .gte('scheduled_at', now)
-    .in('status', ['PENDING', 'CONFIRMED']);
+    .in('status', ['pending', 'confirmed', 'PENDING', 'CONFIRMED']);
   if (error) throw error;
   return count || 0;
 }
@@ -130,10 +168,10 @@ async function getUpcomingAppointments(patientId, { page = 1, limit = 10 } = {})
   const offset = (page - 1) * limit;
   const base = supabase
     .from('appointments')
-      .select(`*, doctor:doctor_profiles(id,specialty,consultationFee:consultation_fee, user:users(name,avatar_url)), consultation_summary:consultation_summaries(diagnosis,prescription,followUpDate:followup_date), payment:payments(status,amount,currency)`, { count: 'exact' })
+    .select(`*, doctor:doctor_profiles(id,specialty,consultationFee:consultation_fee, user:users(name,avatar_url)), consultation_summary:consultation_summaries(diagnosis,prescription,followUpDate:followup_date), payment:payments(status,amount,currency)`, { count: 'exact' })
     .eq('patient_id', patientId)
     .gte('scheduled_at', now)
-    .in('status', ['PENDING', 'CONFIRMED'])
+    .in('status', ['pending', 'confirmed', 'PENDING', 'CONFIRMED'])
     .order('scheduled_at', { ascending: true })
     .range(offset, offset + limit - 1);
   const { data, count, error } = await base;
@@ -183,7 +221,7 @@ async function findAppointmentsByDoctorBetween(doctorId, startsAt, endsAt) {
     .eq('doctor_id', doctorId)
     .gte('scheduled_at', startsAt)
     .lt('scheduled_at', endsAt)
-    .in('status', ['PENDING', 'CONFIRMED'])
+    .in('status', ['pending', 'confirmed', 'PENDING', 'CONFIRMED'])
     .order('scheduled_at', { ascending: true });
   if (error) throw error;
   return data || [];
@@ -363,6 +401,24 @@ async function createQuery(data) {
   return created;
 }
 
+async function createTriageDecision(data) {
+  const payload = {
+    query_id: data.queryId ?? data.query_id,
+    recommended_specialty: data.recommendedSpecialty ?? data.recommended_specialty ?? null,
+    urgency_level: data.urgencyLevel ?? data.urgency_level ?? null,
+    confidence_score: data.confidenceScore ?? data.confidence_score ?? null,
+    ai_reasoning: data.aiReasoning ?? data.ai_reasoning ?? null,
+  };
+
+  const { data: created, error } = await supabase
+    .from('triage_decisions')
+    .insert(payload)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  return created;
+}
+
 async function createQueryResponse(data) {
   const { data: created, error } = await supabase.from('query_responses').insert(data).select().maybeSingle();
   if (error) throw error;
@@ -434,15 +490,31 @@ async function findQueryByIdForDoctor(id) {
 
 // ─── Doctors (for booking) ────────────────────────────────────────────────────
 
-async function getAvailableDoctors({ page = 1, limit = 10, specialty } = {}) {
+async function getAvailableDoctors({ page = 1, limit = 10, specialty, includeUnverified = false } = {}) {
   const offset = (page - 1) * limit;
   let query = supabase
     .from('doctor_profiles')
       .select('id,specialty,subSpecialty:sub_specialty,consultationFee:consultation_fee,qualifications,licenseNo:license_no,isVerified:is_verified,isAvailable:is_available, user:users(name,avatar_url,email)', { count: 'exact' })
     .eq('is_available', true)
-    .eq('is_verified', true)
     .order('id', { ascending: true });
-  if (specialty) query = query.ilike('specialty', `%${specialty}%`);
+
+  if (!includeUnverified) {
+    query = query.eq('is_verified', true);
+  }
+
+  const specialtyTerms = getSpecialtySearchTerms(specialty);
+  if (specialtyTerms.length) {
+    const specialtyFilter = specialtyTerms
+      .map((term) => escapePostgrestOrValue(term))
+      .filter(Boolean)
+      .map((term) => `specialty.ilike.%${term}%`)
+      .join(',');
+
+    if (specialtyFilter) {
+      query = query.or(specialtyFilter);
+    }
+  }
+
   const { data, count, error } = await query.range(offset, offset + limit - 1);
   if (error) throw error;
   return { total: count || 0, page, limit, doctors: data };
@@ -487,6 +559,7 @@ export default {
   findQueryById,
   getPublicQueries,
   createQuery,
+  createTriageDecision,
   createQueryResponse,
   updateQuery,
   deleteQuery,

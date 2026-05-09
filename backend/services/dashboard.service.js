@@ -3,6 +3,7 @@ import authRepo from '../repository/auth.repository.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DEFAULT_BOOKING_TIME_SLOTS = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00'];
+const TRIAGE_URGENCY_LEVELS = new Set(['low', 'medium', 'high']);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -176,7 +177,7 @@ async function getAppointmentDetails(userId, appointmentId) {
   return appt;
 }
 
-async function bookAppointment(userId, body) {
+async function bookAppointment(userId, body, options = {}) {
   const patient = await _requirePatient(userId);
   const { doctorId, scheduledAt, durationMinutes, patientNotes } = body;
   const normalizedDoctorId = typeof doctorId === 'string' ? doctorId.trim() : doctorId;
@@ -192,7 +193,9 @@ async function bookAppointment(userId, body) {
   const doctor = await repo.findDoctorById(normalizedDoctorId);
   if (!doctor)             throw _notFound('Doctor');
   if (!doctor.isAvailable) throw { status: 400, message: 'Doctor is not available' };
-  if (!doctor.isVerified)  throw { status: 400, message: 'Doctor is not verified' };
+  if (!doctor.isVerified && !options.allowUnverifiedDoctor) {
+    throw { status: 400, message: 'Doctor is not verified' };
+  }
 
   const scheduledDate = new Date(scheduledAt);
   if (scheduledDate <= new Date()) {
@@ -351,6 +354,38 @@ async function createQuery(userId, body) {
   });
 }
 
+function normalizeConfidenceScore(value) {
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) return null;
+  return Math.max(0, Math.min(1, Number(parsed.toFixed(4))));
+}
+
+async function recordTriageDecision(userId, body) {
+  const patient = await _requirePatient(userId);
+  const recommendedSpecialty = String(body.recommendedSpecialty || body.recommended_specialty || '').trim() || null;
+  const urgencyLevel = String(body.urgencyLevel || body.urgency_level || 'medium').trim().toLowerCase();
+  const normalizedUrgency = TRIAGE_URGENCY_LEVELS.has(urgencyLevel) ? urgencyLevel : 'medium';
+  const symptomText = String(body.symptomText || body.symptom_text || '').trim();
+  const title = String(body.title || `AI triage: ${recommendedSpecialty || 'Doctor recommendation'}`).slice(0, 200);
+
+  const query = await repo.createQuery({
+    patient_id: patient.id,
+    title,
+    symptom_text: symptomText || null,
+    is_anonymous: body.isAnonymous === true || body.isAnonymous === 'true',
+  });
+
+  const triageDecision = await repo.createTriageDecision({
+    query_id: query.id,
+    recommended_specialty: recommendedSpecialty,
+    urgency_level: normalizedUrgency,
+    confidence_score: normalizeConfidenceScore(body.confidenceScore ?? body.confidence_score),
+    ai_reasoning: body.aiReasoning || body.ai_reasoning || null,
+  });
+
+  return { query, triageDecision };
+}
+
 async function updateQuery(userId, queryId, body) {
   const patient = await _requirePatient(userId);
   const q = await repo.findQueryById(queryId, patient.id);
@@ -426,6 +461,7 @@ async function getAvailableDoctors(query) {
     page:      parseInt(query.page)  || 1,
     limit:     Math.min(parseInt(query.limit) || 10, 50),
     specialty: query.specialty || undefined,
+    includeUnverified: query.includeUnverified === true,
   });
 }
 
@@ -510,6 +546,7 @@ export default {
   getMyQueries,
   getQueryDetails,
   createQuery,
+  recordTriageDecision,
   updateQuery,
   closeQuery,
   deleteQuery,

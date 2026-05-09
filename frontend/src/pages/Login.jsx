@@ -9,6 +9,7 @@ import { supabase } from "../lib/supabaseClient";
 import { getDashboardPathForRole, getUserRole } from "../utils/roleDashboard";
 import { AdminContext } from "../admin/context/AdminContext";
 import { DoctorContext } from "../admin/context/DoctorContext";
+import { DOCTOR_SPECIALIZATIONS } from "../constants/doctorSpecializations";
 
 const Login = () => {
   const { backendUrl, setToken, token, userData, getDoctorsData } = useContext(AppContext);
@@ -268,7 +269,14 @@ const Login = () => {
                 </div>
                 <div>
                   <p className={labelClass}>Specialty</p>
-                  <input className={inputClass} value={specialty} onChange={(e) => setSpecialty(e.target.value)} />
+                  <select className={inputClass} value={specialty} onChange={(e) => setSpecialty(e.target.value)} required>
+                    <option value="">Select Specialty</option>
+                    {DOCTOR_SPECIALIZATIONS.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <p className={labelClass}>Sub Specialty</p>

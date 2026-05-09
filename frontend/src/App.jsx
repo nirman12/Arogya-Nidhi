@@ -98,7 +98,6 @@ const App = () => {
         <Route path="/my-appointments" element={<Appointments />} />
         <Route path="/appointment/:docId" element={<Appointment />} />
         <Route path="/iot" element={<IoTPage />} />
-        <Route path="/patient-portal/profile" element={<EditProfile />} />
         <Route path="/patient-portal" element={<PatientPortal />} />
         <Route
           path="/patient-portal/ai-assistant"
@@ -147,7 +146,6 @@ const App = () => {
         <Route path="/doctor-portal/article" element={<DoctorArticle />} />
         <Route path="/doctor-portal/queries" element={<DoctorQueries />} />
         <Route path="/doctor-portal/queries/:id" element={<DoctorQueryDetail />} />
-        <Route path="/doctor-portal/profile" element={<DoctorProfile />} />
         <Route path="/student-portal" element={<StudentPortal />} />
         <Route path="/admin-portal/*" element={<AdminPortalApp />} />
 

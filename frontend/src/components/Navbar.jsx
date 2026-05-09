@@ -299,9 +299,7 @@ const PortalNavbar = ({ token, userData, logout }) => {
                     {
                       label: "My Profile",
                       action: () => {
-                        const r = userData?.role || userData?.user?.role;
-                        if (r === "doctor") navigate("/doctor-portal/profile");
-                        else navigate("/profile");
+                        navigate("/profile");
                         setOpen(false);
                       },
                     },
