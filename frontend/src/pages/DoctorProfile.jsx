@@ -215,7 +215,7 @@ const DoctorProfile = () => {
   };
 
   return (
-    <div className="pp-page">
+    <div className="pp-page pp-page-profile">
       <div className="pp-container">
         <DoctorSidebar />
 
@@ -578,7 +578,7 @@ const DoctorProfile = () => {
               <button
                 type="button"
                 className="pp-btn pp-btn-outline"
-                onClick={() => navigate("/doctor-portal/profile/preview")}
+                onClick={() => navigate("/profile")}
               >
                 Preview Profile
               </button>

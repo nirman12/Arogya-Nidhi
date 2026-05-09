@@ -333,6 +333,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  white-space: pre-line;
 }
 
 .paa-message-text-row {

@@ -401,6 +401,24 @@ async function createQuery(data) {
   return created;
 }
 
+async function createTriageDecision(data) {
+  const payload = {
+    query_id: data.queryId ?? data.query_id,
+    recommended_specialty: data.recommendedSpecialty ?? data.recommended_specialty ?? null,
+    urgency_level: data.urgencyLevel ?? data.urgency_level ?? null,
+    confidence_score: data.confidenceScore ?? data.confidence_score ?? null,
+    ai_reasoning: data.aiReasoning ?? data.ai_reasoning ?? null,
+  };
+
+  const { data: created, error } = await supabase
+    .from('triage_decisions')
+    .insert(payload)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  return created;
+}
+
 async function createQueryResponse(data) {
   const { data: created, error } = await supabase.from('query_responses').insert(data).select().maybeSingle();
   if (error) throw error;
@@ -541,6 +559,7 @@ export default {
   findQueryById,
   getPublicQueries,
   createQuery,
+  createTriageDecision,
   createQueryResponse,
   updateQuery,
   deleteQuery,
