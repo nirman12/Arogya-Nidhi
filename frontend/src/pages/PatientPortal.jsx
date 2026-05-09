@@ -1,6 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import PatientSidebar from "../components/PatientSidebar";
 import {
   CalendarDaysIcon,
@@ -27,6 +26,7 @@ const PatientPortal = () => {
 
   useEffect(() => {
     if (!token) return;
+
     const fetchAll = async () => {
       try {
         const [overviewRes, quickRes, queriesRes] = await Promise.all([
@@ -34,6 +34,7 @@ const PatientPortal = () => {
           axios.get(backendUrl + "/api/patient/dashboard/quick-actions", { headers }),
           axios.get(backendUrl + "/api/patient/queries", { headers }),
         ]);
+
         if (overviewRes.data.success) {
           const nextStats = overviewRes.data.data?.stats || {};
           setStats({
@@ -41,13 +42,15 @@ const PatientPortal = () => {
             activePrescriptions: Number(nextStats.activePrescriptions || 0),
           });
         }
+
         if (quickRes.data.success) {
-          const d = quickRes.data.data;
-          setUpcomingAppointments(d.upcomingAppointments || []);
+          const data = quickRes.data.data;
+          setUpcomingAppointments(data.upcomingAppointments || []);
         }
+
         if (queriesRes.data.success) {
-          const q = queriesRes.data.data;
-          setQueries(Array.isArray(q) ? q : q?.queries || []);
+          const data = queriesRes.data.data;
+          setQueries(Array.isArray(data) ? data : data?.queries || []);
         }
       } catch (err) {
         toast.error(err.response?.data?.message || "Failed to load dashboard");
@@ -55,6 +58,7 @@ const PatientPortal = () => {
         setLoading(false);
       }
     };
+
     fetchAll();
   }, [token, backendUrl]);
 
@@ -62,7 +66,7 @@ const PatientPortal = () => {
     try {
       await axios.patch(backendUrl + `/api/patient/appointments/${id}/cancel`, {}, { headers });
       toast.success("Appointment cancelled");
-      setUpcomingAppointments((prev) => prev.filter((a) => a.id !== id));
+      setUpcomingAppointments((prev) => prev.filter((appointment) => appointment.id !== id));
       setStats((prev) => ({ ...prev, upcomingAppointments: Math.max(0, prev.upcomingAppointments - 1) }));
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to cancel appointment");
@@ -76,9 +80,41 @@ const PatientPortal = () => {
     navigate("/login");
   };
 
-  const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
-  const fmtDateTime = (d) => d ? new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
-  const statusBadge = (isResolved) => isResolved ? "pp-status-resolved" : "pp-status-progress";
+  const fmtDate = (date) =>
+    date ? new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+
+  const fmtDateTime = (date) =>
+    date
+      ? new Date(date).toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : "Date not set";
+
+  const getAppointmentDate = (appointment) =>
+    appointment?.scheduledAt || appointment?.scheduled_at || appointment?.appointment_date || null;
+
+  const getDoctorName = (appointment) =>
+    appointment?.doctor?.user?.name ||
+    appointment?.doctor?.users?.name ||
+    appointment?.doctor?.name ||
+    "Doctor";
+
+  const getDoctorSpecialty = (appointment) =>
+    appointment?.doctor?.specialty ||
+    appointment?.doctor?.specialization ||
+    appointment?.doctor?.speciality ||
+    appointment?.doctor?.subSpecialty ||
+    appointment?.doctor?.sub_specialty ||
+    "General physician";
+
+  const getAppointmentNote = (appointment) =>
+    appointment?.patientNotes || appointment?.patient_notes || appointment?.reason || "";
+
+  const statusBadge = (isResolved) => (isResolved ? "pp-status-resolved" : "pp-status-progress");
 
   return (
     <div className="pp-page">
@@ -95,7 +131,7 @@ const PatientPortal = () => {
                 {[...Array(3)].map((_, i) => (
                   <div key={i} className="pp-stat-card">
                     <div className="pp-stat-label">Loading...</div>
-                    <div className="pp-stat-value">—</div>
+                    <div className="pp-stat-value">-</div>
                   </div>
                 ))}
               </div>
@@ -121,7 +157,9 @@ const PatientPortal = () => {
             <h2 className="pp-section-title">AI Health Assistant</h2>
             <div className="pp-ai-container">
               <div className="pp-ai-header">
-                <div className="pp-ai-avatar"><SparklesIcon style={{ width: 20, height: 20 }} /></div>
+                <div className="pp-ai-avatar">
+                  <SparklesIcon style={{ width: 20, height: 20 }} />
+                </div>
                 <div>
                   <div className="pp-ai-title">Dr. AI Assistant</div>
                   <div className="pp-ai-subtitle">Chat or Voice Assistant</div>
@@ -145,19 +183,25 @@ const PatientPortal = () => {
             <div className="pp-quick-actions">
               <Link to="/patient-portal/book-appointment" style={{ textDecoration: "none" }}>
                 <div className="pp-action-card">
-                  <div className="pp-action-icon"><CalendarDaysIcon style={{ width: 22, height: 22 }} /></div>
+                  <div className="pp-action-icon">
+                    <CalendarDaysIcon style={{ width: 22, height: 22 }} />
+                  </div>
                   <div className="pp-action-title">Book Appointment</div>
                 </div>
               </Link>
               <Link to="/patient-portal/medical-history" style={{ textDecoration: "none" }}>
                 <div className="pp-action-card">
-                  <div className="pp-action-icon"><ClipboardDocumentListIcon style={{ width: 22, height: 22 }} /></div>
+                  <div className="pp-action-icon">
+                    <ClipboardDocumentListIcon style={{ width: 22, height: 22 }} />
+                  </div>
                   <div className="pp-action-title">View Medical History</div>
                 </div>
               </Link>
               <Link to="/iot" style={{ textDecoration: "none" }}>
                 <div className="pp-action-card">
-                  <div className="pp-action-icon"><SignalIcon style={{ width: 22, height: 22 }} /></div>
+                  <div className="pp-action-icon">
+                    <SignalIcon style={{ width: 22, height: 22 }} />
+                  </div>
                   <div className="pp-action-title">IoT Device Test</div>
                 </div>
               </Link>
@@ -187,31 +231,33 @@ const PatientPortal = () => {
               </div>
             ) : (
               <div className="pp-appointment-list">
-                {upcomingAppointments.map((appt) => (
-                  <div key={appt.id} className="pp-appointment-item">
-                    <div className="pp-appointment-icon">
-                      <UserCircleIcon style={{ width: 22, height: 22 }} />
-                    </div>
-                    <div className="pp-appointment-info">
-                      <div className="pp-appointment-title">
-                        {appt.doctor?.user?.name || appt.doctor?.name || "Doctor"} — {appt.doctor?.specialization || ""}
+                {upcomingAppointments.map((appointment) => {
+                  const note = getAppointmentNote(appointment);
+                  return (
+                    <div key={appointment.id} className="pp-appointment-item">
+                      <div className="pp-appointment-icon">
+                        <UserCircleIcon style={{ width: 22, height: 22 }} />
                       </div>
-                      <div className="pp-appointment-meta">
-                        {fmtDateTime(appt.scheduledAt)}
-                        {appt.patientNotes ? ` · ${appt.patientNotes}` : ""}
+                      <div className="pp-appointment-info">
+                        <div className="pp-appointment-title">Dr. {getDoctorName(appointment)}</div>
+                        <div className="pp-appointment-meta">
+                          {getDoctorSpecialty(appointment)} | {fmtDateTime(getAppointmentDate(appointment))}
+                          {appointment.status ? ` | ${appointment.status}` : ""}
+                          {note ? ` | ${note}` : ""}
+                        </div>
+                      </div>
+                      <div className="pp-appointment-actions">
+                        <button
+                          type="button"
+                          className="pp-btn pp-btn-outline pp-btn-sm"
+                          onClick={() => handleCancelAppointment(appointment.id)}
+                        >
+                          Cancel
+                        </button>
                       </div>
                     </div>
-                    <div className="pp-appointment-actions">
-                      <button
-                        type="button"
-                        className="pp-btn pp-btn-outline pp-btn-sm"
-                        onClick={() => handleCancelAppointment(appt.id)}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
@@ -238,23 +284,28 @@ const PatientPortal = () => {
                       <td colSpan="4">No health queries found.</td>
                     </tr>
                   ) : (
-                    queries.slice(0, 5).map((q) => (
-                      <tr key={q.id}>
+                    queries.slice(0, 5).map((query) => (
+                      <tr key={query.id}>
                         <td>
-                          <strong>{q.title}</strong>
-                          {q.symptomText && <div className="pp-cell-note">{q.symptomText.slice(0, 80)}{q.symptomText.length > 80 ? "…" : ""}</div>}
+                          <strong>{query.title}</strong>
+                          {query.symptomText && (
+                            <div className="pp-cell-note">
+                              {query.symptomText.slice(0, 80)}
+                              {query.symptomText.length > 80 ? "..." : ""}
+                            </div>
+                          )}
                         </td>
-                        <td>{fmtDate(q.createdAt)}</td>
+                        <td>{fmtDate(query.createdAt)}</td>
                         <td>
-                          <span className={`pp-status-badge ${statusBadge(q.isResolved)}`}>
-                            {q.isResolved ? "Resolved" : "In Progress"}
+                          <span className={`pp-status-badge ${statusBadge(query.isResolved)}`}>
+                            {query.isResolved ? "Resolved" : "In Progress"}
                           </span>
                         </td>
                         <td>
                           <button
                             type="button"
                             className="pp-btn pp-btn-primary pp-btn-sm"
-                            onClick={() => navigate(`/patient-portal/health-queries/${q.id}`)}
+                            onClick={() => navigate(`/patient-portal/health-queries/${query.id}`)}
                           >
                             View
                           </button>

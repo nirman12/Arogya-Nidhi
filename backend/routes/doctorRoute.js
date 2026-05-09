@@ -3,8 +3,10 @@ import {
   appointmentCancel,
   appointmentComplete,
   appointmentsDoctor,
+  doctorAiSummaries,
   doctorDashboard,
   doctorList,
+  doctorPatientHistory,
   doctorProfile,
   loginDoctor,
   updateDoctorProfile,
@@ -22,6 +24,8 @@ doctorRouter.get("/appointments", authDoctor, appointmentsDoctor);
 doctorRouter.post("/complete-appointment", authDoctor, validate(appointmentIdSchema), appointmentComplete);
 doctorRouter.post("/cancel-appointment", authDoctor, validate(appointmentIdSchema), appointmentCancel);
 doctorRouter.get("/dashboard", authDoctor, doctorDashboard);
+doctorRouter.get("/ai-summaries", authDoctor, doctorAiSummaries);
+doctorRouter.get("/patient/:patientId/history", authDoctor, doctorPatientHistory);
 doctorRouter.get("/profile", authDoctor, doctorProfile);
 doctorRouter.post("/update-profile", authDoctor, validate(updateDoctorProfileSchema), updateDoctorProfile);
 
