@@ -20,7 +20,8 @@ const PaymentSuccess = () => {
         // /payment-success?appointmentId=xxx&data=yyy
         // But if there was already a ? in our URL, eSewa uses ? again making it malformed.
         // Parse both searchParams and the raw hash/search to be safe.
-        const appointmentId = searchParams.get('appointmentId');
+        const rawAppointmentId = searchParams.get('appointmentId');
+        const appointmentId = rawAppointmentId ? rawAppointmentId.split('?')[0].split('&')[0] : null;
 
         // eSewa may append data with & or ? — check both parsed params and raw URL
         let esewaData = searchParams.get('data');
@@ -52,6 +53,8 @@ const PaymentSuccess = () => {
         if (response.data.success) {
           setVerified(true);
           toast.success('Payment confirmed! Appointment is now active.');
+          navigate(response.data.data?.redirectTo || '/my-appointments', { replace: true });
+          return;
         } else {
           toast.error(response.data.message || 'Payment verification failed');
         }
@@ -64,11 +67,11 @@ const PaymentSuccess = () => {
     };
 
     verifyPayment();
-  }, []);
+  }, [backendUrl, navigate, searchParams]);
 
   // Countdown after loading completes
   useEffect(() => {
-    if (loading) return;
+    if (loading || verified) return;
     const interval = setInterval(() => {
       setCountdown((c) => {
         if (c <= 1) {
@@ -80,7 +83,7 @@ const PaymentSuccess = () => {
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [loading]);
+  }, [loading, navigate, verified]);
 
   if (loading) {
     return (

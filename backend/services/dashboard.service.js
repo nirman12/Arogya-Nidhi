@@ -273,7 +273,7 @@ async function getRecentMedicalHistory(userId) {
 
 // ─── IoT readings ─────────────────────────────────────────────────────────────
 
-const VALID_TEST_TYPES = ['blood_pressure', 'blood_glucose', 'heart_rate', 'spo2', 'temperature', 'weight', 'ecg', 'other'];
+const MAX_TEST_TYPE_LENGTH = 100;
 
 async function getIotReadings(userId, query) {
   const patient = await _requirePatient(userId);
@@ -298,21 +298,34 @@ async function getIotReadingById(userId, readingId) {
 
 async function submitIotTest(userId, body) {
   const patient = await _requirePatient(userId);
-  const { testType, sensorData, resultScore, notes } = body;
+  const { testType, sensorData, readingData, resultScore, notes, normalRange, recordedAt } = body;
+  const normalizedTestType = String(testType || '').trim();
+  const normalizedReadingData = readingData ?? sensorData;
 
-  if (!testType)   throw { status: 400, message: 'testType is required' };
-  if (!sensorData) throw { status: 400, message: 'sensorData is required' };
+  if (!normalizedTestType) throw { status: 400, message: 'testType is required' };
+  if (normalizedTestType.length > MAX_TEST_TYPE_LENGTH) {
+    throw { status: 400, message: `testType must be ${MAX_TEST_TYPE_LENGTH} characters or less` };
+  }
+  if (normalizedReadingData === undefined || normalizedReadingData === null) {
+    throw { status: 400, message: 'readingData is required' };
+  }
 
-  if (!VALID_TEST_TYPES.includes(testType)) {
-    throw { status: 400, message: `Invalid testType. Allowed: ${VALID_TEST_TYPES.join(', ')}` };
+  let parsedScore = null;
+  if (resultScore !== undefined && resultScore !== null) {
+    parsedScore = Number(resultScore);
+    if (Number.isNaN(parsedScore) || parsedScore < 0 || parsedScore > 100) {
+      throw { status: 400, message: 'resultScore must be between 0 and 100' };
+    }
   }
 
   return repo.createIotReading({
     patientId:   patient.id,
-    testType,
-    sensorData,
-    resultScore: resultScore !== undefined ? parseFloat(resultScore) : null,
+    testType:    normalizedTestType,
+    readingData: normalizedReadingData,
+    resultScore: parsedScore,
     notes:       notes || null,
+    normalRange: normalRange ?? null,
+    recordedAt:  recordedAt || null,
   });
 }
 
@@ -541,7 +554,7 @@ export default {
   getRecentIotReadings,
   getIotReadingById,
   submitIotTest,
-  VALID_TEST_TYPES,
+  MAX_TEST_TYPE_LENGTH,
   // queries
   getMyQueries,
   getQueryDetails,

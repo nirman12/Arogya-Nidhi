@@ -208,7 +208,7 @@ export async function getIotReadingById(req, res) {
 
 /**
  * POST /api/patient/iot
- * Body: { testType, sensorData, resultScore?, notes? }
+ * Body: { testType, readingData|sensorData, resultScore?, notes?, normalRange?, recordedAt? }
  */
 export async function submitIotTest(req, res) {
   try {
