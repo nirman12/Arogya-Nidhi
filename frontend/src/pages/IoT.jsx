@@ -650,9 +650,11 @@ const IoTPage = () => {
       await axios.post(
         backendUrl + "/api/patient/iot",
         {
-          testType: "other",
-          sensorData: { test: "reaction_time", mode, reactionTimeMs: resultMs },
+          testType: "reaction_time",
+          readingData: { test: "reaction_time", mode, reactionTimeMs: resultMs, resultScore: score },
           resultScore: score,
+          normalRange: "<=300 ms",
+          recordedAt: new Date().toISOString(),
           notes: `Reaction Time (${mode}): ${resultMs}ms`,
         },
         { headers }
@@ -676,14 +678,17 @@ const IoTPage = () => {
       await axios.post(
         backendUrl + "/api/patient/iot",
         {
-          testType: "other",
-          sensorData: {
+          testType: "tremor_analysis",
+          readingData: {
             test: "tremor_analysis",
             amplitude,
             pointCount: data.length,
+            resultScore: score,
             sampleData: data.slice(0, 20), // send first 20 points as sample
           },
           resultScore: score,
+          normalRange: "0-2 u amplitude",
+          recordedAt: new Date().toISOString(),
           notes: `Tremor Analysis: amplitude ${amplitude}u, ${data.length} data points`,
         },
         { headers }

@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 const APPOINTMENT_STATUSES = ['pending', 'confirmed', 'cancelled', 'completed', 'no_show', 'PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW'];
-const VALID_TEST_TYPES = ['blood_pressure', 'blood_glucose', 'heart_rate', 'spo2', 'temperature', 'weight', 'ecg', 'other'];
 const MAX_LIMIT = 50;
 
 // ─── Shared ───────────────────────────────────────────────────────────────────
@@ -42,16 +41,22 @@ export const getAllAppointmentsSchema = z.object({
 
 export const submitIotTestSchema = z.object({
   body: z.object({
-    testType:    z.enum(VALID_TEST_TYPES),
-    sensorData:  z.record(z.string(), z.unknown()).or(z.array(z.unknown())),
+    testType:    z.string().trim().min(1).max(100),
+    readingData: z.record(z.string(), z.unknown()).or(z.array(z.unknown())).optional(),
+    sensorData:  z.record(z.string(), z.unknown()).or(z.array(z.unknown())).optional(),
     resultScore: z.coerce.number().min(0).max(100).optional().nullable(),
     notes:       z.string().max(500).optional().nullable(),
-  }),
+    normalRange: z.string().max(100).optional().nullable(),
+    recordedAt:  z.string().datetime({ offset: true }).optional().nullable(),
+  }).refine(
+    (data) => data.readingData !== undefined || data.sensorData !== undefined,
+    { message: 'readingData or sensorData is required' }
+  ),
 });
 
 export const getIotReadingsSchema = z.object({
   query: paginationQuery.extend({
-    testType: z.enum(VALID_TEST_TYPES).optional(),
+    testType: z.string().trim().min(1).max(100).optional(),
   }),
 });
 

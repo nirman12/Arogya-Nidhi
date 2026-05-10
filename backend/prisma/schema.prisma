@@ -201,16 +201,18 @@ model TriageDecision {
 }
 
 model IotReading {
-  id          String   @id @default(uuid()) @db.Uuid
-  patientId   String   @map("patient_id") @db.Uuid
-  testType    String   @map("test_type") @db.VarChar
-  sensorData  Json     @map("sensor_data")
-  resultScore Float?   @map("result_score")
-  notes       String?  @db.Text
-  recordedAt  DateTime @default(now()) @map("recorded_at")
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  patientId   String    @map("patient_id") @db.Uuid
+  testType    String    @map("test_type") @db.VarChar(100)
+  readingData Json?     @map("reading_data")
+  normalRange String?   @map("normal_range") @db.VarChar(100)
+  recordedAt  DateTime? @map("recorded_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   patient Patient @relation(fields: [patientId], references: [id])
 
+  @@index([patientId], name: "idx_iot_readings_patient_id")
+  @@index([recordedAt], name: "idx_iot_readings_recorded_at")
   @@map("iot_readings")
 }
 

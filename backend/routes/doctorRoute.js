@@ -6,6 +6,7 @@ import {
   doctorAiSummaries,
   doctorDashboard,
   doctorList,
+  doctorPatientIot,
   doctorPatientHistory,
   doctorProfile,
   loginDoctor,
@@ -25,6 +26,7 @@ doctorRouter.post("/complete-appointment", authDoctor, validate(appointmentIdSch
 doctorRouter.post("/cancel-appointment", authDoctor, validate(appointmentIdSchema), appointmentCancel);
 doctorRouter.get("/dashboard", authDoctor, doctorDashboard);
 doctorRouter.get("/ai-summaries", authDoctor, doctorAiSummaries);
+doctorRouter.get("/patient-iot/:patientId", authDoctor, doctorPatientIot);
 doctorRouter.get("/patient/:patientId/history", authDoctor, doctorPatientHistory);
 doctorRouter.get("/profile", authDoctor, doctorProfile);
 doctorRouter.post("/update-profile", authDoctor, validate(updateDoctorProfileSchema), updateDoctorProfile);

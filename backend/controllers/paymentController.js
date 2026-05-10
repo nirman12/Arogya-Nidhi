@@ -139,10 +139,12 @@ export const esewaSuccess = async (req, res) => {
       // Sandbox verification is unreliable — trust the callback and continue
     }
 
+    const paidAt = new Date().toISOString();
+
     // Update payment record
     const { data: updatedPayment, error: updateError } = await supabase
       .from('payments')
-      .update({ status: 'PAID', paid_at: new Date().toISOString() })
+      .update({ status: 'PAID', paid_at: paidAt })
       .eq('gateway_ref', transactionUuid)
       .eq('gateway', 'esewa')
       .select();
@@ -155,30 +157,54 @@ export const esewaSuccess = async (req, res) => {
     }
 
     // If no rows matched, the gateway_ref might not match — update by appointmentId as fallback
+    let paidPayment = Array.isArray(updatedPayment) ? updatedPayment[0] : null;
     if (!updatedPayment || updatedPayment.length === 0) {
       console.warn('No payment matched gateway_ref, trying appointmentId fallback');
-      const { error: fallbackError } = await supabase
+      const { data: fallbackPayment, error: fallbackError } = await supabase
         .from('payments')
-        .update({ status: 'PAID', paid_at: new Date().toISOString() })
+        .update({ status: 'PAID', paid_at: paidAt })
         .eq('appointment_id', appointmentId)
         .eq('gateway', 'esewa')
-        .eq('status', 'INITIATED');
-      if (fallbackError) console.error('Fallback payment update error:', fallbackError);
+        .eq('status', 'INITIATED')
+        .select();
+
+      if (fallbackError) {
+        console.error('Fallback payment update error:', fallbackError);
+        return res.status(500).json({ success: false, message: 'Failed to update payment record' });
+      }
+
+      paidPayment = Array.isArray(fallbackPayment) ? fallbackPayment[0] : null;
     }
 
     // Update appointment to CONFIRMED
-    const { error: apptError } = await supabase
+    const { data: confirmedAppointment, error: apptError } = await supabase
       .from('appointments')
       .update({ status: 'CONFIRMED' })
-      .eq('id', appointmentId);
+      .eq('id', appointmentId)
+      .select('id,status')
+      .maybeSingle();
 
     if (apptError) {
       console.error('Appointment update error:', apptError);
       return res.status(500).json({ success: false, message: 'Failed to confirm appointment' });
     }
 
+    if (!confirmedAppointment) {
+      return res.status(404).json({ success: false, message: 'Appointment not found' });
+    }
+
     console.log('Payment and appointment updated successfully for:', appointmentId);
-    res.json({ success: true, message: 'Payment successful' });
+    res.json({
+      success: true,
+      message: 'Payment successful',
+      data: {
+        appointmentId: confirmedAppointment.id,
+        appointmentStatus: confirmedAppointment.status,
+        paymentId: paidPayment?.id || null,
+        paymentStatus: 'PAID',
+        redirectTo: '/my-appointments',
+      },
+    });
   } catch (error) {
     console.error('eSewa success error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });

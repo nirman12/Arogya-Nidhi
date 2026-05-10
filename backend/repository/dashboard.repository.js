@@ -11,14 +11,18 @@ const DOCTOR_SPECIALTY_ALIASES = {
 
 function normalizeIotReading(row) {
   if (!row) return row;
-  const sensorData = row.sensorData ?? row.sensor_data ?? {};
+  const readingData = row.readingData ?? row.reading_data ?? row.sensorData ?? row.sensor_data ?? {};
+  const sensorData = readingData && typeof readingData === 'object' ? readingData : { value: readingData };
+  const scoreValue = row.resultScore ?? row.result_score ?? sensorData?.resultScore ?? sensorData?.score ?? null;
   return {
     ...row,
+    readingData: sensorData,
     sensorData,
-    resultScore: row.resultScore ?? row.result_score ?? sensorData?.resultScore ?? null,
-    testType: row.testType ?? row.test_type ?? null,
+    resultScore: scoreValue === null || scoreValue === undefined ? null : Number(scoreValue),
+    testType: row.testType ?? row.test_type ?? sensorData?.test ?? null,
+    normalRange: row.normalRange ?? row.normal_range ?? null,
     recordedAt: row.recordedAt ?? row.recorded_at ?? null,
-    createdAt: row.createdAt ?? row.recorded_at ?? row.recordedAt ?? null,
+    createdAt: row.createdAt ?? row.created_at ?? row.recorded_at ?? row.recordedAt ?? null,
   };
 }
 
@@ -316,17 +320,27 @@ async function findIotReadingById(id, patientId) {
 }
 
 async function createIotReading(data) {
-  const sensorData = {
-    ...(data.sensorData || {}),
-    resultScore: data.resultScore ?? null,
-    notes: data.notes ?? null,
-  };
+  const readingInput = data.readingData ?? data.sensorData ?? {};
+  const readingData = Array.isArray(readingInput)
+    ? { samples: readingInput }
+    : readingInput && typeof readingInput === 'object'
+      ? { ...readingInput }
+      : { value: readingInput };
+
+  if (data.resultScore !== undefined && data.resultScore !== null) {
+    readingData.resultScore = data.resultScore;
+  }
+  if (data.notes) {
+    readingData.notes = data.notes;
+  }
 
   const insertData = {
     patient_id: data.patientId,
     test_type: data.testType,
-    sensor_data: sensorData,
+    reading_data: readingData,
+    recorded_at: data.recordedAt || new Date().toISOString(),
   };
+  if (data.normalRange !== undefined) insertData.normal_range = data.normalRange;
 
   const { data: created, error } = await supabase.from('iot_readings').insert(insertData).select().maybeSingle();
   if (error) throw error;

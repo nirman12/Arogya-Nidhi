@@ -2,6 +2,24 @@ import supabase from "../config/supabase.js";
 import { generateAccessToken } from "../util/token.util.js";
 import service from "../services/dashboard.service.js";
 
+function normalizeIotReading(row) {
+  if (!row) return row;
+  const readingData = row.reading_data ?? row.sensor_data ?? {};
+  const sensorData = readingData && typeof readingData === "object" ? readingData : { value: readingData };
+  const scoreValue = sensorData.resultScore ?? sensorData.score ?? null;
+
+  return {
+    ...row,
+    readingData: sensorData,
+    sensorData,
+    resultScore: scoreValue === null || scoreValue === undefined ? null : Number(scoreValue),
+    testType: row.test_type || sensorData.test || null,
+    normalRange: row.normal_range || null,
+    recordedAt: row.recorded_at || null,
+    createdAt: row.created_at || row.recorded_at || null,
+  };
+}
+
 /**
  * Resolve doctor_profiles.id from logged-in user.
  * Supports:
@@ -702,7 +720,7 @@ const doctorPatientHistory = async (req, res) => {
 
     const { data: labReports, error: labError } = await supabase
       .from("iot_readings")
-      .select("id,test_type,recorded_at,sensor_data")
+      .select("id,test_type,reading_data,normal_range,recorded_at,created_at")
       .eq("patient_id", patient.id)
       .order("recorded_at", { ascending: false })
       .limit(10);
@@ -736,6 +754,56 @@ const doctorPatientHistory = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error?.message || "Failed to load patient history",
+    });
+  }
+};
+
+const doctorPatientIot = async (req, res) => {
+  try {
+    const docId = await resolveDoctorProfileId(req);
+    const patientId = String(req.params.patientId || "").trim();
+
+    if (!patientId) {
+      return res.status(400).json({
+        success: false,
+        message: "Patient id is required",
+      });
+    }
+
+    const { data: appointment, error: appointmentError } = await supabase
+      .from("appointments")
+      .select("id")
+      .eq("doctor_id", docId)
+      .eq("patient_id", patientId)
+      .limit(1)
+      .maybeSingle();
+
+    if (appointmentError) throw appointmentError;
+
+    if (!appointment) {
+      return res.status(403).json({
+        success: false,
+        message: "No appointment found for this patient",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("iot_readings")
+      .select("id,test_type,reading_data,normal_range,recorded_at,created_at")
+      .eq("patient_id", patientId)
+      .order("recorded_at", { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      success: true,
+      data: (data || []).map(normalizeIotReading),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };
@@ -858,6 +926,7 @@ export {
   doctorDashboard,
   doctorAiSummaries,
   doctorPatientHistory,
+  doctorPatientIot,
   doctorProfile,
   updateDoctorProfile,
   getHealthQueries,
