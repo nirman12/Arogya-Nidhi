@@ -2,6 +2,33 @@ import crypto from 'crypto';
 import axios from 'axios';
 import supabase from '../config/supabase.js';
 
+const trimTrailingSlashes = (value) => String(value || '').replace(/\/+$/, '');
+
+const getFrontendBaseUrl = () => (
+  process.env.FRONTEND_URL
+  || process.env.CLIENT_URL
+  || process.env.VITE_FRONTEND_URL
+  || 'http://localhost:5173'
+);
+
+const buildEsewaCallbackUrl = (configuredUrl, fallbackPath, appointmentId) => {
+  const fallbackUrl = `${trimTrailingSlashes(getFrontendBaseUrl())}${fallbackPath}`;
+  const rawUrl = configuredUrl || fallbackUrl;
+
+  try {
+    const url = new URL(rawUrl);
+    const collapsedPath = url.pathname.replace(/\/{2,}/g, '/') || fallbackPath;
+    const normalizedPath = collapsedPath === '/' ? fallbackPath : collapsedPath.replace(/\/+$/, '');
+    url.pathname = normalizedPath || fallbackPath;
+    url.searchParams.set('appointmentId', appointmentId);
+    return url.toString();
+  } catch {
+    const url = new URL(fallbackUrl);
+    url.searchParams.set('appointmentId', appointmentId);
+    return url.toString();
+  }
+};
+
 // eSewa payment initiation
 export const esewaInitiate = async (req, res) => {
   try {
@@ -68,6 +95,9 @@ export const esewaInitiate = async (req, res) => {
       return res.status(500).json({ success: false, message: 'Failed to create payment record' });
     }
 
+    const successUrl = buildEsewaCallbackUrl(process.env.ESEWA_SUCCESS_URL, '/payment-success', appointmentId);
+    const failureUrl = buildEsewaCallbackUrl(process.env.ESEWA_FAILURE_URL, '/payment-failure', appointmentId);
+
     // Return payload for frontend to submit — all values as strings to match eSewa's validation
     res.json({
       success: true,
@@ -79,8 +109,8 @@ export const esewaInitiate = async (req, res) => {
         total_amount: String(totalAmount),
         transaction_uuid: transactionUuid,
         product_code: productCode,
-        success_url: `${process.env.ESEWA_SUCCESS_URL}?appointmentId=${appointmentId}`,
-        failure_url: `${process.env.ESEWA_FAILURE_URL}?appointmentId=${appointmentId}`,
+        success_url: successUrl,
+        failure_url: failureUrl,
         signed_field_names: 'total_amount,transaction_uuid,product_code',
         signature: signature
       }
@@ -98,7 +128,7 @@ export const esewaSuccess = async (req, res) => {
 
     // eSewa may append ?data= directly onto appointmentId if the success_url already had a ?
     // Strip anything after ? from appointmentId to get the clean UUID
-    const appointmentId = rawAppointmentId ? rawAppointmentId.split('?')[0] : null;
+    const appointmentId = rawAppointmentId ? rawAppointmentId.split(/[?&]/)[0] : null;
 
     if (!appointmentId || !encodedData) {
       return res.status(400).json({ success: false, message: 'Missing transaction data' });

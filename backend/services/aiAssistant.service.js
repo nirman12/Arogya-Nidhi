@@ -1245,6 +1245,7 @@ async function processMessage(userId, message, options = {}) {
           patientNotes: session.draft.notes || null,
         }, {
           allowUnverifiedDoctor: true,
+          status: 'CONFIRMED',
         });
         resetSession(sessionKey);
         return {

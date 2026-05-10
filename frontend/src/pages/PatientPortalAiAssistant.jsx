@@ -784,7 +784,14 @@ const PatientPortalAiAssistant = () => {
                           <CheckCircleIcon className="paa-success-icon" />
                           <div>
                             <div className="paa-success-title">Appointment booked</div>
-                            <div className="paa-success-subtitle">You can review it in your patient dashboard.</div>
+                            <div className="paa-success-subtitle">You can review it in My Appointments.</div>
+                            <button
+                              type="button"
+                              className="paa-action-chip"
+                              onClick={() => navigate("/my-appointments")}
+                            >
+                              View My Appointments
+                            </button>
                           </div>
                         </div>
                       )}
