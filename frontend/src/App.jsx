@@ -64,6 +64,17 @@ const RoleAwareHome = () => {
 
 const App = () => {
   const location = useLocation();
+  const normalizedPath = location.pathname.replace(/^\/{2,}/, "/");
+
+  if (normalizedPath !== location.pathname) {
+    return (
+      <Navigate
+        to={`${normalizedPath}${location.search}${location.hash}`}
+        replace
+      />
+    );
+  }
+
   const isAdminPortalRoute = location.pathname.startsWith("/admin-portal");
   const isPatientPortalRoute =
     location.pathname.startsWith("/patient-portal") ||

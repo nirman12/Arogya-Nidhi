@@ -4,6 +4,7 @@ import authRepo from '../repository/auth.repository.js';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DEFAULT_BOOKING_TIME_SLOTS = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00'];
 const TRIAGE_URGENCY_LEVELS = new Set(['low', 'medium', 'high']);
+const BOOKING_STATUSES = new Set(['pending', 'confirmed', 'PENDING', 'CONFIRMED']);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -181,6 +182,8 @@ async function bookAppointment(userId, body, options = {}) {
   const patient = await _requirePatient(userId);
   const { doctorId, scheduledAt, durationMinutes, patientNotes } = body;
   const normalizedDoctorId = typeof doctorId === 'string' ? doctorId.trim() : doctorId;
+  const requestedStatus = typeof options.status === 'string' ? options.status.trim() : '';
+  const status = BOOKING_STATUSES.has(requestedStatus) ? requestedStatus : 'pending';
 
   if (!normalizedDoctorId || normalizedDoctorId === 'undefined' || normalizedDoctorId === 'null') {
     throw { status: 400, message: 'doctorId is required' };
@@ -213,7 +216,7 @@ async function bookAppointment(userId, body, options = {}) {
     scheduledAt:     scheduledDate,
     durationMinutes: durationMinutes || 30,
     patientNotes:    patientNotes || null,
-    status:          'pending',
+    status,
   });
 }
 
