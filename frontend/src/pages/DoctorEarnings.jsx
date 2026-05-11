@@ -42,11 +42,12 @@ const DoctorEarnings = () => {
           axios.get(backendUrl + "/api/doctor/appointments", { headers }).catch(() => ({ data: {} })),
         ]);
         setDash(dashData?.success ? dashData.dashData : null);
-        setTransactions(apptData?.success ? (apptData.appointments || []).filter((appointment) => appointment.amount || appointment.payment) : []);
+        // Only keep appointments that have at least one PAID payment
+        const paid = (apptData?.appointments || apptData?.data?.appointments || [])
+          .filter((a) => (a.payment || []).some((p) => p.status === "PAID"));
+        setTransactions(paid);
       } catch (err) {
         console.error(err);
-        setDash(null);
-        setTransactions([]);
       } finally {
         setLoading(false);
       }
@@ -54,18 +55,14 @@ const DoctorEarnings = () => {
     load();
   }, [backendUrl, token]);
 
-  const monthlyData = transactions.reduce((acc, transaction) => {
-    const date = transaction.scheduled_at || transaction.created_at || transaction.createdAt;
-    if (!date) return acc;
-    const month = new Date(date).toLocaleString("en-US", { month: "short" });
-    const existing = acc.find((item) => item.month === month);
-    if (existing) existing.earnings += Number(transaction.amount || 0);
-    else acc.push({ month, earnings: Number(transaction.amount || 0) });
-    return acc;
-  }, []);
+  // Use backend-computed monthly earnings (already correct)
+  const monthlyData = dash?.monthlyEarnings || [];
 
-  const patientName = (transaction) =>
-    transaction?.patient?.users?.name || transaction?.patient?.user?.name || transaction?.patient_name || "-";
+  // Helper: get the PAID payment record from an appointment
+  const getPaidPayment = (appt) => (appt.payment || []).find((p) => p.status === "PAID");
+
+  const patientName = (appt) =>
+    appt?.patient?.users?.name || appt?.patient?.user?.name || appt?.patient_name || "—";
 
   return (
     <div className="pp-page">
@@ -102,7 +99,7 @@ const DoctorEarnings = () => {
             <h2 className="pp-section-title">Monthly Earnings Trend</h2>
             <div className="pp-panel">
               {monthlyData.length === 0 ? (
-                <div className="pp-stat-label">No earnings data available yet.</div>
+                <div className="pp-stat-label" style={{ padding: "1rem", color: "#94a3b8" }}>No monthly earnings data yet.</div>
               ) : (
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={monthlyData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -136,20 +133,19 @@ const DoctorEarnings = () => {
                 </thead>
                 <tbody>
                   {transactions.length === 0 ? (
-                    <tr><td colSpan="5">No transactions found.</td></tr>
-                  ) : transactions.map((transaction) => (
-                    <tr key={transaction.id}>
-                      <td>{transaction.scheduled_at ? new Date(transaction.scheduled_at).toLocaleDateString() : "-"}</td>
-                      <td>{patientName(transaction)}</td>
-                      <td>{transaction.type || "Consultation"}</td>
-                      <td>Rs {transaction.amount != null ? Number(transaction.amount).toLocaleString() : "0"}</td>
-                      <td>
-                        <span className={`pp-status-badge ${transaction.payment ? "pp-status-resolved" : "pp-status-pending"}`}>
-                          {transaction.payment ? "Paid" : "Pending"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                    <tr><td colSpan="5" style={{ textAlign: "center", color: "#94a3b8" }}>No paid transactions yet.</td></tr>
+                  ) : transactions.map((appt) => {
+                    const payment = getPaidPayment(appt);
+                    return (
+                      <tr key={appt.id}>
+                        <td>{payment?.paid_at ? new Date(payment.paid_at).toLocaleDateString() : new Date(appt.scheduled_at).toLocaleDateString()}</td>
+                        <td>{patientName(appt)}</td>
+                        <td>Consultation</td>
+                        <td>Rs {payment?.amount != null ? Number(payment.amount).toLocaleString() : "—"}</td>
+                        <td><span className="pp-status-badge pp-status-resolved">Paid</span></td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

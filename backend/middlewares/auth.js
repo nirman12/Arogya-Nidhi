@@ -2,6 +2,7 @@ import { verifyAccessToken } from '../util/token.util.js';
 import { sendError } from '../util/response.util.js';
 import supabase from '../config/supabase.js';
 import repo from '../repository/auth.repository.js';
+import jwt from 'jsonwebtoken';
 
 // Accepts either the app's JWT or a Supabase access token (Bearer). If Supabase token
 // is provided, validates with Supabase and ensures a corresponding local user exists.
@@ -60,17 +61,35 @@ export async function authenticate(req, res, next) {
   try {
     const { data, error } = await supabase.auth.getUser(token);
     if (error || !data?.user) {
+      // If network is unreachable, try decoding the Supabase JWT locally
+      try {
+        const payload = jwt.verify(token, process.env.SUPABASE_JWT_SECRET || process.env.JWT_SECRET);
+        if (payload?.sub) {
+          const suppliedRole = payload?.user_metadata?.role || payload?.role || 'patient';
+          req.user = { userId: payload.sub, id: payload.sub, sub: payload.sub, email: payload.email, role: suppliedRole };
+          return next();
+        }
+      } catch (_) { /* ignore */ }
       return sendError(res, 'Invalid or expired token', 401);
     }
 
     const sUser = data.user;
-
-    // Map Supabase user to request user object. No local DB creation.
     const suppliedRole = sUser.user_metadata?.role || 'patient';
     req.user = { userId: sUser.id, id: sUser.id, sub: sUser.id, email: sUser.email, role: suppliedRole };
     return next();
   } catch (err) {
-    console.error('Supabase token validation error', err);
+    // Network unreachable — try decoding Supabase JWT locally
+    if (err?.cause?.code === 'ENETUNREACH' || err?.message?.includes('fetch failed')) {
+      try {
+        const payload = jwt.verify(token, process.env.SUPABASE_JWT_SECRET || process.env.JWT_SECRET);
+        if (payload?.sub) {
+          const suppliedRole = payload?.user_metadata?.role || payload?.role || 'patient';
+          req.user = { userId: payload.sub, id: payload.sub, sub: payload.sub, email: payload.email, role: suppliedRole };
+          return next();
+        }
+      } catch (_) { /* ignore */ }
+    }
+    console.error('Supabase token validation error', err?.message || err);
     return sendError(res, 'Invalid or expired token', 401);
   }
 }
