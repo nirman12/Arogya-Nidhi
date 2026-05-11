@@ -14,10 +14,13 @@ const DoctorAISummaries = () => {
   const [summaries, setSummaries] = useState([]);
   const [selected, setSelected] = useState(null);
   const [query, setQuery] = useState("");
+  const [queryDraft, setQueryDraft] = useState("");
 
   useEffect(() => {
     if (requestedPatient?.patientName || requestedPatient?.patientEmail) {
-      setQuery(requestedPatient.patientName || requestedPatient.patientEmail);
+      const requestedQuery = requestedPatient.patientName || requestedPatient.patientEmail;
+      setQuery(requestedQuery);
+      setQueryDraft(requestedQuery);
     }
   }, [requestedPatient?.patientName, requestedPatient?.patientEmail]);
 
@@ -49,9 +52,28 @@ const DoctorAISummaries = () => {
       !needle ||
       (summary.patientName || "").toLowerCase().includes(needle) ||
       (summary.patientEmail || "").toLowerCase().includes(needle) ||
-      (summary.aiSummary || "").toLowerCase().includes(needle)
+      (summary.aiSummary || "").toLowerCase().includes(needle) ||
+      (summary.medicalHistory || "").toLowerCase().includes(needle) ||
+      (summary.allergies || "").toLowerCase().includes(needle)
     );
   });
+
+  const runSearch = () => {
+    const nextQuery = queryDraft.trim();
+    setQuery(nextQuery);
+    const match = summaries.find((summary) => {
+      const needle = nextQuery.toLowerCase();
+      return (
+        !needle ||
+        (summary.patientName || "").toLowerCase().includes(needle) ||
+        (summary.patientEmail || "").toLowerCase().includes(needle) ||
+        (summary.aiSummary || "").toLowerCase().includes(needle) ||
+        (summary.medicalHistory || "").toLowerCase().includes(needle) ||
+        (summary.allergies || "").toLowerCase().includes(needle)
+      );
+    });
+    setSelected(match || null);
+  };
 
   useEffect(() => {
     if (!requestedPatient) return;
@@ -118,13 +140,32 @@ const DoctorAISummaries = () => {
                 </div>
               )}
 
-              <input
-                className="pp-chat-input"
-                style={{ width: "100%" }}
-                placeholder="Search by patient name, email, or summary text..."
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <input
+                  className="pp-chat-input"
+                  style={{ flex: "1 1 260px" }}
+                  placeholder="Search by patient, history, allergies, or summary..."
+                  value={queryDraft}
+                  onChange={(event) => setQueryDraft(event.target.value)}
+                  onKeyDown={(event) => event.key === "Enter" && runSearch()}
+                />
+                <button type="button" className="pp-btn pp-btn-primary" onClick={runSearch}>
+                  Search
+                </button>
+                {query && (
+                  <button
+                    type="button"
+                    className="pp-btn pp-btn-outline"
+                    onClick={() => {
+                      setQuery("");
+                      setQueryDraft("");
+                      setSelected(null);
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
           </section>
 

@@ -450,9 +450,156 @@ const generateGeminiText = async (prompt, { temperature = 0.3, maxOutputTokens =
   return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
 };
 
+const SPECIALTY_KEYWORDS = [
+  {
+    specialty: 'Cardiology',
+    terms: ['chest pain', 'chest pressure', 'heart', 'palpitation', 'palpitations', 'shortness of breath', 'breathless', 'bp', 'blood pressure', 'fainting'],
+    reason: 'heart, chest, blood pressure, or breathing symptoms are best assessed by a cardiology-focused doctor.',
+  },
+  {
+    specialty: 'Neurologist',
+    terms: ['headache', 'migraine', 'seizure', 'dizziness', 'vertigo', 'numbness', 'weakness', 'stroke', 'memory', 'confusion', 'tingling'],
+    reason: 'headache, dizziness, weakness, numbness, or seizure-like symptoms point toward the nervous system.',
+  },
+  {
+    specialty: 'Dermatologist',
+    terms: ['rash', 'skin', 'itching', 'itchy', 'acne', 'eczema', 'hives', 'mole', 'lesion', 'hair loss'],
+    reason: 'skin, rash, itching, acne, or hair-related symptoms fit dermatology care.',
+  },
+  {
+    specialty: 'Gastroenterologist',
+    terms: ['stomach', 'abdominal', 'abdomen', 'vomit', 'vomiting', 'nausea', 'diarrhea', 'constipation', 'acidity', 'reflux', 'gastric', 'blood in stool'],
+    reason: 'digestive symptoms such as abdominal pain, vomiting, reflux, or bowel changes fit gastroenterology.',
+  },
+  {
+    specialty: 'Gynecologist',
+    terms: ['period', 'menstrual', 'pregnant', 'pregnancy', 'vaginal', 'pelvic', 'uterus', 'ovary', 'breast lump', 'contraception'],
+    reason: 'menstrual, pregnancy, pelvic, or reproductive-health symptoms fit gynecology.',
+  },
+  {
+    specialty: 'Pediatricians',
+    terms: ['child', 'children', 'baby', 'infant', 'toddler', 'kid', 'newborn', 'pediatric'],
+    reason: 'the concern is for a child, so pediatric care is the most useful starting point.',
+  },
+];
+
+const EMERGENCY_TERMS = [
+  'severe chest pain',
+  'crushing chest',
+  'trouble breathing',
+  'cannot breathe',
+  'fainting',
+  'stroke',
+  'face droop',
+  'heavy bleeding',
+  'suicidal',
+  'unconscious',
+];
+
+const normalizeRecommendedSpecialty = (value = '') => {
+  const normalized = String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+  const aliases = {
+    cardiologist: 'Cardiology',
+    cardiology: 'Cardiology',
+    neuro: 'Neurologist',
+    neurology: 'Neurologist',
+    neurologist: 'Neurologist',
+    dermatologist: 'Dermatologist',
+    dermatology: 'Dermatologist',
+    gastroenterology: 'Gastroenterologist',
+    gastroenterologist: 'Gastroenterologist',
+    gynecology: 'Gynecologist',
+    gynecologist: 'Gynecologist',
+    pediatrician: 'Pediatricians',
+    pediatricians: 'Pediatricians',
+    pediatrics: 'Pediatricians',
+    general: 'General physician',
+    physician: 'General physician',
+    'general medicine': 'General physician',
+    'general physician': 'General physician',
+  };
+  return aliases[normalized] || (value ? String(value).trim() : 'General physician');
+};
+
+const inferSpecialtyFromSymptoms = (symptomText = '') => {
+  const text = String(symptomText || '').toLowerCase();
+  const match = SPECIALTY_KEYWORDS.find((item) => item.terms.some((term) => text.includes(term)));
+  const urgent = EMERGENCY_TERMS.some((term) => text.includes(term));
+
+  if (match) {
+    return {
+      specialty: match.specialty,
+      reason: match.reason,
+      urgent,
+    };
+  }
+
+  return {
+    specialty: 'General physician',
+    reason: 'the symptoms need an initial clinical assessment before deciding if another specialist is needed.',
+    urgent,
+  };
+};
+
+const buildSpecialtyRecommendationReply = ({ specialty, reason, urgent }) => {
+  const urgencyText = urgent
+    ? ' If this is severe, sudden, worsening, or associated with danger signs, seek emergency care now.'
+    : '';
+  return `Recommended specialty: ${specialty}. ${reason}${urgencyText}`;
+};
+
+const getLatestSymptomText = (messages = []) => {
+  const latest = [...(messages || [])]
+    .reverse()
+    .find((message) => String(message?.text || '').trim());
+  return String(latest?.text || '').trim();
+};
+
 export const diagnose = async (req, res) => {
   try {
     const { messages } = req.body;
+    const symptomText = getLatestSymptomText(messages);
+
+    if (!symptomText) {
+      return res.json({
+        success: true,
+        specialty: 'General physician',
+        reply: 'Please describe your symptoms so I can recommend the most useful specialty.',
+      });
+    }
+
+    let recommendation = inferSpecialtyFromSymptoms(symptomText);
+    const specialtyPrompt = [
+      'You are a medical appointment triage assistant.',
+      'Read the patient symptom text and choose exactly one most useful specialty.',
+      'Return ONLY valid JSON with this shape:',
+      '{"specialty":"Cardiology|Neurologist|Dermatologist|Gastroenterologist|Gynecologist|Pediatricians|General physician","reason":"one short sentence","urgent":true|false}',
+      'Rules:',
+      '- Do not role-play as a patient.',
+      '- Do not ask follow-up questions.',
+      '- Decide the specialty in this single reply.',
+      '- Use urgent=true only for danger signs such as severe chest pain, stroke symptoms, heavy bleeding, fainting, or serious breathing trouble.',
+      `Patient symptom text: ${symptomText}`,
+    ].join('\n');
+
+    const aiText = await generateGeminiText(specialtyPrompt, { temperature: 0.15, maxOutputTokens: 220 });
+    const parsed = extractJson(aiText);
+
+    if (parsed?.specialty) {
+      recommendation = {
+        specialty: normalizeRecommendedSpecialty(parsed.specialty),
+        reason: safeText(parsed.reason, recommendation.reason),
+        urgent: Boolean(parsed.urgent),
+      };
+    }
+
+    return res.json({
+      success: true,
+      specialty: recommendation.specialty,
+      urgent: recommendation.urgent,
+      reply: buildSpecialtyRecommendationReply(recommendation),
+    });
+
     console.log(
       'diagnose called, received messages:',
       Array.isArray(messages) ? messages.length : typeof messages

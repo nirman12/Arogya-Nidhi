@@ -16,8 +16,17 @@ const authDoctor = async (req, res, next) => {
     // First try backend JWT (signed with JWT_SECRET)
     try {
       const token_decode = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = { docId: token_decode.id, userId: token_decode.id, id: token_decode.id, sub: token_decode.id };
-      try { console.debug('authDoctor: validated backend JWT', { id: token_decode.id }); } catch(_) {}
+      const userId = token_decode.userId || token_decode.sub || token_decode.id;
+      const docId = token_decode.docId || token_decode.doctorId || token_decode.doctor_id || token_decode.id;
+      req.user = {
+        ...token_decode,
+        docId,
+        doctorId: docId,
+        userId,
+        id: userId,
+        sub: userId,
+      };
+      try { console.debug('authDoctor: validated backend JWT', { userId, docId }); } catch(_) {}
       return next();
     } catch (jwtErr) {
       // not a backend JWT — fall through to try Supabase token
@@ -37,9 +46,30 @@ const authDoctor = async (req, res, next) => {
       }
       const sUser = data.user;
       try { console.debug('authDoctor: validated Supabase token', { id: sUser.id, metadata: sUser.user_metadata }); } catch(_) {}
-      // For Supabase-backed doctor profiles, map supabase user id to docId
-      req.user = { docId: sUser.id, userId: sUser.id, id: sUser.id, sub: sUser.id, role: sUser.user_metadata?.role || 'patient' };
-      console.log(`[authDoctor] Success: Authenticated doctor ${sUser.id}`);
+      const { data: doctorProfile, error: doctorProfileError } = await supabase
+        .from('doctor_profiles')
+        .select('id')
+        .eq('user_id', sUser.id)
+        .maybeSingle();
+
+      if (doctorProfileError) {
+        console.error('[authDoctor] Doctor profile lookup error', doctorProfileError);
+        return res.status(500).json({ success: false, message: doctorProfileError.message });
+      }
+
+      if (!doctorProfile?.id) {
+        return res.status(403).json({ success: false, message: 'Doctor profile not found' });
+      }
+
+      req.user = {
+        docId: doctorProfile.id,
+        doctorId: doctorProfile.id,
+        userId: sUser.id,
+        id: sUser.id,
+        sub: sUser.id,
+        role: sUser.user_metadata?.role || 'doctor',
+      };
+      console.log(`[authDoctor] Success: Authenticated doctor ${doctorProfile.id}`);
       return next();
     } catch (supErr) {
       console.error('[authDoctor] Supabase token validation error', supErr);

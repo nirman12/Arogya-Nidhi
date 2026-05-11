@@ -141,7 +141,6 @@ const Dashboard = () => {
                 <th>User</th>
                 <th>Email</th>
                 <th>Role</th>
-                <th>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -151,16 +150,11 @@ const Dashboard = () => {
                     <td style={{ fontWeight: 600 }}>{user.name || user.full_name || "Unnamed user"}</td>
                     <td style={{ color: "var(--ap-text-secondary)" }}>{user.email || "—"}</td>
                     <td>{user.role || user.user_role || "—"}</td>
-                    <td>
-                      <span className="ap-badge ap-badge-verified">
-                        {user.is_active === false ? "Inactive" : "Active"}
-                      </span>
-                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4" style={{ color: "var(--ap-text-secondary)" }}>
+                  <td colSpan="3" style={{ color: "var(--ap-text-secondary)" }}>
                     No users loaded yet.
                   </td>
                 </tr>

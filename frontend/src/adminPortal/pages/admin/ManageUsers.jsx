@@ -11,7 +11,7 @@ const ManageUsers = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [newUser, setNewUser] = useState({ name: "", email: "", type: "Patient", status: "Active" });
+  const [newUser, setNewUser] = useState({ name: "", email: "", type: "Patient" });
   const [editingUser, setEditingUser] = useState(null);
 
   useEffect(() => {
@@ -46,10 +46,6 @@ const ManageUsers = () => {
     }
   };
 
-  const handleToggleStatus = async (userId, currentStatus) => {
-    await updateUser(userId, { is_active: !currentStatus });
-  };
-
   const handleAddUser = async () => {
     if (!newUser.name || !newUser.email) {
       toast.error("Please fill all fields");
@@ -64,7 +60,7 @@ const ManageUsers = () => {
     
     if (success) {
       setShowAddModal(false);
-      setNewUser({ name: "", email: "", type: "Patient", status: "Active" });
+      setNewUser({ name: "", email: "", type: "Patient" });
     }
   };
 
@@ -133,7 +129,6 @@ const ManageUsers = () => {
               <th>Name</th>
               <th>Type</th>
               <th>Email</th>
-              <th>Status</th>
               <th>Joined</th>
               <th>Actions</th>
             </tr>
@@ -150,11 +145,6 @@ const ManageUsers = () => {
                     </span>
                   </td>
                   <td className="ap-list-meta">{user.email}</td>
-                  <td>
-                    <span className={`ap-badge ap-badge-${user.is_active ? 'active' : 'inactive'}`}>
-                      {user.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
                   <td className="ap-list-meta">{new Date(user.created_at).toISOString().split('T')[0]}</td>
                   <td>
                     <div className="ap-button-group">
@@ -163,12 +153,6 @@ const ManageUsers = () => {
                         className="ap-btn ap-btn-outline ap-btn-sm"
                       >
                         Edit
-                      </button>
-                      <button 
-                        onClick={() => handleToggleStatus(user.id, user.is_active)}
-                        className="ap-btn ap-btn-warning ap-btn-sm"
-                      >
-                        {user.is_active ? "Deactivate" : "Activate"}
                       </button>
                       <button 
                         onClick={() => setShowDeleteModal(user.id)}
@@ -182,7 +166,7 @@ const ManageUsers = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>
+                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>
                   No users found
                 </td>
               </tr>
