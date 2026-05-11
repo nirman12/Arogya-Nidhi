@@ -81,7 +81,7 @@ const changeAvailability = async (req, res) => {
 
     const { data: existing, error: existingError } = await supabase
       .from("doctor_profiles")
-      .select("is_available")
+      .select("is_available,is_verified")
       .eq("id", docId)
       .maybeSingle();
 
@@ -98,9 +98,16 @@ const changeAvailability = async (req, res) => {
         ? req.body.is_available
         : !Boolean(existing.is_available);
 
+    if (nextAvailability && !existing.is_verified) {
+      return res.status(400).json({
+        success: false,
+        message: "Only verified doctors can be made available for booking",
+      });
+    }
+
     const { data: updated, error: updateError } = await supabase
       .from("doctor_profiles")
-      .update({ is_available: nextAvailability })
+      .update({ is_available: nextAvailability, updated_at: new Date().toISOString() })
       .eq("id", docId)
       .select()
       .maybeSingle();
@@ -125,18 +132,24 @@ const doctorList = async (req, res) => {
     let { data, error } = await supabase
       .from("doctor_profiles")
       .select("*, users!doctor_profiles_user_id_fkey(name,email,avatar_url)")
+      .eq("is_verified", true)
+      .eq("is_available", true)
       .order("created_at", { ascending: false });
 
     if (error) {
       const fallback = await supabase
         .from("doctor_profiles")
         .select("*, users(name,email,avatar_url)")
+        .eq("is_verified", true)
+        .eq("is_available", true)
         .order("created_at", { ascending: false });
 
       if (fallback.error) {
         const plain = await supabase
           .from("doctor_profiles")
           .select("*")
+          .eq("is_verified", true)
+          .eq("is_available", true)
           .order("created_at", { ascending: false });
 
         if (plain.error) {
@@ -868,6 +881,23 @@ const updateDoctorProfile = async (req, res) => {
     if (license_no !== undefined) updates.license_no = license_no;
     if (bio !== undefined) updates.bio = bio;
     if (experience !== undefined) updates.experience = experience;
+    if (Object.keys(updates).length > 0) updates.updated_at = new Date().toISOString();
+
+    if (updates.is_available === true || updates.is_available === "true") {
+      const { data: existing, error: existingError } = await supabase
+        .from("doctor_profiles")
+        .select("is_verified")
+        .eq("id", docId)
+        .maybeSingle();
+
+      if (existingError) throw existingError;
+      if (!existing?.is_verified) {
+        return res.status(400).json({
+          success: false,
+          message: "Only verified doctors can be made available for booking",
+        });
+      }
+    }
 
     const { data, error } = await supabase
       .from("doctor_profiles")

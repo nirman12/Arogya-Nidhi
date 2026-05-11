@@ -177,12 +177,16 @@ const AppContextProvider = (props) => {
         const { data, error } = await supabase
           .from("doctor_profiles")
           .select("*, users!doctor_profiles_user_id_fkey(name, email, avatar_url)")
+          .eq("is_verified", true)
+          .eq("is_available", true)
           .order("created_at", { ascending: false });
 
         if (error) {
           const plain = await supabase
             .from("doctor_profiles")
             .select("*")
+            .eq("is_verified", true)
+            .eq("is_available", true)
             .order("created_at", { ascending: false });
           if (plain.error) throw error;
           setDoctors((plain.data || []).map(normalizeDoctorForCards));

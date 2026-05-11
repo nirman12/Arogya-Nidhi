@@ -11,6 +11,7 @@ import {
   updateUser,
   deleteUser,
   verifyDoctor,
+  systemReports,
 } from "../controllers/adminController.js";
 import upload from "../middlewares/multer.js";
 import { authenticate, requireRole } from "../middlewares/auth.js";
@@ -48,6 +49,7 @@ adminRouter.post(
   appointmentCancelAdmin
 );
 adminRouter.get("/dashboard", authenticate, requireRole('admin'), adminDashboard);
+adminRouter.get("/system-reports", authenticate, requireRole('admin'), systemReports);
 
 // User Management Routes
 adminRouter.get("/all-users", authenticate, requireRole('admin'), getAllUsers);

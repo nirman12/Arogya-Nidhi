@@ -55,7 +55,7 @@ export const createAppointment = async (req, res) => {
     let doctorId = req.body.doctor_id;
     const { data: doctorProfile, error: doctorError } = await supabase
       .from('doctor_profiles')
-      .select('id')
+      .select('id,is_verified,is_available')
       .eq('id', doctorId)
       .maybeSingle();
     if (doctorError) throw doctorError;
@@ -63,15 +63,20 @@ export const createAppointment = async (req, res) => {
       // Assume doctorId is user_id, find the profile
       const { data: profileByUser, error: userError } = await supabase
         .from('doctor_profiles')
-        .select('id')
+        .select('id,is_verified,is_available')
         .eq('user_id', doctorId)
         .maybeSingle();
       if (userError) throw userError;
       if (profileByUser) {
         doctorId = profileByUser.id;
+        if (!profileByUser.is_verified || !profileByUser.is_available) {
+          return res.status(400).json({ error: 'Doctor is not available for booking' });
+        }
       } else {
         return res.status(400).json({ error: 'Invalid doctor_id' });
       }
+    } else if (!doctorProfile.is_verified || !doctorProfile.is_available) {
+      return res.status(400).json({ error: 'Doctor is not available for booking' });
     }
     payload.doctor_id = doctorId;
 

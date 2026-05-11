@@ -5,6 +5,7 @@ import repo from "../repository/auth.repository.js";
 import { generateAccessToken } from "../util/token.util.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { buildSystemReports } from "../services/adminReports.service.js";
 
 // API for adding doctor
 const addDoctor = async (req, res) => {
@@ -96,6 +97,7 @@ const addDoctor = async (req, res) => {
       address: typeof address === 'string' ? JSON.parse(address) : address,
       image: imageUrl,
       is_verified: true, // Admin-added doctors are verified immediately
+      is_available: true, // Admin-added doctors can be booked immediately
       nmc_license_no: `ADMIN-${Date.now()}`, // Admin added doctors don't always have license in form
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -470,15 +472,27 @@ const deleteUser = async (req, res) => {
 const verifyDoctor = async (req, res) => {
   try {
     const { doctorId, status } = req.body; // status: 'verified' or 'rejected'
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    if (!['verified', 'rejected'].includes(normalizedStatus)) {
+      return res.status(400).json({ success: false, message: 'status must be verified or rejected' });
+    }
     
     // Find the doctor profile
     const { data: profile, error: profErr } = await supabase.from('doctor_profiles').select('user_id').eq('id', doctorId).maybeSingle();
     if (profErr || !profile) return res.status(404).json({ success: false, message: 'Doctor profile not found' });
 
-    const isVerified = status === 'verified';
+    const isVerified = normalizedStatus === 'verified';
+    const now = new Date().toISOString();
 
-    // Update doctor profile verification status
-    const { error: upProfErr } = await supabase.from('doctor_profiles').update({ is_verified: isVerified }).eq('id', doctorId);
+    // Rejected doctors must never remain bookable or visible in patient doctor lists.
+    const { error: upProfErr } = await supabase
+      .from('doctor_profiles')
+      .update({
+        is_verified: isVerified,
+        is_available: isVerified,
+        updated_at: now,
+      })
+      .eq('id', doctorId);
     if (upProfErr) return res.status(500).json({ success: false, message: upProfErr.message });
 
     // Also update the user's is_active status
@@ -487,16 +501,22 @@ const verifyDoctor = async (req, res) => {
 
     // Update or create the doctor_verifications record
     try {
-      const { data: existingV } = await supabase.from('doctor_verifications').select('id').eq('doctor_id', doctorId).maybeSingle();
+      const { data: existingRows, error: existingErr } = await supabase
+        .from('doctor_verifications')
+        .select('id')
+        .eq('doctor_id', doctorId)
+        .order('created_at', { ascending: false });
+
+      if (existingErr) throw existingErr;
+
       const vData = {
         doctor_id: doctorId,
         status: isVerified ? 'verified' : 'rejected',
         verified_at: isVerified ? new Date().toISOString() : null,
-        reviewed_by: 'admin'
       };
 
-      if (existingV) {
-        await supabase.from('doctor_verifications').update(vData).eq('id', existingV.id);
+      if (existingRows?.length) {
+        await supabase.from('doctor_verifications').update(vData).eq('doctor_id', doctorId);
       } else {
         vData.id = crypto.randomUUID();
         vData.created_at = new Date().toISOString();
@@ -506,9 +526,19 @@ const verifyDoctor = async (req, res) => {
       console.warn("Failed to update doctor_verifications record:", vErr.message);
     }
 
-    return res.status(200).json({ success: true, message: `Doctor ${status} successfully` });
+    return res.status(200).json({ success: true, message: `Doctor ${normalizedStatus} successfully` });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const systemReports = async (req, res) => {
+  try {
+    const reports = await buildSystemReports(req.query || {});
+    return res.status(200).json({ success: true, reports });
+  } catch (error) {
+    console.error('systemReports error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Failed to build system reports' });
   }
 };
 
@@ -524,4 +554,5 @@ export {
   updateUser,
   deleteUser,
   verifyDoctor,
+  systemReports,
 };

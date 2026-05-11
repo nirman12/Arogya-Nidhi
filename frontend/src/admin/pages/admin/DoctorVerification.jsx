@@ -56,6 +56,7 @@ const DoctorVerification = () => {
     const success = await verifyDoctor(doctorId, "rejected");
     if (success) {
       setShowModal(false);
+      setActiveFilter("REJECTED");
     }
   };
 
