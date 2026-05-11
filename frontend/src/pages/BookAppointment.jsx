@@ -16,6 +16,7 @@ import "./BookAppointment.css";
 
 const SPECIALTIES = [
   { key: "General physician", label: "General physician", Icon: UserIcon, desc: "Primary care and checkups" },
+  { key: "Cardiology", label: "Cardiology", Icon: HeartIcon, desc: "Heart and circulation care" },
   { key: "Gynecologist", label: "Gynecologist", Icon: FaceSmileIcon, desc: "Women's health and pregnancy care" },
   { key: "Dermatologist", label: "Dermatologist", Icon: SparklesIcon, desc: "Skin conditions and care" },
   { key: "Pediatricians", label: "Pediatricians", Icon: FaceSmileIcon, desc: "Child healthcare" },
@@ -53,8 +54,52 @@ const BookAppointment = () => {
 
   const headers = { Authorization: `Bearer ${token}` };
 
-  const normalizeSpecialty = (value = "") =>
-    String(value).trim().toLowerCase().replace(/\s+/g, " ");
+  const normalizeSpecialty = (value = "") => {
+    const key = String(value).trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+    const aliases = {
+      cardiologist: "cardiology",
+      cardiology: "cardiology",
+      neurology: "neurologist",
+      neurologist: "neurologist",
+      dermatology: "dermatologist",
+      dermatologist: "dermatologist",
+      gynecology: "gynecologist",
+      gynecologist: "gynecologist",
+      pediatrics: "pediatricians",
+      pediatrician: "pediatricians",
+      pediatricians: "pediatricians",
+      gastroenterology: "gastroenterologist",
+      gastroenterologist: "gastroenterologist",
+      general: "general physician",
+      "general medicine": "general physician",
+      physician: "general physician",
+    };
+    return aliases[key] || key;
+  };
+
+  const getRecommendedSpecialty = (value = "") => {
+    const normalized = normalizeSpecialty(value);
+    const aliases = {
+      cardiologist: "Cardiology",
+      cardiology: "Cardiology",
+      neurology: "Neurologist",
+      neurologist: "Neurologist",
+      dermatology: "Dermatologist",
+      dermatologist: "Dermatologist",
+      gynecology: "Gynecologist",
+      gynecologist: "Gynecologist",
+      pediatrics: "Pediatricians",
+      pediatrician: "Pediatricians",
+      pediatricians: "Pediatricians",
+      gastroenterology: "Gastroenterologist",
+      gastroenterologist: "Gastroenterologist",
+      general: "General physician",
+      "general medicine": "General physician",
+      "general physician": "General physician",
+      physician: "General physician",
+    };
+    return aliases[normalized] || value;
+  };
 
   // If a doctorId is provided via query param, pre-select that doctor (if available)
   useEffect(() => {
@@ -129,7 +174,15 @@ const BookAppointment = () => {
       const { data } = await axios.post(backendUrl + "/api/ai/diagnose", {
         messages: [{ text: symptomText }],
       });
-      if (data.success) setAiSuggestion(data.reply);
+      if (data.success) {
+        setAiSuggestion(data.reply);
+        const recommended = getRecommendedSpecialty(data.specialty);
+        const matched = SPECIALTIES.find((item) => normalizeSpecialty(item.key) === normalizeSpecialty(recommended));
+        if (matched) {
+          setSelectedSpecialty(matched.key);
+          setSelectedDoctor(null);
+        }
+      }
     } catch (err) {
       toast.error("Failed to get AI recommendation");
     } finally {

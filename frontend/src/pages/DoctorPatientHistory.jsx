@@ -79,7 +79,7 @@ const DoctorPatientHistory = () => {
                   onChange={(event) => setPatientId(event.target.value)}
                   onKeyDown={(event) => event.key === "Enter" && search()}
                 />
-                <button className="pp-btn pp-btn-primary" onClick={search} disabled={loading}>
+                <button type="button" className="pp-btn pp-btn-primary" onClick={search} disabled={loading}>
                   {loading ? "Searching..." : "Search"}
                 </button>
               </div>
@@ -91,7 +91,7 @@ const DoctorPatientHistory = () => {
             <>
               <section className="pp-section">
                 <div className="pp-panel">
-                  <div style={{ display: "flex", gap: 20 }}>
+                  <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
                     <div>
                       <div style={{ width: 100, height: 100, background: "var(--pp-primary-lighter)", border: "1px solid var(--pp-primary-light)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--pp-primary)", fontWeight: 700, fontSize: 36 }}>
                         {patientName.slice(0, 1).toUpperCase()}
@@ -100,6 +100,16 @@ const DoctorPatientHistory = () => {
                       <div style={{ color: "var(--pp-text-secondary)", fontSize: "0.8125rem" }}>ID: {profile.id || "-"}</div>
                     </div>
                     <div style={{ flex: 1 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8, marginBottom: 12 }}>
+                        <div className="pp-iot-item" style={{ flexDirection: "column", alignItems: "flex-start", borderColor: "var(--pp-primary-light)", background: "var(--pp-primary-lighter)" }}>
+                          <div className="pp-panel-title" style={{ marginBottom: 4 }}>Medical History</div>
+                          <div style={{ fontWeight: 700, lineHeight: 1.6 }}>{profile.medical_history || "No medical history recorded"}</div>
+                        </div>
+                        <div className="pp-iot-item" style={{ flexDirection: "column", alignItems: "flex-start", borderColor: "#fde68a", background: "#fffbeb" }}>
+                          <div className="pp-panel-title" style={{ marginBottom: 4 }}>Allergies</div>
+                          <div style={{ fontWeight: 700, lineHeight: 1.6 }}>{profile.allergies || "No allergies recorded"}</div>
+                        </div>
+                      </div>
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8 }}>
                         {PROFILE_FIELDS.map(({ label, key }) => (
                           <div key={key} className="pp-iot-item" style={{ flexDirection: "column", alignItems: "flex-start" }}>

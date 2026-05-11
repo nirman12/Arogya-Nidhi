@@ -1,6 +1,10 @@
 import supabase from "../config/supabase.js";
 import { generateAccessToken } from "../util/token.util.js";
 import service from "../services/dashboard.service.js";
+import fetch from "node-fetch";
+
+const isUuid = (value = "") =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value));
 
 function normalizeIotReading(row) {
   if (!row) return row;
@@ -473,20 +477,25 @@ const doctorDashboard = async (req, res) => {
     // Unique patients
     const patients = Array.from(new Set(appts.map((a) => a.patient_id)));
 
+    const isCompletedAppointment = (appointment) =>
+      String(appointment?.status || "").toUpperCase() === "COMPLETED";
+    const isScheduledAppointment = (appointment) =>
+      ["PENDING", "CONFIRMED", "SCHEDULED"].includes(String(appointment?.status || "").toUpperCase());
+
     // Today's appointments
     const todayStr = now.toISOString().slice(0, 10);
     const todaysAppointments = appts.filter((appointment) => {
       if (!appointment.scheduled_at) return false;
       return new Date(appointment.scheduled_at).toISOString().slice(0, 10) === todayStr;
     });
+    const todaysScheduledAppointments = todaysAppointments.filter(isScheduledAppointment);
 
     // Pending appointments (PENDING status)
     const pendingAppointments = appts.filter((a) => ["pending", "PENDING"].includes(a.status));
 
-    // Recent confirmed/completed consultations
-    const recentConsultations = appts
-      .filter((a) => ["confirmed", "CONFIRMED", "completed", "COMPLETED"].includes(a.status))
-      .slice(0, 5);
+    // Recent consultations are only appointments explicitly marked complete by the doctor.
+    const completedAppointments = appts.filter(isCompletedAppointment);
+    const recentConsultations = completedAppointments.slice(0, 5);
 
     const dashData = {
       earning: totalEarning,
@@ -494,12 +503,14 @@ const doctorDashboard = async (req, res) => {
       pending,
       avgPerConsultation,
       monthlyEarnings,
-      appointments: appts.length,
+      appointments: completedAppointments.length,
+      totalAppointments: appts.length,
+      completedAppointments: completedAppointments.length,
       patients: patients.length,
-      todayAppointments: todaysAppointments.length,
-      todayAppointmentsList: todaysAppointments,
+      todayAppointments: todaysScheduledAppointments.length,
+      todayAppointmentsList: todaysScheduledAppointments,
       pendingAppointmentsList: pendingAppointments,
-      latestAppointments: recentConsultations,
+      latestAppointments: todaysScheduledAppointments,
       recentAppointments: recentConsultations,
     };
 
@@ -510,7 +521,89 @@ const doctorDashboard = async (req, res) => {
   }
 };
 
-const buildPatientAiSummary = (appointment) => {
+const hasProfileValue = (value = "") => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized || ["none", "no", "n/a", "na"].includes(normalized)) return false;
+  if (normalized.includes("not recorded")) return false;
+  if (normalized.includes("no medical history")) return false;
+  if (normalized.includes("no known allergies")) return false;
+  return true;
+};
+
+const buildProfileFallbackFeedback = ({ patientName, medicalHistory, allergies, demographics, notes, scheduledAt, status }) => `AI profile feedback for ${patientName}
+
+Appointment:
+- Scheduled for: ${scheduledAt}
+- Status: ${status || "pending"}
+- Patient notes: ${notes}
+
+Patient profile:
+${demographics.length ? demographics.map((item) => `- ${item}`).join("\n") : "- No demographic details recorded."}
+
+Medical history:
+- ${medicalHistory}
+
+Allergies:
+- ${allergies}
+
+Clinical feedback:
+- Review the medical history before consultation and confirm whether conditions are active, controlled, or resolved.
+- Verify allergy details before prescribing; avoid medicines related to the reported allergy until clarified.
+- Ask about current medications, recent symptom changes, previous reactions, and any hospital visits related to the recorded history.`;
+
+const generateProfileAiFeedback = async ({ patientName, medicalHistory, allergies, demographics, notes, scheduledAt, status }) => {
+  const fallback = buildProfileFallbackFeedback({ patientName, medicalHistory, allergies, demographics, notes, scheduledAt, status });
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GENERATIVE_API_KEY;
+  const hasAnyProfileData = hasProfileValue(medicalHistory) || hasProfileValue(allergies);
+
+  if (!apiKey || !hasAnyProfileData) return fallback;
+
+  try {
+    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const encodedModel = encodeURIComponent(model);
+    const prompt = [
+      "You are a clinical assistant helping a doctor prepare for a consultation.",
+      "Analyze ONLY the patient's medical_history and allergies fields, with brief appointment context.",
+      "Give concise, practical feedback for the doctor.",
+      "Do not diagnose. Do not invent facts. If data is missing, say what should be confirmed.",
+      "Use this format:",
+      "Clinical focus:",
+      "- ...",
+      "Prescription/allergy cautions:",
+      "- ...",
+      "Questions to ask:",
+      "- ...",
+      `Patient: ${patientName}`,
+      `Scheduled: ${scheduledAt}`,
+      `Appointment status: ${status || "pending"}`,
+      `Appointment notes: ${notes}`,
+      `Medical history column: ${medicalHistory}`,
+      `Allergies column: ${allergies}`,
+    ].join("\n");
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodedModel}:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 450,
+        },
+      }),
+    });
+
+    if (!response.ok) return fallback;
+    const data = await response.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    return text ? text.trim() : fallback;
+  } catch (error) {
+    console.error("generateProfileAiFeedback error", error?.message || error);
+    return fallback;
+  }
+};
+
+const buildPatientAiSummary = async (appointment) => {
   const patient = appointment?.patient || {};
   const user = patient?.users || patient?.user || {};
   const patientName = user?.name || "Unknown Patient";
@@ -532,26 +625,15 @@ const buildPatientAiSummary = (appointment) => {
   ].filter(Boolean);
   const notes = appointment?.patient_notes || appointment?.reason || appointment?.ai_triage_summary || "No appointment notes provided.";
 
-  return `Pre-consultation AI summary for ${patientName}
-
-Appointment:
-- Scheduled for: ${scheduledAt}
-- Status: ${appointment?.status || "pending"}
-- Patient notes: ${notes}
-
-Patient profile:
-${demographics.length ? demographics.map((item) => `- ${item}`).join("\n") : "- No demographic details recorded."}
-
-Medical history:
-- ${medicalHistory}
-
-Allergies:
-- ${allergies}
-
-Clinical focus:
-- Review the listed medical history before starting the consultation.
-- Confirm allergy details before prescribing medication.
-- Ask whether symptoms, medications, or chronic conditions have changed since registration.`;
+  return generateProfileAiFeedback({
+    patientName,
+    medicalHistory,
+    allergies,
+    demographics,
+    notes,
+    scheduledAt,
+    status: appointment?.status,
+  });
 };
 
 const doctorAiSummaries = async (req, res) => {
@@ -566,6 +648,7 @@ const doctorAiSummaries = async (req, res) => {
         scheduled_at,
         status,
         ai_triage_summary,
+        patient_notes,
         patient:patients(
           id,
           medical_history,
@@ -590,7 +673,7 @@ const doctorAiSummaries = async (req, res) => {
       latestAppointmentByPatient.set(patientId, appointment);
     });
 
-    const summaries = Array.from(latestAppointmentByPatient.values()).map((appointment) => {
+    const summaries = await Promise.all(Array.from(latestAppointmentByPatient.values()).map(async (appointment) => {
       const patient = appointment?.patient || {};
       const user = patient?.users || patient?.user || {};
       return {
@@ -608,9 +691,9 @@ const doctorAiSummaries = async (req, res) => {
           : "",
         medicalHistory: patient?.medical_history || "",
         allergies: patient?.allergies || "",
-        aiSummary: buildPatientAiSummary(appointment),
+        aiSummary: await buildPatientAiSummary(appointment),
       };
-    });
+    }));
 
     return res.status(200).json({
       success: true,
@@ -636,29 +719,52 @@ const doctorPatientHistory = async (req, res) => {
 
     let patient = null;
 
-    const { data: byId, error: byIdError } = await supabase
-      .from("patients")
-      .select(`
-        id,
-        user_id,
-        date_of_birth,
-        blood_group,
-        gender,
-        medical_history,
-        allergies,
-        users(name,email,phone,avatar_url)
-      `)
-      .eq("id", search)
-      .maybeSingle();
+    if (isUuid(search)) {
+      const { data: byId, error: byIdError } = await supabase
+        .from("patients")
+        .select(`
+          id,
+          user_id,
+          date_of_birth,
+          blood_group,
+          gender,
+          medical_history,
+          allergies,
+          users(name,email,phone,avatar_url)
+        `)
+        .eq("id", search)
+        .maybeSingle();
 
-    if (byIdError) throw byIdError;
-    patient = byId;
+      if (byIdError) throw byIdError;
+      patient = byId;
+    }
+
+    if (!patient && isUuid(search)) {
+      const { data: byUserId, error: byUserIdError } = await supabase
+        .from("patients")
+        .select(`
+          id,
+          user_id,
+          date_of_birth,
+          blood_group,
+          gender,
+          medical_history,
+          allergies,
+          users(name,email,phone,avatar_url)
+        `)
+        .eq("user_id", search)
+        .maybeSingle();
+
+      if (byUserIdError) throw byUserIdError;
+      patient = byUserId;
+    }
 
     if (!patient) {
+      const safeSearch = search.replace(/[%(),]/g, " ").trim();
       const { data: users, error: usersError } = await supabase
         .from("users")
         .select("id,name,email,phone,avatar_url")
-        .or(`email.ilike.%${search}%,name.ilike.%${search}%`)
+        .or(`email.ilike.%${safeSearch}%,name.ilike.%${safeSearch}%,phone.ilike.%${safeSearch}%`)
         .limit(5);
 
       if (usersError) throw usersError;

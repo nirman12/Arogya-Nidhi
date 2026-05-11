@@ -438,7 +438,11 @@ async function createTriageDecision(data) {
 }
 
 async function createQueryResponse(data) {
-  const { data: created, error } = await supabase.from('query_responses').insert(data).select().maybeSingle();
+  const { data: created, error } = await supabase
+    .from('query_responses')
+    .insert(data)
+    .select('id,responseText:response_text,response_text,isAccepted:is_accepted,createdAt:created_at,created_at,doctor:doctor_profiles(id,specialty,user:users(name,avatar_url))')
+    .maybeSingle();
   if (error) throw error;
   return created;
 }

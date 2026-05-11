@@ -1,8 +1,28 @@
 import repo from '../repository/dashboard.repository.js';
+import supabase from '../config/supabase.js';
 import { sendSuccess, sendError } from '../util/response.util.js';
 
-function getDocId(req) {
-  return req.user?.docId || req.user?.id || null;
+async function getDocId(req) {
+  const possibleId = req.user?.docId || req.user?.doctorId || req.user?.doctor_id || req.user?.id || req.user?.userId || null;
+  if (!possibleId) return null;
+
+  const { data: byProfileId, error: profileError } = await supabase
+    .from('doctor_profiles')
+    .select('id')
+    .eq('id', possibleId)
+    .maybeSingle();
+
+  if (profileError) throw profileError;
+  if (byProfileId?.id) return byProfileId.id;
+
+  const { data: byUserId, error: userError } = await supabase
+    .from('doctor_profiles')
+    .select('id')
+    .eq('user_id', possibleId)
+    .maybeSingle();
+
+  if (userError) throw userError;
+  return byUserId?.id || null;
 }
 
 export async function listQueries(req, res) {
@@ -34,7 +54,7 @@ export async function getQuery(req, res) {
 
 export async function createResponse(req, res) {
   try {
-    const docId = getDocId(req);
+    const docId = await getDocId(req);
     if (!docId) return sendError(res, 'Doctor id not found', 401);
     const queryId = req.params.id;
     const { responseText } = req.body;

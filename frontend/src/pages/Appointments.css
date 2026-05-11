@@ -11,16 +11,21 @@
 
 .myappt-container {
   width: 100%;
-  max-width: 980px;
+  max-width: 1120px;
   margin: 0 auto;
   background: var(--pp-surface, #ffffff);
   border: 1px solid var(--pp-border, #e2e8f0);
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   box-shadow: var(--pp-shadow-sm, 0 1px 2px 0 rgb(0 0 0 / 0.05));
   padding: 1.25rem;
 }
 
 .myappt-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
   margin-bottom: 1.1rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--pp-border-light, #f1f5f9);
@@ -38,6 +43,63 @@
   margin: 0.35rem 0 0;
   color: var(--pp-text-secondary, #64748b);
   font-size: 0.9rem;
+}
+
+.myappt-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.myappt-summary-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--pp-border, #e2e8f0);
+  border-radius: 0.5rem;
+  background: var(--pp-background, #f8fafc);
+  color: var(--pp-text-secondary, #64748b);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.myappt-summary-card strong {
+  color: var(--pp-text-primary, #0f172a);
+  font-size: 1.2rem;
+}
+
+.myappt-summary-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--pp-primary, #1e40af);
+}
+
+.myappt-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.myappt-filter {
+  border: 1px solid var(--pp-border, #e2e8f0);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--pp-text-secondary, #64748b);
+  padding: 0.45rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.myappt-filter--active,
+.myappt-filter:hover {
+  border-color: var(--pp-primary, #1e40af);
+  background: var(--pp-primary-lighter, #eff6ff);
+  color: var(--pp-primary, #1e40af);
 }
 
 .myappt-empty {
@@ -70,7 +132,7 @@
   position: relative;
   background: var(--pp-surface, #ffffff);
   border: 1px solid var(--pp-border, #e2e8f0);
-  border-radius: 1rem;
+  border-radius: 0.5rem;
   box-shadow: var(--pp-shadow-sm, 0 1px 2px 0 rgb(0 0 0 / 0.05));
   transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
   overflow: hidden;
@@ -161,6 +223,22 @@
   color: #15803d;
 }
 
+.myappt-badge--pending,
+.myappt-badge--scheduled {
+  background: #fef9c3;
+  color: #a16207;
+}
+
+.myappt-badge--completed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.myappt-badge--cancelled {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
 .myappt-meta {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -173,6 +251,9 @@
 }
 
 .myappt-meta-item dt {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
   color: var(--pp-text-muted, #94a3b8);
   font-size: 0.7rem;
   font-weight: 800;
@@ -196,6 +277,12 @@
 
 .myappt-meta-item--wide dd {
   white-space: normal;
+}
+
+.myappt-meta-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--pp-primary, #1e40af);
 }
 
 .myappt-side {
@@ -308,6 +395,10 @@
 }
 
 @media (max-width: 860px) {
+  .myappt-summary {
+    grid-template-columns: 1fr;
+  }
+
   .myappt-meta {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -341,38 +432,28 @@
 }
 
 @media (max-width: 480px) {
-  .appt-main {
+  .myappt-page {
     padding: 1rem 0.75rem;
   }
 
-  .appt-card {
+  .myappt-container {
     padding: 1rem;
   }
 
-  .appt-card-body {
-    flex-direction: column;
+  .myappt-title {
+    font-size: 1.25rem;
   }
 
-  .appt-avatar {
-    width: 44px;
-    height: 44px;
+  .myappt-meta {
+    grid-template-columns: 1fr;
   }
 
-  .appt-info-top {
-    flex-direction: column;
-    align-items: flex-start;
+  .myappt-actions,
+  .myappt-header > .myappt-btn {
+    width: 100%;
   }
 
-  .appt-meta {
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .appt-actions {
-    flex-direction: column;
-  }
-
-  .appt-btn {
+  .myappt-btn {
     width: 100%;
     text-align: center;
   }
