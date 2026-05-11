@@ -314,7 +314,9 @@ const PatientPortalAiAssistant = () => {
       if (data?.success) {
         pushAiMessage(data);
       } else {
-        toast.error(data?.message || "Failed to process assistant request");
+        const errorText = data?.message || "Failed to process assistant request";
+        toast.error(errorText);
+        pushAiMessage({ reply: errorText, stage: bookingState.stage });
       }
     } catch (err) {
       const message = err.response?.data?.message || "Failed to process assistant request";

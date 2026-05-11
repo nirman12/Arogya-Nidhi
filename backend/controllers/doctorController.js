@@ -2,6 +2,7 @@ import supabase from "../config/supabase.js";
 import { generateAccessToken } from "../util/token.util.js";
 import service from "../services/dashboard.service.js";
 import fetch from "node-fetch";
+import { generateText as generateLlmText } from "../services/llm.service.js";
 
 const isUuid = (value = "") =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value));
@@ -553,14 +554,11 @@ Clinical feedback:
 
 const generateProfileAiFeedback = async ({ patientName, medicalHistory, allergies, demographics, notes, scheduledAt, status }) => {
   const fallback = buildProfileFallbackFeedback({ patientName, medicalHistory, allergies, demographics, notes, scheduledAt, status });
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GENERATIVE_API_KEY;
   const hasAnyProfileData = hasProfileValue(medicalHistory) || hasProfileValue(allergies);
 
-  if (!apiKey || !hasAnyProfileData) return fallback;
+  if (!hasAnyProfileData) return fallback;
 
   try {
-    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-    const encodedModel = encodeURIComponent(model);
     const prompt = [
       "You are a clinical assistant helping a doctor prepare for a consultation.",
       "Analyze ONLY the patient's medical_history and allergies fields, with brief appointment context.",
@@ -581,21 +579,7 @@ const generateProfileAiFeedback = async ({ patientName, medicalHistory, allergie
       `Allergies column: ${allergies}`,
     ].join("\n");
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodedModel}:generateContent?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 450,
-        },
-      }),
-    });
-
-    if (!response.ok) return fallback;
-    const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text = await generateLlmText(prompt, { temperature: 0.2, maxTokens: 450 });
     return text ? text.trim() : fallback;
   } catch (error) {
     console.error("generateProfileAiFeedback error", error?.message || error);

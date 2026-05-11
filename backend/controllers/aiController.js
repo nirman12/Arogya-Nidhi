@@ -1,12 +1,5 @@
 import aiAssistantService from '../services/aiAssistant.service.js';
-import fetch from 'node-fetch';
-
-let GoogleGenAI;
-try {
-  GoogleGenAI = (await import('@google/genai')).GoogleGenAI;
-} catch (e) {
-  GoogleGenAI = null;
-}
+import { generateText as generateLlmText } from '../services/llm.service.js';
 
 const FALLBACK_DIAGNOSTIC_CASE = {
   id: 'case_fallback_rlq_pain',
@@ -405,49 +398,12 @@ const buildRevealPrompt = (caseData) => {
 };
 
 const generateGeminiText = async (prompt, { temperature = 0.3, maxOutputTokens = 512 } = {}) => {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GENERATIVE_API_KEY;
-  if (!apiKey) return null;
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-
-  if (GoogleGenAI) {
-    try {
-      const client = new GoogleGenAI({ apiKey });
-      const result = await client.models.generateContent({
-        model,
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature, maxOutputTokens },
-      });
-
-      return (
-        result?.candidates?.[0]?.content?.parts?.[0]?.text ||
-        result?.text ||
-        null
-      );
-    } catch (err) {
-      console.error('GoogleGenAI SDK error:', err?.message || err);
-    }
-  }
-
-  const encodedModel = encodeURIComponent(model);
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodedModel}:generateContent?key=${apiKey}`;
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature, maxOutputTokens },
-    }),
-  });
-
-  if (!response.ok) {
-    const errText = await response.text().catch(() => '');
-    console.error('Gemini API error:', response.status, errText || '(empty body)');
+  try {
+    return await generateLlmText(prompt, { temperature, maxTokens: maxOutputTokens });
+  } catch (error) {
+    console.error('LLM generateText error:', error?.message || error);
     return null;
   }
-
-  const data = await response.json();
-  return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
 };
 
 const SPECIALTY_KEYWORDS = [
@@ -607,117 +563,21 @@ export const diagnose = async (req, res) => {
 
     const last = messages?.slice(-6) || [];
 
-    const apiKey =
-      process.env.GEMINI_API_KEY || process.env.GENERATIVE_API_KEY;
+    // Build prompt (provider-agnostic)
+    const promptParts = [
+      'You are role-playing as a mock patient. Answer briefly and consistently about symptoms when asked.',
+    ];
 
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    last.forEach((m) => {
+      const role = (m.role || 'user').toLowerCase();
+      promptParts.push(`${role}: ${m.text}`);
+    });
 
-    console.log('GEMINI apiKey present?', !!apiKey, 'model:', model);
+    const prompt = promptParts.join('\n');
 
-    if (apiKey) {
-      // Build prompt
-      const promptParts = [
-        'You are role-playing as a mock patient. Answer briefly and consistently about symptoms when asked.',
-      ];
-
-      last.forEach((m) => {
-        const role = (m.role || 'user').toLowerCase();
-        promptParts.push(`${role}: ${m.text}`);
-      });
-
-      const prompt = promptParts.join('\n');
-
-      // ✅ Try SDK first
-      if (GoogleGenAI) {
-        try {
-          const client = new GoogleGenAI({ apiKey });
-
-          const result = await client.models.generateContent({
-            model,
-            contents: [
-              {
-                parts: [{ text: prompt }],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.3,
-              maxOutputTokens: 512,
-            },
-          });
-
-          const text =
-            result?.candidates?.[0]?.content?.parts?.[0]?.text ||
-            result?.text ||
-            JSON.stringify(result);
-
-          return res.json({ success: true, reply: text });
-        } catch (err) {
-          console.error('GoogleGenAI SDK error:', err?.message || err);
-          // fallback to fetch
-        }
-      }
-
-      // ✅ HTTP fallback (correct Gemini API)
-      const encodedModel = encodeURIComponent(model);
-
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodedModel}:generateContent?key=${apiKey}`;
-
-      console.log('Calling Gemini API:', url);
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 512,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text().catch(() => '');
-
-        console.error(
-          'Gemini API error:',
-          response.status,
-          errText || '(empty body)'
-        );
-
-        const STATUS_MESSAGES = {
-          400: `Invalid request to Gemini API (400). The model name "${model}" may be incorrect — update GEMINI_MODEL in backend .env (e.g. gemini-1.5-flash).`,
-          401: 'Invalid Gemini API key (401). Check GEMINI_API_KEY in backend .env.',
-          403: 'Access denied to Gemini API (403). The API may not be enabled for this key, or there may be region restrictions.',
-          404: `Gemini model "${model}" not found (404). Update GEMINI_MODEL in backend .env (e.g. gemini-1.5-flash).`,
-          429: 'Gemini API rate limit reached (429). Please wait a moment and try again.',
-        };
-
-        const reply =
-          STATUS_MESSAGES[response.status] ||
-          `Gemini API returned an unexpected error (${response.status}). Check the backend logs.`;
-
-        return res.json({ success: true, reply });
-      }
-
-      const data = await response.json();
-
-      console.log(
-        'Gemini response:',
-        JSON.stringify(data).slice(0, 500)
-      );
-
-      const reply =
-        data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-        JSON.stringify(data);
-
-      return res.json({ success: true, reply });
+    const replyFromLlm = await generateGeminiText(prompt, { temperature: 0.3, maxOutputTokens: 512 });
+    if (replyFromLlm) {
+      return res.json({ success: true, reply: replyFromLlm });
     }
 
     // ✅ No API key fallback

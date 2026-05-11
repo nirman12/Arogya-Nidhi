@@ -1,4 +1,5 @@
 import dashboardService from './dashboard.service.js';
+import { generateJson as generateLlmJson } from './llm.service.js';
 
 const SPECIALTIES = [
   { key: 'Cardiology', label: 'Cardiologist', synonyms: ['cardiology', 'cardiologist', 'heart'] },
@@ -10,6 +11,14 @@ const SPECIALTIES = [
 ];
 
 const TRIAGE_RULES = [
+  {
+    specialty: 'General',
+    keywords: ['diabetes', 'type 2', 'type ii', 'blood sugar', 'high blood sugar', 'glucose', 'hypergly'],
+    causeHint: 'High blood sugar in diabetes can be triggered by infection, missed medication, diet changes, stress, or dehydration.',
+    urgencyLevel: 'medium',
+    confidenceScore: 0.86,
+    aiReasoning: 'Diabetes and high blood sugar symptoms are best assessed first by a general physician (or endocrinology when available).',
+  },
   {
     specialty: 'Cardiology',
     keywords: ['heart pain', 'chest pain', 'chest tightness', 'chest pressure', 'palpitation', 'shortness of breath', 'left chest'],
@@ -49,6 +58,45 @@ const TRIAGE_RULES = [
     urgencyLevel: 'medium',
     confidenceScore: 0.8,
     aiReasoning: 'Symptoms described for a child, baby, or infant should be reviewed by pediatrics.',
+  },
+];
+
+// Fields we can recognize but do not have dedicated doctors for (outside the 6 supported specialties).
+const EXTERNAL_FIELD_RULES = [
+  {
+    field: 'Gastroenterology',
+    keywords: ['abdominal pain', 'stomach pain', 'stomach', 'abdomen', 'vomit', 'vomiting', 'nausea', 'diarrhea', 'constipation', 'reflux', 'acidity', 'heartburn', 'blood in stool'],
+    reason: 'digestive or stomach-related symptoms are usually assessed by gastroenterology.',
+  },
+  {
+    field: 'Gynecology',
+    keywords: ['period', 'menstrual', 'missed period', 'pregnant', 'pregnancy', 'pelvic pain', 'vaginal discharge', 'vaginal bleeding', 'uterus', 'ovary'],
+    reason: 'menstrual, pregnancy, pelvic, or reproductive-health symptoms are usually assessed by gynecology.',
+  },
+  {
+    field: 'ENT (Ear, Nose, Throat)',
+    keywords: ['ear pain', 'earache', 'hearing loss', 'tonsil', 'sore throat', 'throat pain', 'sinus', 'blocked nose', 'runny nose', 'nose bleed'],
+    reason: 'ear, nose, throat, and sinus symptoms are usually assessed by ENT.',
+  },
+  {
+    field: 'Ophthalmology (Eye)',
+    keywords: ['eye pain', 'eye', 'blurred vision', 'vision loss', 'red eye', 'itchy eye', 'watery eyes'],
+    reason: 'eye and vision symptoms are usually assessed by an eye specialist.',
+  },
+  {
+    field: 'Psychiatry / Mental health',
+    keywords: ['panic', 'anxiety', 'depression', 'insomnia', 'sleep problem', 'can\'t sleep', 'suicidal', 'self harm'],
+    reason: 'mood, anxiety, sleep, and mental-health symptoms are usually assessed by mental health specialists.',
+  },
+  {
+    field: 'Urology',
+    keywords: ['burning urination', 'burning when i urinate', 'painful urination', 'dysuria', 'urine', 'frequent urination', 'urgency', 'blood in urine', 'kidney stone'],
+    reason: 'urinary symptoms are usually assessed by urology.',
+  },
+  {
+    field: 'Endocrinology',
+    keywords: ['thyroid', 'hypothyroid', 'hyperthyroid', 'hormone', 'pcos'],
+    reason: 'hormone and thyroid-related concerns are usually assessed by endocrinology.',
   },
 ];
 
@@ -262,34 +310,32 @@ function toDoctorCatalog(doctors = []) {
   }));
 }
 
-async function callGeminiJson(prompt) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
+async function callGeminiJson(prompt, { strict = false } = {}) {
+  try {
+    const result = await generateLlmJson(prompt, {
+      temperature: 0.2,
+      maxTokens: 512,
+      softFail: !strict,
+    });
 
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    if (!result) {
+      if (strict) {
+        const error = new Error('LLM is unavailable or returned an invalid response. Please try again.');
+        error.status = 503;
+        throw error;
+      }
+      return null;
+    }
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: 512,
-        responseMimeType: 'application/json',
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const details = await response.text();
-    throw new Error(`Gemini request failed (${response.status}): ${details.slice(0, 200)}`);
+    return result;
+  } catch (error) {
+    if (strict) {
+      if (!error.status) error.status = 503;
+      throw error;
+    }
+    console.error('LLM generateJson error:', error?.message || error);
+    return null;
   }
-
-  const payload = await response.json();
-  const text = payload?.candidates?.[0]?.content?.parts?.map((part) => part?.text || '').join('') || '';
-  return safeJsonParse(text);
 }
 
 function buildGeminiPrompt(session, message) {
@@ -399,8 +445,44 @@ function normalizeAssistantPlan(plan) {
   };
 }
 
-function replyForStage(plan, fallbackReply) {
-  return plan?.reply || fallbackReply;
+function isPlanReplyCompatible(plan, stage) {
+  const reply = String(plan?.reply || '').trim();
+  if (!reply) return false;
+
+  const intent = String(plan?.intent || '').trim().toLowerCase();
+  const allowedIntents = {
+    specialty: ['specialty', 'clarify', 'restart'],
+    doctor: ['doctor', 'clarify'],
+    date: ['date', 'clarify'],
+    time: ['time', 'clarify'],
+    notes: ['notes', 'clarify'],
+    confirm: ['confirm', 'clarify'],
+    done: ['restart', 'clarify'],
+  };
+
+  if (stage && intent && allowedIntents[stage] && !allowedIntents[stage].includes(intent)) {
+    return false;
+  }
+
+  const lower = reply.toLowerCase();
+  const mentionsSpecialtySelection =
+    lower.includes('which specialty') ||
+    lower.includes('choose a specialty') ||
+    lower.includes('pick a specialty') ||
+    lower.includes('choose from') && lower.includes('cardio');
+
+  if (stage && stage !== 'specialty' && lower.includes('specialty')) return false;
+  if (stage === 'doctor' && mentionsSpecialtySelection) return false;
+  if (stage === 'date' && (lower.includes('pick a doctor') || lower.includes('choose a doctor'))) return false;
+  if (stage === 'time' && (lower.includes('pick a doctor') || lower.includes('choose a doctor') || lower.includes('choose a date') || lower.includes('pick a date'))) return false;
+  if (stage === 'confirm' && (lower.includes('choose a date') || lower.includes('choose a time') || lower.includes('pick a doctor'))) return false;
+
+  return true;
+}
+
+function replyForStage(plan, fallbackReply, stage) {
+  if (isPlanReplyCompatible(plan, stage)) return plan.reply;
+  return fallbackReply;
 }
 
 function resolveSpecialtyCandidate(value) {
@@ -415,7 +497,10 @@ function findSpecialty(input) {
 }
 
 function detectSymptomTriage(input) {
-  const text = normalizeText(input);
+  const text = normalizeText(input)
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (!text) return null;
 
   const matched = TRIAGE_RULES.find((rule) => rule.keywords.some((keyword) => text.includes(normalizeText(keyword))));
@@ -454,11 +539,38 @@ function detectRequestedSpecialty(input, plan = null) {
   const triage = detectSymptomTriage(input);
   const plannedSpecialty = resolveSpecialtyCandidate(plan?.specialty);
   const textSpecialty = findSpecialty(input);
-  const specialty = plannedSpecialty || textSpecialty || triage?.specialty;
+
+  // Priority:
+  // 1) Explicit specialty typed by the user
+  // 2) Deterministic symptom triage
+  // 3) LLM plan specialty (only as a last resort)
+  const specialty = textSpecialty || triage?.specialty || plannedSpecialty;
   if (!specialty) return null;
 
   const inferredTriage = triage || (plannedSpecialty && !textSpecialty ? buildInferredTriage(specialty, input) : null);
   return { specialty, triage: inferredTriage };
+}
+
+function detectExternalField(input) {
+  const text = normalizeText(input)
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text) return null;
+
+  const matched = EXTERNAL_FIELD_RULES.find((rule) =>
+    rule.keywords.some((keyword) => text.includes(normalizeText(keyword)))
+  );
+  if (!matched) return null;
+
+  // If the field is actually one of our supported specialties, do nothing here.
+  const supportedKeys = new Set(SPECIALTIES.map((s) => s.key));
+  if (supportedKeys.has(matched.field)) return null;
+
+  return {
+    field: matched.field,
+    reason: matched.reason,
+  };
 }
 
 function mentionsBookingIntent(input) {
@@ -1096,14 +1208,21 @@ async function processMessage(userId, message, options = {}) {
   const normalized = normalizeText(text);
   let plan = null;
 
-  try {
-    const geminiPrompt = getChannel(options) === "voice"
-      ? buildGeminiVoicePrompt(session, text)
-      : buildGeminiPrompt(session, text);
-    plan = normalizeAssistantPlan(await callGeminiJson(geminiPrompt));
-  } catch (error) {
-    console.error("Gemini call failed:", error);
-    plan = null;
+  const channel = getChannel(options);
+  const geminiPrompt = channel === 'voice'
+    ? buildGeminiVoicePrompt(session, text)
+    : buildGeminiPrompt(session, text);
+
+  if (channel === 'voice') {
+    try {
+      plan = normalizeAssistantPlan(await callGeminiJson(geminiPrompt, { strict: false }));
+    } catch (error) {
+      console.error('LLM call failed (voice):', error?.message || error);
+      plan = null;
+    }
+  } else {
+    // Text chat: do NOT mask failures with fallback replies.
+    plan = normalizeAssistantPlan(await callGeminiJson(geminiPrompt, { strict: true }));
   }
 
   // Detect and record triage decision early
@@ -1145,8 +1264,22 @@ async function processMessage(userId, message, options = {}) {
 
   if (!session.draft.specialty) {
     if (!requested?.specialty) {
+      const external = detectExternalField(text);
+      if (external) {
+        const prompt = makeSpecialtyPrompt(enhancedOptions);
+        return {
+          ...prompt,
+          reply: forChannel(
+            `Your symptoms might be related to ${external.field} — ${external.reason} Unfortunately, we don't have doctors specialized in ${external.field} right now. You can book with General, or choose another available specialty: ${formatSpecialtyList()}.`,
+            `It sounds like ${external.field}. Unfortunately, we don't have a ${external.field} specialist right now. We can still start with a General doctor, or you can pick another available specialty.`,
+            enhancedOptions
+          ),
+          stage: 'specialty',
+        };
+      }
+
       const prompt = makeSpecialtyPrompt(enhancedOptions);
-      return { ...prompt, reply: replyForStage(plan, prompt.reply), triageDecision };
+      return { ...prompt, reply: replyForStage(plan, prompt.reply, 'specialty'), triageDecision };
     }
 
     return makeSpecialtyDoctorsReply(session, requested.specialty, requested.triage, enhancedOptions);
@@ -1157,7 +1290,7 @@ async function processMessage(userId, message, options = {}) {
       (session.doctors.length === 1 && mentionsBookingIntent(text) ? session.doctors[0] : null);
     if (!doctor) {
       const prompt = makeDoctorPrompt(session.doctors, enhancedOptions);
-      return { ...prompt, reply: replyForStage(plan, prompt.reply), triageDecision };
+      return { ...prompt, reply: replyForStage(plan, prompt.reply, 'doctor'), triageDecision };
     }
 
     session.draft.doctorId = doctor.id;
@@ -1171,7 +1304,7 @@ async function processMessage(userId, message, options = {}) {
     const date = resolveDateCandidate(plan, text);
     if (!date) {
       const prompt = makeDatePrompt(session, enhancedOptions);
-      return { ...prompt, reply: replyForStage(plan, prompt.reply), triageDecision };
+      return { ...prompt, reply: replyForStage(plan, prompt.reply, 'date'), triageDecision };
     }
 
     session.draft.date = formatDateKey(date);
@@ -1192,7 +1325,7 @@ async function processMessage(userId, message, options = {}) {
 
     session.step = 'time';
     const prompt = makeTimePrompt(session, enhancedOptions);
-    return { ...prompt, reply: replyForStage(plan, prompt.reply), triageDecision };
+    return { ...prompt, reply: replyForStage(plan, prompt.reply, 'time'), triageDecision };
   }
 
   if (!session.draft.time) {
@@ -1207,14 +1340,14 @@ async function processMessage(userId, message, options = {}) {
               "That slot isn't available, I'm afraid. Could you pick a different time?",
               options
             )
-          : replyForStage(plan, prompt.reply),
+          : replyForStage(plan, prompt.reply, 'time'),
       };
     }
 
     session.draft.time = time;
     session.step = 'notes';
     const prompt = makeNotesPrompt(enhancedOptions);
-    return { ...prompt, reply: replyForStage(plan, prompt.reply), triageDecision };
+    return { ...prompt, reply: replyForStage(plan, prompt.reply, 'notes'), triageDecision };
   }
 
   if (!session.draft.notes && session.step === 'notes') {
@@ -1228,7 +1361,7 @@ async function processMessage(userId, message, options = {}) {
 
     session.step = 'confirm';
     const prompt = makeSummaryPrompt(session, enhancedOptions);
-    return { ...prompt, reply: replyForStage(plan, prompt.reply), triageDecision };
+    return { ...prompt, reply: replyForStage(plan, prompt.reply, 'confirm'), triageDecision };
   }
 
   if (session.step === 'confirm') {
@@ -1290,15 +1423,15 @@ async function processMessage(userId, message, options = {}) {
       session.draft.notes = null;
       session.availableSlots = [...TIME_SLOTS];
       const prompt = makeDoctorPrompt(session.doctors, enhancedOptions);
-      return { ...prompt, reply: replyForStage(plan, prompt.reply), triageDecision };
+      return { ...prompt, reply: replyForStage(plan, prompt.reply, 'doctor'), triageDecision };
     }
 
     const prompt = makeSummaryPrompt(session, enhancedOptions);
-    return { ...prompt, reply: replyForStage(plan, prompt.reply), triageDecision };
+    return { ...prompt, reply: replyForStage(plan, prompt.reply, 'confirm'), triageDecision };
   }
 
   const prompt = makeSpecialtyPrompt(enhancedOptions);
-  return { ...prompt, reply: replyForStage(plan, prompt.reply), triageDecision };
+  return { ...prompt, reply: replyForStage(plan, prompt.reply, 'specialty'), triageDecision };
 }
 
 export default { processMessage, getInitialPrompt, resetSession };

@@ -1,6 +1,6 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateJson as generateLlmJson } from './llm.service.js';
 
-const MODEL_NAME = 'gemini-1.5-flash';
+const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 const FALLBACK_RESULT = {
   symptoms: [],
   severity: 'low',
@@ -70,17 +70,6 @@ function normalizeResult(raw, message) {
 }
 
 export async function analyzeSymptoms(message) {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GENERATIVE_API_KEY;
-  if (!apiKey) {
-    return {
-      ...FALLBACK_RESULT,
-      symptoms: message ? [message.slice(0, 120)] : [],
-    };
-  }
-
-  const client = new GoogleGenerativeAI(apiKey);
-  const model = client.getGenerativeModel({ model: MODEL_NAME });
-
   const prompt = [
     'You are a medical triage assistant for appointment booking.',
     'Analyze the user message and return ONLY valid JSON.',
@@ -99,10 +88,15 @@ export async function analyzeSymptoms(message) {
     `User message: ${message}`,
   ].join('\n');
 
-  const result = await model.generateContent(prompt);
-  const responseText = result?.response?.text?.() || result?.response?.candidates?.[0]?.content?.parts?.map((part) => part.text).join('') || '';
-  const parsed = extractJson(responseText);
-  return normalizeResult(parsed, message);
+  try {
+    const parsed = await generateLlmJson(prompt, { temperature: 0.2, maxTokens: 350 });
+    return normalizeResult(parsed, message);
+  } catch {
+    return {
+      ...FALLBACK_RESULT,
+      symptoms: message ? [message.slice(0, 120)] : [],
+    };
+  }
 }
 
 export { MODEL_NAME };
