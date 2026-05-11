@@ -185,6 +185,8 @@ export const AdminContextProvider = ({ children }) => {
               ? {
                   ...doctor,
                   is_verified: status === "verified",
+                  available: status === "verified",
+                  is_available: status === "verified",
                   verification_status: status,
                   users: doctor.users
                     ? { ...doctor.users, is_active: status === "verified" }

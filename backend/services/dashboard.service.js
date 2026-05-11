@@ -489,6 +489,7 @@ async function getAvailableDoctors(query) {
 async function getDoctorById(doctorId) {
   const doctor = await repo.findDoctorById(doctorId);
   if (!doctor) throw _notFound('Doctor');
+  if (!doctor.isAvailable || !doctor.isVerified) throw _notFound('Doctor');
   return doctor;
 }
 
@@ -506,6 +507,9 @@ async function getDoctorAvailability({ doctorId, date }) {
 
   const doctor = await repo.findDoctorById(normalizedDoctorId);
   if (!doctor) throw _notFound('Doctor');
+  if (!doctor.isAvailable || !doctor.isVerified) {
+    throw { status: 400, message: 'Doctor is not available' };
+  }
 
   const startOfDay = new Date(`${date}T00:00:00`);
   if (Number.isNaN(startOfDay.getTime())) {

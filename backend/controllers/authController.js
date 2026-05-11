@@ -90,7 +90,7 @@ export async function register(req, res) {
           consultation_fee: Number(profile.consultationFee) || 0,
           qualifications: profile.qualifications || null,
           is_verified: false,
-          is_available: true,
+          is_available: false,
           updated_at: now,
         };
 
@@ -348,6 +348,13 @@ export async function updateDoctorProfile(req, res) {
 
     if (Object.keys(updates).length > 0) {
       updates.updated_at = new Date().toISOString();
+    }
+
+    if (updates.is_available === true || updates.is_available === 'true') {
+      const currentProfile = await repo.findDoctorProfileByUserId(id);
+      if (!currentProfile?.is_verified && !currentProfile?.isVerified) {
+        return sendError(res, 'Only verified doctors can be made available for booking', 400);
+      }
     }
 
     let updatedUser = null;
