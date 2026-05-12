@@ -15,9 +15,10 @@ const AllAppointments = () => {
     }
   }, [aToken]);
   return (
-    <div className="w-full max-w-6xl m-5">
-      <p className="mb-3 text-lg font-medium">All Appointments</p>
-      <div className="bg-white border border-gray-400 rounded text-sm min-h-[60vh] max-h-[80vh] overflow-y-scroll">
+    <div className="w-full">
+      <p className="mb-3 text-lg font-medium text-gray-800">All Appointments</p>
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white text-sm shadow-sm">
+        <div className="max-h-[80vh] min-h-[60vh] overflow-y-auto overflow-x-auto">
         <div className="hidden sm:grid grid-cols-[0.5fr_3fr_1fr_3fr_3fr_1fr_1fr_1fr] grid-flow-col py-3 px-6 border-b border-gray-400">
           <p>#</p>
           <p>Patient</p>
@@ -82,6 +83,7 @@ const AllAppointments = () => {
             )}
           </div>
         ))}
+        </div>
       </div>
     </div>
   );

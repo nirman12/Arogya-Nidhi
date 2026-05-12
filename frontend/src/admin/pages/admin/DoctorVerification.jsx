@@ -102,7 +102,7 @@ const DoctorVerification = () => {
       </div>
 
       <section className="ap-section ap-card">
-        <form onSubmit={handleSearchSubmit} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: "0.75rem", alignItems: "center" }}>
+        <form onSubmit={handleSearchSubmit} className="ap-responsive-search">
           <input
             type="search"
             value={searchInput}
@@ -140,8 +140,8 @@ const DoctorVerification = () => {
           </div>
         ) : (activeFilter === "VERIFIED" || activeFilter === "REJECTED") ? (
           /* Table View for Verified/Rejected Doctors */
-          <div className="ap-card overflow-hidden" style={{ overflowX: "auto" }}>
-            <table className="ap-table" style={{ minWidth: "760px" }}>
+          <div className="ap-table ap-table-scroll">
+            <table style={{ minWidth: "760px" }}>
               <thead>
                 <tr>
                   <th>Doctor Name</th>

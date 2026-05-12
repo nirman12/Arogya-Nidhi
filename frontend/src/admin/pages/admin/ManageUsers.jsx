@@ -121,8 +121,8 @@ const ManageUsers = () => {
       </section>
 
       {/* Users Table */}
-      <section className="ap-section ap-table">
-        <table>
+      <section className="ap-section ap-table ap-table-scroll">
+        <table style={{ minWidth: "720px" }}>
           <thead>
             <tr>
               <th>User ID</th>
@@ -147,7 +147,7 @@ const ManageUsers = () => {
                   <td className="ap-list-meta">{user.email}</td>
                   <td className="ap-list-meta">{new Date(user.created_at).toISOString().split('T')[0]}</td>
                   <td>
-                    <div className="ap-button-group">
+                    <div className="ap-button-group ap-action-stack">
                       <button 
                         onClick={() => openEditModal(user)}
                         className="ap-btn ap-btn-outline ap-btn-sm"
@@ -176,7 +176,7 @@ const ManageUsers = () => {
       </section>
 
       {/* Pagination */}
-      <section className="ap-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <section className="ap-section ap-pagination">
         <p className="ap-list-meta">
           Showing {filteredUsers.length} of {users?.length || 0} users
         </p>

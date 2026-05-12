@@ -106,7 +106,11 @@ export async function aiBooking(req, res) {
       return res.status(400).json({ success: false, message: 'message is required' });
     }
 
-    const aiData = await analyzeSymptoms(String(message).trim());
+    const symptomText = String(message).trim();
+    const aiData = await analyzeSymptoms(symptomText, {
+      userId: requestUserId,
+      interactionType: 'ai_booking_symptom_analysis',
+    });
     const safety = safetyCheck(aiData);
 
     if (!safety.allowed) {

@@ -397,9 +397,15 @@ const buildRevealPrompt = (caseData) => {
   ].join('\n');
 };
 
-const generateGeminiText = async (prompt, { temperature = 0.3, maxOutputTokens = 512 } = {}) => {
+const getRequestUserId = (req) => req.user?.userId || req.user?.sub || req.user?.id || null;
+
+const generateGeminiText = async (prompt, { temperature = 0.3, maxOutputTokens = 512, log = null } = {}) => {
   try {
-    return await generateLlmText(prompt, { temperature, maxTokens: maxOutputTokens });
+    return await generateLlmText(prompt, {
+      temperature,
+      maxTokens: maxOutputTokens,
+      log,
+    });
   } catch (error) {
     console.error('LLM generateText error:', error?.message || error);
     return null;
@@ -514,6 +520,7 @@ const getLatestSymptomText = (messages = []) => {
 export const diagnose = async (req, res) => {
   try {
     const { messages } = req.body;
+    const userId = getRequestUserId(req);
     const symptomText = getLatestSymptomText(messages);
 
     if (!symptomText) {
@@ -538,7 +545,15 @@ export const diagnose = async (req, res) => {
       `Patient symptom text: ${symptomText}`,
     ].join('\n');
 
-    const aiText = await generateGeminiText(specialtyPrompt, { temperature: 0.15, maxOutputTokens: 220 });
+    const aiText = await generateGeminiText(specialtyPrompt, {
+      temperature: 0.15,
+      maxOutputTokens: 220,
+      log: {
+        userId,
+        interactionType: 'diagnose_specialty_recommendation',
+        inputText: symptomText,
+      },
+    });
     const parsed = extractJson(aiText);
 
     if (parsed?.specialty) {
@@ -603,7 +618,15 @@ export const generateDiagnosticCase = async (req, res) => {
   try {
     const { difficulty, specialty } = req.body || {};
     const prompt = buildCasePrompt({ difficulty, specialty });
-    const text = await generateGeminiText(prompt, { temperature: 0.4, maxOutputTokens: 800 });
+    const text = await generateGeminiText(prompt, {
+      temperature: 0.4,
+      maxOutputTokens: 800,
+      log: {
+        userId: getRequestUserId(req),
+        interactionType: 'diagnostic_case_generation',
+        inputText: JSON.stringify({ difficulty, specialty }),
+      },
+    });
     const parsed = extractJson(text);
     const data = normalizeDiagnosticCase(parsed || pickFallbackDiagnosticCase({ difficulty, specialty }));
     return res.json({ success: true, data });
@@ -618,7 +641,15 @@ export const diagnosticReply = async (req, res) => {
     const caseData = normalizeDiagnosticCase(req.body?.case || FALLBACK_DIAGNOSTIC_CASE);
     const messages = Array.isArray(req.body?.messages) ? req.body.messages : [];
     const prompt = buildPatientPrompt(caseData, messages);
-    const text = await generateGeminiText(prompt, { temperature: 0.3, maxOutputTokens: 512 });
+    const text = await generateGeminiText(prompt, {
+      temperature: 0.3,
+      maxOutputTokens: 512,
+      log: {
+        userId: getRequestUserId(req),
+        interactionType: 'diagnostic_patient_reply',
+        inputText: getLatestSymptomText(messages) || JSON.stringify(messages.slice(-3)),
+      },
+    });
 
     if (!text) {
       const fallback = fallbackPatientReply(caseData, messages);
@@ -639,7 +670,15 @@ export const diagnosticEvaluate = async (req, res) => {
     if (!guess) return res.status(400).json({ success: false, message: 'Diagnosis guess is required' });
 
     const prompt = buildEvaluatePrompt(caseData, guess);
-    const text = await generateGeminiText(prompt, { temperature: 0.2, maxOutputTokens: 256 });
+    const text = await generateGeminiText(prompt, {
+      temperature: 0.2,
+      maxOutputTokens: 256,
+      log: {
+        userId: getRequestUserId(req),
+        interactionType: 'diagnostic_evaluation',
+        inputText: guess,
+      },
+    });
     const parsed = extractJson(text) || {};
 
     const diagnosis = safeText(caseData.diagnosis, '').toLowerCase();
@@ -667,7 +706,15 @@ export const diagnosticReveal = async (req, res) => {
   try {
     const caseData = normalizeDiagnosticCase(req.body?.case || FALLBACK_DIAGNOSTIC_CASE);
     const prompt = buildRevealPrompt(caseData);
-    const text = await generateGeminiText(prompt, { temperature: 0.2, maxOutputTokens: 512 });
+    const text = await generateGeminiText(prompt, {
+      temperature: 0.2,
+      maxOutputTokens: 512,
+      log: {
+        userId: getRequestUserId(req),
+        interactionType: 'diagnostic_reveal',
+        inputText: caseData.title || caseData.diagnosis,
+      },
+    });
 
     const fallback = `Diagnosis: ${caseData.diagnosis}. ${caseData.explanation}`;
     return res.json({ success: true, reveal: text || fallback });

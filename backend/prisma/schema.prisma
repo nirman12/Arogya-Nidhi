@@ -316,18 +316,19 @@ model Notification {
 }
 
 model AiInteractionLog {
-  id              String   @id @default(uuid()) @db.Uuid
-  userId          String   @map("user_id") @db.Uuid
-  interactionType String   @map("interaction_type") @db.VarChar
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String?  @map("user_id") @db.Uuid
+  interactionType String?  @map("interaction_type") @db.VarChar(100)
   inputText       String?  @map("input_text") @db.Text
   outputText      String?  @map("output_text") @db.Text
-  modelUsed       String?  @map("model_used") @db.VarChar
+  modelUsed       String?  @map("model_used") @db.VarChar(100)
   tokensUsed      Int?     @map("tokens_used")
   latencyMs       Int?     @map("latency_ms")
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  user User @relation(fields: [userId], references: [id])
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  @@index([userId], map: "idx_ai_interaction_logs_user_id")
   @@map("ai_interaction_logs")
 }
 

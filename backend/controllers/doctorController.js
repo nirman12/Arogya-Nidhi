@@ -561,7 +561,16 @@ Clinical feedback:
 - Verify allergy details before prescribing; avoid medicines related to the reported allergy until clarified.
 - Ask about current medications, recent symptom changes, previous reactions, and any hospital visits related to the recorded history.`;
 
-const generateProfileAiFeedback = async ({ patientName, medicalHistory, allergies, demographics, notes, scheduledAt, status }) => {
+const generateProfileAiFeedback = async ({
+  patientName,
+  medicalHistory,
+  allergies,
+  demographics,
+  notes,
+  scheduledAt,
+  status,
+  logUserId = null,
+}) => {
   const fallback = buildProfileFallbackFeedback({ patientName, medicalHistory, allergies, demographics, notes, scheduledAt, status });
   const hasAnyProfileData = hasProfileValue(medicalHistory) || hasProfileValue(allergies);
 
@@ -588,7 +597,20 @@ const generateProfileAiFeedback = async ({ patientName, medicalHistory, allergie
       `Allergies column: ${allergies}`,
     ].join("\n");
 
-    const text = await generateLlmText(prompt, { temperature: 0.2, maxTokens: 450 });
+    const text = await generateLlmText(prompt, {
+      temperature: 0.2,
+      maxTokens: 450,
+      log: {
+        userId: logUserId,
+        interactionType: "doctor_patient_profile_summary",
+        inputText: [
+          `Patient: ${patientName}`,
+          `Medical history: ${medicalHistory}`,
+          `Allergies: ${allergies}`,
+          `Notes: ${notes}`,
+        ].join("\n"),
+      },
+    });
     return text ? text.trim() : fallback;
   } catch (error) {
     console.error("generateProfileAiFeedback error", error?.message || error);
@@ -596,7 +618,7 @@ const generateProfileAiFeedback = async ({ patientName, medicalHistory, allergie
   }
 };
 
-const buildPatientAiSummary = async (appointment) => {
+const buildPatientAiSummary = async (appointment, { logUserId = null } = {}) => {
   const patient = appointment?.patient || {};
   const user = patient?.users || patient?.user || {};
   const patientName = user?.name || "Unknown Patient";
@@ -626,12 +648,14 @@ const buildPatientAiSummary = async (appointment) => {
     notes,
     scheduledAt,
     status: appointment?.status,
+    logUserId,
   });
 };
 
 const doctorAiSummaries = async (req, res) => {
   try {
     const docId = await resolveDoctorProfileId(req);
+    const logUserId = req.user?.userId || req.user?.id || req.user?.sub || null;
     const summaryStatuses = [
       "pending",
       "confirmed",
@@ -694,7 +718,7 @@ const doctorAiSummaries = async (req, res) => {
           : "",
         medicalHistory: patient?.medical_history || "",
         allergies: patient?.allergies || "",
-        aiSummary: await buildPatientAiSummary(appointment),
+        aiSummary: await buildPatientAiSummary(appointment, { logUserId }),
       };
     }));
 

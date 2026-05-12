@@ -12,11 +12,11 @@ import NotAuthorized from "../pages/auth/NotAuthorized";
 import "../styles/AdminPortal.css";
 
 const AdminLayout = () => (
-  <div className="ap-page" style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
+  <div className="ap-page ap-page-shell">
     <Navbar />
-    <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
+    <div className="ap-content-shell">
       <Sidebar />
-      <main className="ap-main-content" style={{ marginLeft: "280px", flex: 1, marginTop: 0, minHeight: 0, height: "100%" }}>
+      <main className="ap-main-content">
         <Routes>
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="all-appointments" element={<AllAppointments />} />
