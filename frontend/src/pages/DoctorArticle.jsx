@@ -1,5 +1,6 @@
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { toast } from "react-toastify";
 import DoctorSidebar from "../components/DoctorSidebar";
 import { AppContext } from "../context/AppContext";
@@ -16,16 +17,22 @@ const INITIAL_FORM = {
 };
 
 const LANGUAGE_OPTIONS = ["English", "Nepali", "Hindi", "Other"];
+const ARTICLE_SELECT =
+  "id, title, content, category, subcategory, language, is_published, created_at, updated_at";
 
 const DoctorArticle = () => {
   const { token, userData } = useContext(AppContext);
   const navigate = useNavigate();
+  const formSectionRef = useRef(null);
   const [form, setForm] = useState(INITIAL_FORM);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [articles, setArticles] = useState([]);
+  const [editingArticleId, setEditingArticleId] = useState(null);
+  const [deletingArticleId, setDeletingArticleId] = useState(null);
 
   const userId = userData?.id || userData?.user?.id;
+  const isEditing = Boolean(editingArticleId);
 
   useEffect(() => {
     if (!token) return navigate("/login");
@@ -54,9 +61,7 @@ const DoctorArticle = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("learning_resources")
-      .select(
-        "id, title, content, category, subcategory, language, is_published, created_at, updated_at"
-      )
+      .select(ARTICLE_SELECT)
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
@@ -78,6 +83,50 @@ const DoctorArticle = () => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const resetForm = useCallback(() => {
+    setForm(INITIAL_FORM);
+    setEditingArticleId(null);
+  }, []);
+
+  const handleEdit = (article) => {
+    setEditingArticleId(article.id);
+    setForm({
+      title: article.title || "",
+      content: article.content || "",
+      category: article.category || "",
+      subcategory: article.subcategory || "",
+      language: LANGUAGE_OPTIONS.includes(article.language) ? article.language : "English",
+      is_published: !!article.is_published,
+    });
+    formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleDelete = async (article) => {
+    if (!supabase) return toast.error("Supabase is not configured on the frontend.");
+    if (!userId) return toast.error("User session not found. Please login again.");
+
+    const confirmed = window.confirm(`Delete "${article.title}"? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setDeletingArticleId(article.id);
+    const { error } = await supabase
+      .from("learning_resources")
+      .delete()
+      .eq("id", article.id)
+      .eq("user_id", userId);
+
+    if (error) {
+      toast.error(error.message || "Failed to delete article");
+      setDeletingArticleId(null);
+      return;
+    }
+
+    toast.success("Article deleted");
+    setArticles((prev) => prev.filter((item) => item.id !== article.id));
+    if (editingArticleId === article.id) resetForm();
+    setDeletingArticleId(null);
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!supabase) return toast.error("Supabase is not configured on the frontend.");
@@ -87,7 +136,6 @@ const DoctorArticle = () => {
     if (!title) return toast.error("Title is required.");
 
     const payload = {
-      user_id: userId,
       title,
       content: form.content.trim() || null,
       category: form.category.trim() || null,
@@ -98,23 +146,29 @@ const DoctorArticle = () => {
     };
 
     setSaving(true);
-    const { data, error } = await supabase
-      .from("learning_resources")
-      .insert(payload)
-      .select(
-        "id, title, content, category, subcategory, language, is_published, created_at, updated_at"
-      )
-      .single();
+    const request = isEditing
+      ? supabase
+          .from("learning_resources")
+          .update(payload)
+          .eq("id", editingArticleId)
+          .eq("user_id", userId)
+      : supabase.from("learning_resources").insert({ ...payload, user_id: userId });
+
+    const { data, error } = await request.select(ARTICLE_SELECT).single();
 
     if (error) {
-      toast.error(error.message || "Failed to publish article");
+      toast.error(error.message || `Failed to ${isEditing ? "update" : "publish"} article`);
       setSaving(false);
       return;
     }
 
-    toast.success(payload.is_published ? "Article published" : "Draft saved");
-    setArticles((prev) => [data, ...prev]);
-    setForm(INITIAL_FORM);
+    toast.success(
+      isEditing ? "Article updated" : payload.is_published ? "Article published" : "Draft saved"
+    );
+    setArticles((prev) =>
+      isEditing ? prev.map((article) => (article.id === editingArticleId ? data : article)) : [data, ...prev]
+    );
+    resetForm();
     setSaving(false);
   };
 
@@ -125,8 +179,8 @@ const DoctorArticle = () => {
         <main className="pp-main-content">
           <p className="pp-welcome">Share your medical knowledge with students</p>
 
-          <section className="pp-section">
-            <h2 className="pp-section-title">Write an Article</h2>
+          <section className="pp-section" ref={formSectionRef}>
+            <h2 className="pp-section-title">{isEditing ? "Edit Article" : "Write an Article"}</h2>
             <form className="pp-panel" onSubmit={handleSubmit}>
               <div className="pp-form-grid">
                 <div className="pp-form-field">
@@ -192,13 +246,13 @@ const DoctorArticle = () => {
                   <button
                     type="button"
                     className="pp-btn pp-btn-secondary"
-                    onClick={() => setForm(INITIAL_FORM)}
+                    onClick={resetForm}
                     disabled={saving}
                   >
-                    Clear
+                    {isEditing ? "Cancel Edit" : "Clear"}
                   </button>
                   <button type="submit" className="pp-btn pp-btn-primary" disabled={saving}>
-                    {saving ? "Saving..." : "Post Article"}
+                    {saving ? "Saving..." : isEditing ? "Update Article" : "Post Article"}
                   </button>
                 </div>
               </div>
@@ -222,16 +276,17 @@ const DoctorArticle = () => {
                     <th>Language</th>
                     <th>Status</th>
                     <th>Created</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={5}>Loading articles...</td>
+                      <td colSpan={6}>Loading articles...</td>
                     </tr>
                   ) : articles.length === 0 ? (
                     <tr>
-                      <td colSpan={5}>No articles yet. Publish your first one above.</td>
+                      <td colSpan={6}>No articles yet. Publish your first one above.</td>
                     </tr>
                   ) : (
                     articles.map((article) => (
@@ -247,12 +302,12 @@ const DoctorArticle = () => {
                           ) : null}
                         </td>
                         <td>
-                          <div>{article.category || "—"}</div>
+                          <div>{article.category || "-"}</div>
                           {article.subcategory ? (
                             <div className="pp-cell-note">{article.subcategory}</div>
                           ) : null}
                         </td>
-                        <td>{article.language || "—"}</td>
+                        <td>{article.language || "-"}</td>
                         <td>
                           <span
                             className="pp-status-badge"
@@ -265,6 +320,28 @@ const DoctorArticle = () => {
                           </span>
                         </td>
                         <td>{formatDate(article.created_at)}</td>
+                        <td>
+                          <div className="pp-table-actions">
+                            <button
+                              type="button"
+                              className="pp-btn pp-btn-outline pp-btn-sm pp-btn-icon"
+                              onClick={() => handleEdit(article)}
+                              disabled={saving || deletingArticleId === article.id}
+                            >
+                              <PencilSquareIcon style={{ width: 14, height: 14 }} />
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="pp-btn pp-btn-danger pp-btn-sm pp-btn-icon"
+                              onClick={() => handleDelete(article)}
+                              disabled={saving || deletingArticleId === article.id}
+                            >
+                              <TrashIcon style={{ width: 14, height: 14 }} />
+                              {deletingArticleId === article.id ? "Deleting..." : "Delete"}
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   )}
