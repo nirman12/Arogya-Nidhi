@@ -53,8 +53,8 @@ export async function getProfile(req, res) {
       address = null;
     }
 
-    const resolvedGender = user.gender ?? patient?.gender ?? null;
-    const resolvedDob = user.date_of_birth ?? user.dateOfBirth ?? patient?.dateOfBirth ?? null;
+    const resolvedGender = patient?.gender ?? user.gender ?? null;
+    const resolvedDob = patient?.dateOfBirth ?? user.date_of_birth ?? user.dateOfBirth ?? null;
     const userAddress = normalizeAddress({
       streetAddress: user.street_address,
       city: user.city,
