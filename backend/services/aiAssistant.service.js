@@ -426,12 +426,13 @@ function toDoctorCatalog(doctors = []) {
   }));
 }
 
-async function callGeminiJson(prompt, { strict = false } = {}) {
+async function callGeminiJson(prompt, { strict = false, log = null } = {}) {
   try {
     const result = await generateLlmJson(prompt, {
       temperature: 0.2,
       maxTokens: 512,
       softFail: !strict,
+      log,
     });
 
     if (!result) {
@@ -1326,17 +1327,22 @@ async function processMessage(userId, message, options = {}) {
   const geminiPrompt = channel === 'voice'
     ? buildGeminiVoicePrompt(session, text)
     : buildGeminiPrompt(session, text);
+  const interactionLog = {
+    userId,
+    interactionType: channel === 'voice' ? 'appointment_assistant_voice' : 'appointment_assistant_text',
+    inputText: text,
+  };
 
   if (channel === 'voice') {
     try {
-      plan = normalizeAssistantPlan(await callGeminiJson(geminiPrompt, { strict: false }));
+      plan = normalizeAssistantPlan(await callGeminiJson(geminiPrompt, { strict: false, log: interactionLog }));
     } catch (error) {
       console.error('LLM call failed (voice):', error?.message || error);
       plan = null;
     }
   } else {
     // Text chat: do NOT mask failures with fallback replies.
-    plan = normalizeAssistantPlan(await callGeminiJson(geminiPrompt, { strict: true }));
+    plan = normalizeAssistantPlan(await callGeminiJson(geminiPrompt, { strict: true, log: interactionLog }));
   }
 
   // Detect and record triage decision early

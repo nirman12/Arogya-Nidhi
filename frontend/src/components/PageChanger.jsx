@@ -23,12 +23,15 @@ const PageChanger = ({ currentPage, totalPages, onPageChange, className = "" }) 
   };
 
   return (
-    <nav className={`flex items-center justify-center gap-2 mt-8 ${className}`} aria-label="Pagination">
+    <nav
+      className={`mt-8 flex flex-wrap items-center justify-center gap-2 ${className}`}
+      aria-label="Pagination"
+    >
       <button
         type="button"
         disabled={currentPage <= 1}
         onClick={() => goToPage(currentPage - 1)}
-        className={`px-5 py-2 rounded-full text-sm font-medium border-2 transition-all duration-200 ${
+        className={`min-w-[96px] rounded-full border-2 px-3 py-2 text-sm font-medium transition-all duration-200 sm:px-5 ${
           currentPage <= 1
             ? "opacity-40 cursor-not-allowed border-gray-200 text-gray-400 bg-white"
             : "border-gray-300 text-gray-700 bg-white hover:border-primary hover:text-primary"
@@ -37,7 +40,7 @@ const PageChanger = ({ currentPage, totalPages, onPageChange, className = "" }) 
         &larr; Prev
       </button>
 
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center justify-center gap-1">
         {getVisiblePages(currentPage, totalPages).map((page, index) =>
           page === "..." ? (
             <span key={`ellipsis-${index}`} className="px-2 text-sm font-medium text-gray-400">
@@ -49,7 +52,7 @@ const PageChanger = ({ currentPage, totalPages, onPageChange, className = "" }) 
               type="button"
               onClick={() => goToPage(page)}
               aria-current={page === currentPage ? "page" : undefined}
-              className={`w-9 h-9 rounded-full text-sm font-medium transition-all duration-200 ${
+              className={`h-8 w-8 rounded-full text-sm font-medium transition-all duration-200 sm:h-9 sm:w-9 ${
                 page === currentPage
                   ? "bg-primary text-white shadow-sm"
                   : "text-gray-500 hover:bg-primary/10 hover:text-primary"
@@ -65,7 +68,7 @@ const PageChanger = ({ currentPage, totalPages, onPageChange, className = "" }) 
         type="button"
         disabled={currentPage >= totalPages}
         onClick={() => goToPage(currentPage + 1)}
-        className={`px-5 py-2 rounded-full text-sm font-medium border-2 transition-all duration-200 ${
+        className={`min-w-[96px] rounded-full border-2 px-3 py-2 text-sm font-medium transition-all duration-200 sm:px-5 ${
           currentPage >= totalPages
             ? "opacity-40 cursor-not-allowed border-gray-200 text-gray-400 bg-white"
             : "border-gray-300 text-gray-700 bg-white hover:border-primary hover:text-primary"

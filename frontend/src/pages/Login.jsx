@@ -35,7 +35,9 @@ const Login = () => {
   const [experience, setExperience] = useState("");
   const [consultationFee, setConsultationFee] = useState("");
   const [loading, setLoading] = useState(false);
-  const roles = ["patient", "student", "doctor", "admin"];
+  const loginRoles = ["patient", "student", "doctor", "admin"];
+  const signupRoles = ["patient", "student", "doctor"];
+  const roles = state === "Sign Up" ? signupRoles : loginRoles;
   const inputClass = "mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-800 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:bg-gray-50 disabled:text-gray-400";
   const labelClass = "text-xs font-semibold uppercase tracking-wide text-gray-500";
 
@@ -142,6 +144,12 @@ const Login = () => {
     }
   }, [navigate, token, userData]);
 
+  useEffect(() => {
+    if (state === "Sign Up" && role === "admin") {
+      setRole("patient");
+    }
+  }, [role, state]);
+
   return (
     <main className="min-h-[calc(100vh-140px)] bg-gray-50/70 px-4 pb-10 pt-28 sm:px-6 sm:pt-32 lg:px-12">
       <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl shadow-primary/10 lg:grid-cols-[0.95fr_1.05fr]">
@@ -180,7 +188,7 @@ const Login = () => {
           <div className="space-y-5">
             <div>
               <p className={labelClass}>Role</p>
-              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className={`mt-2 grid grid-cols-2 gap-2 ${state === "Sign Up" ? "sm:grid-cols-3" : "sm:grid-cols-4"}`}>
                 {roles.map((r) => (
                   <button
                     type="button"
@@ -328,6 +336,8 @@ const Login = () => {
                   Login here
                 </button>
               </p>
+            ) : role === "admin" ? (
+              <p>Admin access is provisioned internally. Use the admin login to continue.</p>
             ) : (
               <p>
                 Don't have an account?{" "}

@@ -69,7 +69,7 @@ function normalizeResult(raw, message) {
   };
 }
 
-export async function analyzeSymptoms(message) {
+export async function analyzeSymptoms(message, { userId = null, interactionType = 'symptom_analysis' } = {}) {
   const prompt = [
     'You are a medical triage assistant for appointment booking.',
     'Analyze the user message and return ONLY valid JSON.',
@@ -89,7 +89,15 @@ export async function analyzeSymptoms(message) {
   ].join('\n');
 
   try {
-    const parsed = await generateLlmJson(prompt, { temperature: 0.2, maxTokens: 350 });
+    const parsed = await generateLlmJson(prompt, {
+      temperature: 0.2,
+      maxTokens: 350,
+      log: {
+        userId,
+        interactionType,
+        inputText: message,
+      },
+    });
     return normalizeResult(parsed, message);
   } catch {
     return {
